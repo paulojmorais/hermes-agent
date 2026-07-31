@@ -141,9 +141,15 @@ class TestUserSkins:
 
         skin = load_skin("broken")
 
+        # Read the expected default from the engine itself rather than
+        # hardcoding a brand name — forks rebrand the built-in default skin
+        # (e.g. CEODigital Agent) and a literal here becomes a change-detector.
+        from hermes_cli.skin_engine import _BUILTIN_SKINS
+        expected_agent = _BUILTIN_SKINS["default"].get("branding", {}).get("agent_name", "")
+
         assert skin.name == "broken"
         assert skin.get_color("banner_title") == "#FFD700"
-        assert skin.get_branding("agent_name") == "Hermes Agent"
+        assert skin.get_branding("agent_name") == expected_agent
         assert skin.spinner.get("waiting_faces", []) == []
         assert skin.tool_emojis == {}
         assert skin.tool_prefix == "!"
