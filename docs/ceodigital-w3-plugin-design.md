@@ -145,11 +145,29 @@ segue o `display.language` ativo da app.
 
 ## 7. Config & secrets (W3)
 
-- `ceodigital.tenant_slug`, `ceodigital.mcp_token`: lidos no backend via
-  `ceodigital_overrides.yaml` / env (nunca hardcoded — §10.3.2/§10.3.7).
-- O token MCP é por-tenant, TTL, gerado via `provisionAppAccess` (F3) — o user
-  loga o device, o plugin backend recebe o config `{ mcp url, bearer }` como o
-  `install ↔ provisionAppAccess` simplificam (§10.1).
+**Fonte de produção (confirmada no main do ceodigital, 2026-08-15):** o
+`ceodigital-agent` é instalado como **app do catálogo F3b** pelo **App Manager
+no Connector Companion** — não é config manual. Fluxo real:
+
+```
+tenant user → menu Connector → descarrega Connector Companion (Tauri)
+  → parear device
+  → tab App Manager (platform.local_apps): hermes / cowork / opencode / ceodigital-agent
+      → "Instalar ceodigital-agent"
+          installLocalApp (resolve release+sha256) → device_outbox 'app.install'
+          daemon → pip/binary (install.go) · PC pessoal OU servidor (desktop/server)
+          provisionAppAccess → gera MCP token (auto-revoga) + config pronto
+               { mcp: { url, header: Bearer } } → device fica ligado ao tenant
+```
+
+- `ceodigital.app_url` / `tenant_slug` / `mcp_token`: o plugin lê de config/env
+  (nunca hardcoded — §10.3.2/§10.3.7). Em produção a fonte é o **config que o
+  App Manager provisiona / o daemon grava** (`config.push`), não overrides
+  manual. O `ceodigital_overrides.yaml` fica como **dev/fallback**.
+- O token MCP é por-tenant, TTL, gerado via `provisionAppAccess` (F3b) — o user
+  liga a app no App Manager e o device recebe o `{ mcp url, bearer }` pronto
+  (§10.1). O overrides manual serve só para testes locais que não passam pelo
+  connector.
 
 ## 8. Fuera de scope W3 (waves seguintes)
 
@@ -168,8 +186,10 @@ segue o `display.language` ativo da app.
   - `plugin.tsx` — registo contributions (página/sidebar a presente).
 - **Backend router (pytest)** `plugins/ceodigital/plugin_api_test.py`:
   - erros → mocks (sem MCP real).
-- **Manual (smoke)**: com um token MCP real + tenant slug dev, executar `hermes`
-  no modo desktop, abrir `/ceodigital/projects`, ver a lista do CEOD.
+- **Manual (smoke)**: instalar/ligar `ceodigital-agent` no **App Manager do
+  Connector Companion** (ou, em dev, com `ceodigital_overrides.yaml` + token
+  MCP manual de `/t/<slug>/settings/mcp`), executar `hermes`, abrir
+  `/ceodigital/projects`, ver a lista do CEOD.
   Critério de done: a lista populas + o caminho `renderer→rest→backend→MCP` provado.
 
 ## 10. Critério de done W3

@@ -12,14 +12,32 @@
 **Bloqueia:** o critério de done §9/§10 da W3 (provar o caminho
 `renderer → ctx.rest → backend → MCP → dados`).
 **Blocker:** precisa do ambiente dev CEODigital (token MCP + tenant slug + app_url).
-**Valida:**
-- Nomes reais das MCP tools no `ToolRegistry` do CEODigital. O backend chama
-  `workitems_list` / `workitems_get` — confirmar se são esses ou
-  `mcp__ceodigital_*__workitems_list` (alinhar se necessário).
-- Transport **Streamable HTTP**: validar se o `httpx.post` JSON-RPC precisa de
-  `Accept: application/json, text/event-stream` nas headers.
-- Config: criar `ceodigital_overrides.yaml` de dev com `app_url`, `tenant_slug`,
-  `mcp_token` (nunca hardcoded).
+
+**Fonte de produção — CONFIRMADA (main do ceodigital, 2026-08-15):** o config
+NÃO é manual. O `ceodigital-agent` é instalado como **app do catálogo F3b** via
+**App Manager no Connector Companion**:
+
+```
+tenant user → menu Connector → descarrega Connector Companion (Tauri)
+  → parear device
+  → tab App Manager (platform.local_apps): hermes / cowork / opencode / ceodigital-agent
+      → "Instalar ceodigital-agent"
+          installLocalApp (resolves release+sha256) → device_outbox kind='app.install'
+          daemon → pip/binary (install.go)  ·  PC pessoal OU servidor (kind=desktop/server)
+          provisionAppAccess → gera MCP token (auto-revoga) + config pronto
+               { mcp: { url, header: Bearer } }  → o device fica ligado ao tenant
+```
+
+O `plugin_api.py` lê `app_url` / `tenant_slug` / `mcp_token` de config/env — fonte em
+produção devia ser o que o App Manager provisiona (`config.push` / config do daemon),
+não um overrides manual. O overrides.yaml fica como **dev/fallback** apenas.
+
+**O que smoke valida:**
+- Nomes reais das MCP tools no `ToolRegistry` (o backend chama `workitems_list` /
+  `workitems_get` — confirmar vs. `mcp__ceodigital_*__workitems_list`).
+- Transport **Streamable HTTP**: `httpx.post` JSON-RPC talvez precise de
+  `Accept: application/json, text/event-stream`.
+- Onde o daemon grava o config MCP por-app (`config.push`) — peça a fechar no ceodigital.
 
 ### 1.2 vitest / typecheck desktop — ⚠️
 **Bloqueia:** validação dos testes TS (`languages.test.ts`, `plugin.test.tsx`,
