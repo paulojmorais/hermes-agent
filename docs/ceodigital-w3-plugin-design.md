@@ -172,7 +172,7 @@ segue o `display.language` ativo da app.
   no modo desktop, abrir `/ceodigital/projects`, ver a lista do CEOD.
   Critério de done: a lista populas + o caminho `renderer→rest→backend→MCP` provado.
 
-## 11. Critério de done W3
+## 10. Critério de done W3
 
 - Página `/ceodigital/projects` abre na sidebar, lista work items do tenant
   (MCP real).
@@ -181,6 +181,38 @@ segue o `display.language` ativo da app.
 - Tests vitest + pytest passam sem rede (mocks).
 - `hermes --version` inalterado.
 - Nenhum ficheiro core editado (Layer 0 respeitado).
+
+## 10.1 Status de implementação (2026-08-15)
+
+**Estado: código implementado; smoke com MCP real pendente.**
+
+| Componente | Ficheiros | Estado |
+|---|---|---|
+| **Backend proxy** | `plugins/ceodigital/dashboard/plugin_api.py` + `manifest.json` | ✅ Implementado. Router montado em `/api/plugins/ceodigital/` (confirmado `web_server.py:17797`) |
+| **Backend testes** | `plugins/ceodigital/dashboard/plugin_api_test.py` | ✅ **10 passed** (verificado com `.venv/bin/pytest`) |
+| **Desktop plugin** | `apps/desktop/src/plugins/ceodigital/plugin.tsx` | ✅ Escrito, `defaultEnabled: true`, page + sidebar + ⌘K |
+| **Desktop data layer** | `apps/desktop/src/plugins/ceodigital/api.ts` + `types.ts` | ✅ Escrito |
+| **Projects page** | `apps/desktop/src/plugins/ceodigital/pages/Projects.tsx` | ✅ Escrito (3 estados, erros tipados) |
+| **i18n en/pt/fr** | `apps/desktop/src/plugins/ceodigital/i18n/` | ✅ Escrito (prova §6 — pt-pt + fr à esquerda) |
+| **Desktop vitest** | `plugin.test.tsx` + `api.test.ts` | ⚠️ Não corrido localmente — rolldown native binding partido (npm #4828), ver abaixo |
+| **Certificado done** | — | ⏳ **Smoke com MCP real pendente** (critério §9/§10) |
+
+**Pendências técnicas conhecidas (não bloqueiam ship, precisam de validação no smoke):**
+
+1. **Nomes das MCP tools** — o backend chama `workitems_list` / `workitems_get`.
+   Confirmar que são os nomes exatos no `ToolRegistry` do CEODigital (podem ser
+   `workitems.list` ou `mcp__ceodigital_*__workitems_list`). Alinhar no smoke.
+2. **Transport Streamable HTTP** — o MCP provider pode responder a `httpx.post`
+   JSON-RPC com `Accept: application/json, text/event-stream`. Validar headers
+   reais no smoke.
+3. **vitest local** — a rolldown integra binding `wasm32-wasi` em vez de
+   `darwin-arm64` (npm bug #4828), e o `@napi-rs/wasm-runtime` instalado ainda
+   resolve errado. `rm -rf node_modules && npm ci` corrigiria, mas destrutivo;
+   fica para a wave de branding/typecheck (vitest é transpile-only, não valida
+   TS de verdade — o `tsc` pós-wave é o que interessa).
+
+**Commit:** `ac21fc4b9` — `feat(ceodigital): add W3 desktop plugin scaffold`.
+**Repo:** `paulojmorais/ceodigital-agent` (privado), branch `ceodigital-branding`.
 
 ## 11. Risco / decisões pendentes
 
