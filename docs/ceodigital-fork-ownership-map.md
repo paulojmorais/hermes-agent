@@ -326,16 +326,16 @@ Hermes desktop currently authenticates to CEODigital via MCP user tokens
 
 ## 8. Priority (recommended order of work)
 
-| Wave | What | Effort | Impact |
-|---|---|---|---|
-| **W1** | Create locale files `pt.ts`, `fr.ts` for desktop | Low–Med | User sees chat in native language |
-| **W2** | Wire `display.language` to locale switching | Low | Language config works |
-| **W3** | Desktop plugin scaffold — `src/plugins/ceodigital/` with sidebar entry + `Projects` page consuming MCP `workitems_list` | Med | **Prova de conceito** "gerir ceodigital daqui" — primeira superfície CEODigital nativa no Hermes |
-| **W4** | CRM plugin — leads + deals lists (MCP `crm_*` tools) | Med | Painel comercial nativo |
-| **W5** | Agents plugin — CEO Agents catalog, run history | Med | Painel agentes nativo |
-| **W6** | Auth plugin — CEODigital SSO login | Med | Desktop autentica-se ao CEODigital |
-| **W7** | Python-side translation (`agent/i18n/locales/pt.json`) | Low | Agent messages in PT |
-| **W8** | Website translations (Docusaurus pt) | High | Docs in PT
+| Wave | What | Effort | Impact | Estado |
+|---|---|---|---|---|
+| **W1** | Create locale files `pt.ts`, `fr.ts` for desktop | Low–Med | User sees chat in native language | ✅ W1a done (commit `63ffa0927`) — partial pt/fr; expandir W1b+ |
+| **W2** | Wire `display.language` to locale switching | Low | Language config works | ⬜ (mecanismo já existe no core `context.tsx`) |
+| **W3** | Desktop plugin scaffold — `src/plugins/ceodigital/` with sidebar entry + `Projects` page consuming MCP `workitems_list` | Med | **Prova de conceito** "gerir ceodigital daqui" — primeira superfície CEODigital nativa no Hermes | ✅ Implementado (commit) · smoke MCP ⏳ |
+| **W4** | CRM plugin — leads + deals lists (MCP `crm_*` tools) | Med | Painel comercial nativo | ⬜ |
+| **W5** | Agents plugin — CEO Agents catalog, run history | Med | Painel agentes nativo | ⬜ |
+| **W6** | Auth plugin — CEODigital SSO login | Med | Desktop autentica-se ao CEODigital | ⬜ |
+| **W7** | Python-side translation (`agent/i18n/locales/pt.json`) | Low | Agent messages in PT | ⬜ |
+| **W8** | Website translations (Docusaurus pt) | High | Docs in PT | ⬜ |
 
 ---
 
