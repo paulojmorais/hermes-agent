@@ -50,6 +50,20 @@ export interface CeodigitalMessages {
     empty: string
     headers: { name: string; slug: string; status: string; exposed: string }
     workflows: { title: string; empty: string; headers: { name: string; status: string; trigger: string } }
+    runs: {
+      title: string
+      empty: string
+      runBtn: string
+      promptPlaceholder: string
+      executing: string
+      runCompleted: string
+      runFailed: string
+      runPaused: string
+      headers: { id: string; status: string; started: string }
+      viewSteps: string
+      hideSteps: string
+      steps: string
+    }
   }
   errors: {
     fetch: string

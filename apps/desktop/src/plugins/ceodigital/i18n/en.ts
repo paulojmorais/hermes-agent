@@ -62,6 +62,24 @@ export const en: CeodigitalMessages = {
         status: 'Status',
         trigger: 'Trigger'
       }
+    },
+    runs: {
+      title: 'Run debrief',
+      empty: 'No agent runs yet. Run an agent to see its debrief here.',
+      runBtn: 'Run agent',
+      promptPlaceholder: 'What should the agent do?',
+      executing: 'Running…',
+      runCompleted: 'Completed',
+      runFailed: 'Failed',
+      runPaused: 'Paused (approval required)',
+      headers: {
+        id: 'Run',
+        status: 'Status',
+        started: 'Started'
+      },
+      viewSteps: 'View steps',
+      hideSteps: 'Hide steps',
+      steps: 'Steps'
     }
   },
   errors: {

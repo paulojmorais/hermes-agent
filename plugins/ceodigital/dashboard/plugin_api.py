@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
 from hermes_constants import get_hermes_home
@@ -412,4 +412,65 @@ def get_workitem(workitem_id: str) -> JSONResponse:
         return _maybe_error(exc.code)
     except Exception as exc:
         log.exception("ceodigital workitems get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W5+ · Agents — run + debrief (MCP agent.runs.* / agent.<slug>.ask)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/agents/{slug}/ask")
+def ask_agent(slug: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Run one turn of a CEO agent (MCP ``agent.<slug>.ask``, sync). The prompt
+    comes in the JSON body ``{"prompt": "..."}``. Returns the run_debrief shape
+    (run_id, status, response_text, pending_approvals)."""
+    prompt = payload.get("prompt") if isinstance(payload, dict) else None
+    if not prompt or not str(prompt).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "prompt_required"})
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, f"agent.{slug}.ask", {"prompt": str(prompt)})
+        return JSONResponse(content={"ok": True, "run": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agent ask failed: slug=%s", slug)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/agents/runs")
+def list_agent_runs(agentId: Optional[str] = None, status: Optional[str] = None, limit: int = 20) -> JSONResponse:
+    """List recent CEO agent runs (MCP ``agent.runs.list``)."""
+    try:
+        args: Dict[str, Any] = {"limit": limit}
+        if agentId:
+            args["agentId"] = agentId
+        if status:
+            args["status"] = status
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agent.runs.list", args)
+        rows = _rows_from_key(payload, "runs")
+        return JSONResponse(content={"ok": True, "runs": rows})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agent.runs list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/agents/runs/{run_id}")
+def get_agent_run(run_id: str) -> JSONResponse:
+    """Fetch one CEO agent run detail incl. steps (MCP ``agent.runs.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agent.runs.get", {"runId": run_id})
+        if isinstance(payload, dict) and payload.get("run"):
+            return JSONResponse(content={"ok": True, "run": payload["run"]})
+        return _maybe_error("not_found")
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agent.runs get failed")
         return _maybe_error(ERR_UNREACHABLE)

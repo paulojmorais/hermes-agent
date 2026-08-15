@@ -3,15 +3,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   AGENTFLOWS_KEY,
   AGENTS_KEY,
+  askAgent,
   bindApi,
   DEALS_KEY,
   fetchAgentFlows,
   fetchAgents,
   fetchDeals,
   fetchLeads,
+  fetchRun,
+  fetchRuns,
   fetchWorkItem,
   fetchWorkItems,
   LEADS_KEY,
+  RUNS_KEY,
+  runKey,
   workItemKey,
   WORKITEMS_KEY
 } from './api'
@@ -186,6 +191,63 @@ describe('ceodigital api', () => {
     it('rejects loudly when used before bindApi', async () => {
       await expect(fetchAgents()).rejects.toThrow('ceodigital api not ready')
       await expect(fetchAgentFlows()).rejects.toThrow('ceodigital api not ready')
+    })
+  })
+
+  describe('agent runs + debrief (W5+)', () => {
+    it('exposes run query keys', () => {
+      expect(RUNS_KEY).toEqual(['ceodigital', 'agent-runs'])
+      expect(runKey('r-1')).toEqual(['ceodigital', 'agent-runs', 'r-1'])
+    })
+
+    it('fetches the runs list through ctx.rest with no filters', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({ ok: true, runs: [{ id: 'r-1', agent_id: 'a-1', status: 'completed' }] })
+
+      await expect(fetchRuns()).resolves.toEqual({
+        ok: true,
+        runs: [{ id: 'r-1', agent_id: 'a-1', status: 'completed' }]
+      })
+      expect(rest).toHaveBeenCalledWith('/agents/runs')
+    })
+
+    it('sends filters as query params', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({ ok: true, runs: [] })
+
+      await fetchRuns({ agentId: 'a-1', status: 'running', limit: 5 })
+      expect(rest).toHaveBeenCalledWith('/agents/runs?agentId=a-1&status=running&limit=5')
+    })
+
+    it('fetches a single run detail by id', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({ ok: true, run: { id: 'r-1', steps: [] } })
+
+      await expect(fetchRun('r-1')).resolves.toEqual({ ok: true, run: { id: 'r-1', steps: [] } })
+      expect(rest).toHaveBeenCalledWith('/agents/runs/r-1')
+    })
+
+    it('asks an agent via POST with the prompt body', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({
+        ok: true,
+        run: { run_id: 'r-9', status: 'completed', response_text: 'hello' }
+      })
+
+      await expect(askAgent('ops-lead', 'go')).resolves.toEqual({
+        ok: true,
+        run: { run_id: 'r-9', status: 'completed', response_text: 'hello' }
+      })
+      expect(rest).toHaveBeenCalledWith('/agents/ops-lead/ask', { method: 'POST', body: { prompt: 'go' } })
+    })
+
+    it('rejects loudly before bindApi', async () => {
+      await expect(fetchRuns()).rejects.toThrow('ceodigital api not ready')
+      await expect(askAgent('x', 'y')).rejects.toThrow('ceodigital api not ready')
     })
   })
 })

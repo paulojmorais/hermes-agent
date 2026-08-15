@@ -62,6 +62,24 @@ export const fr: CeodigitalMessages = {
         status: 'Statut',
         trigger: 'Déclencheur'
       }
+    },
+    runs: {
+      title: 'Debrief du run',
+      empty: "Aucun run pour le moment. Lancez un agent pour voir son debrief ici.",
+      runBtn: 'Lancer l’agent',
+      promptPlaceholder: 'Que doit faire l’agent ?',
+      executing: 'En cours…',
+      runCompleted: 'Terminé',
+      runFailed: 'Échoué',
+      runPaused: 'En pause (approbation requise)',
+      headers: {
+        id: 'Run',
+        status: 'Statut',
+        started: 'Démarré le'
+      },
+      viewSteps: 'Voir les étapes',
+      hideSteps: 'Masquer les étapes',
+      steps: 'Étapes'
     }
   },
   errors: {

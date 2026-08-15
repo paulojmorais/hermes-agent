@@ -110,6 +110,63 @@ export interface AgentFlowsResponse {
 export type AgentsEnvelope = AgentsResponse | CrmError
 export type AgentFlowsEnvelope = AgentFlowsResponse | CrmError
 
+// ── Agent runs + debrief (W5+) ─────────────────────────────────────────────
+
+/** A CEO agent run row (`agent.runs.list`). */
+export interface AgentRunRow {
+  id: string
+  agent_id: string
+  conversation_id?: string | null
+  status: string
+  started_at?: string
+  finished_at?: string | null
+  cancelled_at?: string | null
+  created_by?: string | null
+  usage?: Record<string, number> | null
+  [key: string]: unknown
+}
+
+/** A CEO agent run detail with steps + HITL snapshot (`agent.runs.get`). */
+export interface AgentRunDetail extends AgentRunRow {
+  version_id?: string | null
+  steps?: unknown[]
+  hitl_snapshot?: Record<string, unknown> | null
+}
+
+/** Immediate result of `agent.<slug>.ask` (ADR-0021 run_debrief shape). */
+export interface AgentAskResult {
+  run_id: string
+  status: 'completed' | 'paused' | 'failed' | 'running' | string
+  response_text?: string
+  pending_approvals?: Array<{ id: string; tool_name: string; approval_url?: string }>
+  steps_summary?: Array<{ kind: string; tool_name?: string; at: string }>
+  usage?: Record<string, unknown>
+  error?: string
+  message?: string
+}
+
+/** GET /agents/runs — success envelope. */
+export interface AgentRunsResponse {
+  ok: true
+  runs: AgentRunRow[]
+}
+
+/** GET /agents/runs/{id} — success envelope. */
+export interface AgentRunResponse {
+  ok: true
+  run: AgentRunDetail
+}
+
+/** POST /agents/{slug}/ask — success envelope. */
+export interface AgentAskResponse {
+  ok: true
+  run: AgentAskResult
+}
+
+export type AgentRunsEnvelope = AgentRunsResponse | CrmError
+export type AgentRunEnvelope = AgentRunResponse | CrmError
+export type AgentAskEnvelope = AgentAskResponse | CrmError
+
 /** Statuses the design doc names; anything the backend adds renders via the
  *  i18n fallback (the raw id). */
 export const WORKITEM_STATUSES = [

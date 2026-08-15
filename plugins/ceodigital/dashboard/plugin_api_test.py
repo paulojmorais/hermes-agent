@@ -404,6 +404,94 @@ def test_agentflows_not_configured(plugin, client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# W5+ — Agent run + debrief (execute + runs)
+# ---------------------------------------------------------------------------
+
+
+def test_agent_ask_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({
+            "run_id": "run-1",
+            "status": "completed",
+            "response_text": "Done!",
+            "pending_approvals": [],
+        }),
+    )
+
+    resp = client.post(
+        "/api/plugins/ceodigital/agents/ops-lead/ask",
+        json={"prompt": "what should I do next?"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["run"]["run_id"] == "run-1"
+    assert data["run"]["status"] == "completed"
+
+
+def test_agent_ask_requires_prompt(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/agents/ops-lead/ask",
+        json={},
+    )
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "prompt_required"}
+
+
+def test_agent_runs_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"runs": [
+            {"id": "run-1", "agent_id": "a1", "status": "completed", "started_at": "2026-08-15T10:00:00Z"},
+            {"id": "run-2", "agent_id": "a1", "status": "running", "started_at": "2026-08-15T11:00:00Z"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/agents/runs")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [r["id"] for r in data["runs"]] == ["run-1", "run-2"]
+
+
+def test_agent_run_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"run": {
+            "id": "run-1", "agent_id": "a1", "status": "completed",
+            "steps": [{"type": "text", "text": "hello"}], "usage": {"input_tokens": 10},
+        }}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/agents/runs/run-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["run"]["id"] == "run-1"
+    assert data["run"]["steps"][0]["text"] == "hello"
+
+
+def test_agent_run_detail_unknown_id(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({}))
+
+    resp = client.get("/api/plugins/ceodigital/agents/runs/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+# ---------------------------------------------------------------------------
 # Config shapes never hardcoded
 # ---------------------------------------------------------------------------
 

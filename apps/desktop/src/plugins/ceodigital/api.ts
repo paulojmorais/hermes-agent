@@ -12,7 +12,10 @@
 import { type PluginRestOptions } from '@hermes/plugin-sdk'
 
 import type {
+  AgentAskEnvelope,
   AgentFlowsEnvelope,
+  AgentRunEnvelope,
+  AgentRunsEnvelope,
   AgentsEnvelope,
   DealsEnvelope,
   LeadsEnvelope,
@@ -72,3 +75,29 @@ export const fetchAgents = () => call<AgentsEnvelope>('/agents')
 
 /** GET /agentflows — the tenant's NativeFlow workflows (MCP agentflow.workflows.list). */
 export const fetchAgentFlows = () => call<AgentFlowsEnvelope>('/agentflows')
+
+// ── Agent runs + debrief (W5+) ─────────────────────────────────────────────
+
+/** GET /agents/runs — recent CEO agent runs (MCP agent.runs.list). */
+export const fetchRuns = (params?: { agentId?: string; status?: string; limit?: number }) => {
+  const qs = new URLSearchParams()
+  if (params?.agentId) qs.set('agentId', params.agentId)
+  if (params?.status) qs.set('status', params.status)
+  if (params?.limit) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<AgentRunsEnvelope>(`/agents/runs${suffix}`)
+}
+
+/** GET /agents/runs/{id} — one run detail incl. steps (MCP agent.runs.get). */
+export const fetchRun = (runId: string) =>
+  call<AgentRunEnvelope>(`/agents/runs/${encodeURIComponent(runId)}`)
+
+/** POST /agents/{slug}/ask — run one CEO agent turn (MCP agent.<slug>.ask). */
+export const askAgent = (slug: string, prompt: string) =>
+  call<AgentAskEnvelope>(`/agents/${encodeURIComponent(slug)}/ask`, {
+    method: 'POST',
+    body: { prompt }
+  })
+
+export const RUNS_KEY = ['ceodigital', 'agent-runs'] as const
+export const runKey = (runId: string) => ['ceodigital', 'agent-runs', runId] as const
