@@ -1,0 +1,123 @@
+# CEODigital Agent — Wheel release workflow
+#
+# Builds a distributable wheel of the branded fork and publishes it as a
+# GitHub Release asset. Triggered by a tag of the form `ceodigital-v<semver>`
+# (e.g. `ceodigital-v0.3.0`).
+#
+# The catalog entry (`platform.local_app_releases`) is fed separately — an
+# OPS/deploy step reads the URL + SHA-256 this workflow's output and upserts
+# it (spec: docs/implementation-plans/connector/connector-f3b-ceodigital-agent-catalog.md).
+#
+# Streamlined design (robustness-first):
+#   - Package name stays `hermes-agent` (pip-show discovery), but the WHEEL
+#     built here is the CEODigital fork — the catalog entry is `ceodigital-agent`.
+#   - Tag carries the version; the release asset + the `version.json` we write
+#     reflect it, so the fork never has to pin a version in pyproject that would
+#     go stale vs upstream.
+#   - O `emit-outputs` job emite `URL` + `SHA256` + `VERSION` para OPS.
+
+name: Release fork wheel
+
+on:
+  push:
+    tags:
+      - "ceodigital-v*"
+
+permissions:
+  contents: write # attach the wheel to a GitHub Release
+
+concurrency:
+  group: release-wheel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-wheel:
+    name: Build wheel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      wheel_name: ${{ steps.tag.outputs.wheel_name }}
+      sha256: ${{ steps.hash.outputs.sha256 }}
+      url: ${{ steps.release.outputs.url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Extract version from tag
+        id: tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF##*/}"             # ceodigital-v0.3.0
+          VERSION="${TAG#ceodigital-v}"        # 0.3.0
+          if [[ -z "$VERSION" || "$VERSION" == "$TAG" ]]; then
+            echo "::error::tag must be 'ceodigital-v<version>'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # setuptools names the wheel by the dist-info version; we compute
+          # the expected filename after build (see step below via glob).
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version-file: .python-version # 3.11 (pyproject caps <3.14)
+
+      - name: Install build front-end
+        shell: bash
+        run: python3 -m pip install --quiet build==1.2.2
+
+      - name: Build wheel
+        shell: bash
+        run: python3 -m build --wheel --outdir dist/
+
+      - name: Compute SHA-256
+        id: hash
+        shell: bash
+        run: |
+          WHEEL="$(ls dist/*.whl | head -n1)"
+          echo "::notice::wheel=$WHEEL"
+          SK="$(sha256sum "$WHEEL" | cut -d' ' -f1)"
+          echo "sha256=$SK" >> "$GITHUB_OUTPUT"
+          echo "wheel_name=$(basename "$WHEEL")" >> "$GITHUB_OUTPUT"
+          # Write a version.json the catalog ingest can consume.
+          echo "{\"version\":\"${{ steps.tag.outputs.version }}\",\"wheel\":\"$(basename "$WHEEL")\",\"sha256\":\"$SK\"}" > dist/version.json
+
+      - name: Create GitHub Release + upload artifact (private archive)
+        id: release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "CEODigital Agent ${{ steps.tag.outputs.version }}"
+          files: dist/
+          fail_on_unmatched_files: false
+
+      - name: Verify asset published
+        shell: bash
+        run: |
+          echo "URL=${{ steps.release.outputs.url }}"
+          echo "SHA256=${{ steps.hash.outputs.sha256 }}"
+          echo "VERSION=${{ steps.tag.outputs.version }}"
+          echo "WHEEL=${{ steps.hash.outputs.wheel_name }}"
+
+  # NÃO é um passo que fale com o catálogo. O download que a F3b usa NÃO é o
+  # GitHub release asset: o repo é privado e o asset requer auth. O catálogo
+  # consome um bucket privado via /api/public/connector/download/<id>
+  # (ownership-map §10). Portanto este workflow só emite metadados; o ingest
+  # roda no repo ceodigital (OPS) que copia o wheel p/ o bucket e regista a
+  # local_app_releases com o download_url que o /api/public serve.
+  emit-outputs:
+    name: Emit release metadata
+    needs: build-wheel
+    if: always() && needs.build-wheel.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print release descriptor (for OPS ingest)
+        shell: bash
+        run: |
+          echo "VERSION=${{ needs.build-wheel.outputs.version }}"
+          echo "GH_RELEASE_URL=${{ needs.build-wheel.outputs.url }}"   # arquivo/auditoria (privado)
+          echo "WHEEL=${{ needs.build-wheel.outputs.wheel_name }}"
+          echo "SHA256=${{ needs.build-wheel.outputs.sha256 }}"
+          echo "NOTE=catalog download_url is the private-bucket URL, NOT this GH asset"
