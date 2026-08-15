@@ -152,5 +152,78 @@ export const pt = defineLocale({
     stopListening: 'Parar de ouvir e enviar',
     stopShort: 'Parar',
     endConversation: 'Terminar conversa de voz'
+  },
+
+  notifications: {
+    region: 'Notificações',
+    hide: 'Ocultar notificações',
+    show: 'Mostrar notificações',
+    more: count => `${count} ${count === 1 ? 'notificação' : 'notificações'} a mais`,
+    clearAll: 'Limpar todas',
+    dismiss: 'Dispensar',
+    copyDetail: 'Copiar detalhe',
+    copyDetailFailed: 'Falha ao copiar detalhe',
+    updateReadyTitle: 'Atualização disponível',
+    seeWhatsNew: 'Ver novidades',
+    errors: {
+      diskFull: 'Disco cheio',
+      methodNotAllowed: 'Método não permitido'
+    }
+  },
+
+  keybinds: {
+    title: 'Atalhos de teclado',
+    search: 'Procurar atalhos',
+    rebind: 'Reatribuir',
+    reset: 'Repor',
+    resetAll: 'Repor tudo',
+    pressKey: 'Primir nova tecla…',
+    set: 'Definir',
+    conflictWith: label => `Conflito com “${label}”`,
+  },
+
+  settings: {
+    closeSettings: 'Fechar definições',
+    exportConfig: 'Exportar configuração',
+    importConfig: 'Importar configuração',
+    resetToDefaults: 'Repor predefinições',
+    nav: {
+      providers: 'Fornecedores',
+      providerAccounts: 'Contas de fornecedores',
+      providerApiKeys: 'Chaves de API',
+      gateway: 'Gateway',
+      apiKeys: 'Chaves de API',
+      keybinds: 'Atalhos de teclado',
+      mcp: 'MCP',
+      archivedChats: 'Conversas arquivadas',
+      about: 'Sobre',
+      billing: 'Faturação',
+      notifications: 'Notificações',
+      plugins: 'Plugins'
+    },
+    plugins: {
+      title: 'Plugins',
+      blurb: 'Gerir os plugins instalados.',
+      openFolder: 'Abrir pasta',
+      rescan: 'Reexaminar',
+      enable: 'Ativar',
+      disable: 'Desativar',
+      failed: 'Falha ao atuar no plugin',
+      empty: 'Nenhum plugin instalado ainda.'
+    },
+    notifications: {
+      title: 'Notificações',
+      enableAll: 'Ativar tudo',
+      test: 'Enviar teste'
+    },
+    appearance: {
+      title: 'Aparência',
+      intro: 'Personaliza o aspeto do desktop.',
+      colorMode: 'Tema de cor',
+      colorModeDesc: 'Escolhe entre claro, escuro ou sistema.',
+      uiScaleTitle: 'Escala da interface',
+      themeTitle: 'Tema',
+      themeDesc: 'Escolhe o tema do desktop.'
+    }
   }
 })

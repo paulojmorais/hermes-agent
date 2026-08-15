@@ -152,5 +152,78 @@ export const fr = defineLocale({
     stopListening: 'Arrêter d’écouter et envoyer',
     stopShort: 'Arrêter',
     endConversation: 'Terminer la conversation vocale'
-  }
-})
+  },
+
+  notifications: {
+    region: 'Notifications',
+    hide: 'Masquer les notifications',
+    show: 'Afficher les notifications',
+    more: count => `${count} notification${count === 1 ? '' : 's'} de plus`,
+    clearAll: 'Tout effacer',
+    dismiss: 'Ignorer',
+    copyDetail: 'Copier le détail',
+    copyDetailFailed: 'Échec de la copie du détail',
+    updateReadyTitle: 'Mise à jour disponible',
+    seeWhatsNew: 'Voir les nouveautés',
+    errors: {
+      diskFull: 'Disque plein',
+      methodNotAllowed: 'Méthode non autorisée'
+    }
+  },
+
+  keybinds: {
+    title: 'Raccourcis clavier',
+    search: 'Rechercher les raccourcis',
+    rebind: 'Réaffecter',
+    reset: 'Réinitialiser',
+    resetAll: 'Tout réinitialiser',
+    pressKey: 'Appuyer sur une touche…',
+    set: 'Définir',
+    conflictWith: label => `Conflit avec “${label}”`,
+  },
+
+  settings: {
+    closeSettings: 'Fermer les réglages',
+    exportConfig: 'Exporter la configuration',
+    importConfig: 'Importer la configuration',
+    resetToDefaults: 'Rétablir les valeurs par défaut',
+    nav: {
+      providers: 'Fournisseurs',
+      providerAccounts: 'Comptes de fournisseurs',
+      providerApiKeys: 'Clés API',
+      gateway: 'Passerelle',
+      apiKeys: 'Clés API',
+      keybinds: 'Raccourcis clavier',
+      mcp: 'MCP',
+      archivedChats: 'Conversations archivées',
+      about: 'À propos',
+      billing: 'Facturation',
+      notifications: 'Notifications',
+      plugins: 'Plugins'
+    },
+    plugins: {
+      title: 'Plugins',
+      blurb: 'Gérer les plugins installés.',
+      openFolder: 'Ouvrir le dossier',
+      rescan: 'Re-analyser',
+      enable: 'Activer',
+      disable: 'Désactiver',
+      failed: 'Échec de l’action sur le plugin',
+      empty: 'Aucun plugin installé pour le moment.'
+    },
+    notifications: {
+      title: 'Notifications',
+      enableAll: 'Tout activer',
+      test: 'Envoyer un test'
+    },
+    appearance: {
+      title: 'Apparence',
+      intro: 'Personnalisez l’aspect du bureau.',
+      colorMode: 'Thème de couleur',
+      colorModeDesc: 'Choisissez clair, sombre ou système.',
+      uiScaleTitle: 'Échelle de l’interface',
+      themeTitle: 'Thème',
+      themeDesc: 'Choisissez le thème du bureau.'
+    }
+   }
+ })

@@ -72,4 +72,26 @@ describe('desktop i18n runtime translator', () => {
 
     expect(translateNow('missing.path')).toBe('missing.path')
   })
+
+  it('resolves W1b branded settings/notifications/keybinds copy for pt/fr', () => {
+    setRuntimeI18nLocale('pt')
+    expect(translateNow('settings.appearance.title')).toBe('Aparência')
+    expect(translateNow('settings.nav.gateway')).toBe('Gateway')
+    expect(translateNow('notifications.updateReadyTitle')).toBe('Atualização disponível')
+    expect(translateNow('keybinds.title')).toBe('Atalhos de teclado')
+
+    setRuntimeI18nLocale('fr')
+    expect(translateNow('settings.appearance.title')).toBe('Apparence')
+    expect(translateNow('settings.nav.about')).toBe('À propos')
+    expect(translateNow('notifications.region')).toBe('Notifications')
+    expect(translateNow('keybinds.title')).toBe('Raccourcis clavier')
+  })
+
+  it('interpolates function translations added in W1b for pt/fr', () => {
+    setRuntimeI18nLocale('pt')
+    expect(translateNow('keybinds.conflictWith', 'Ctrl+K')).toBe('Conflito com “Ctrl+K”')
+
+    setRuntimeI18nLocale('fr')
+    expect(translateNow('notifications.more', 3)).toBe('3 notifications de plus')
+  })
 })
