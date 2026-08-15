@@ -7,16 +7,20 @@ import {
   bindApi,
   DEALS_KEY,
   fetchAgentFlows,
+  fetchAgentSchedules,
   fetchAgents,
   fetchDeals,
   fetchLeads,
+  fetchPendingApprovals,
   fetchRun,
   fetchRuns,
   fetchWorkItem,
   fetchWorkItems,
   LEADS_KEY,
+  PENDING_KEY,
   RUNS_KEY,
   runKey,
+  SCHEDULES_KEY,
   workItemKey,
   WORKITEMS_KEY
 } from './api'
@@ -248,6 +252,63 @@ describe('ceodigital api', () => {
     it('rejects loudly before bindApi', async () => {
       await expect(fetchRuns()).rejects.toThrow('ceodigital api not ready')
       await expect(askAgent('x', 'y')).rejects.toThrow('ceodigital api not ready')
+    })
+  })
+
+  describe('agent schedules + pending (W5+ cont.)', () => {
+    it('exposes the query keys', () => {
+      expect(SCHEDULES_KEY).toEqual(['ceodigital', 'agent-schedules'])
+      expect(PENDING_KEY).toEqual(['ceodigital', 'agent-pending'])
+    })
+
+    it('fetches schedules through ctx.rest with default params', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({ ok: true, schedules: [{ id: 's-1', name: 'digest' }] })
+
+      await expect(fetchAgentSchedules()).resolves.toEqual({
+        ok: true,
+        schedules: [{ id: 's-1', name: 'digest' }]
+      })
+      expect(rest).toHaveBeenCalledWith('/agents/schedules')
+    })
+
+    it('passes activeOnly query param when requested', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({ ok: true, schedules: [] })
+
+      await fetchAgentSchedules({ activeOnly: true, agentId: 'a-1' })
+      expect(rest).toHaveBeenCalledWith('/agents/schedules?agentId=a-1&activeOnly=true')
+    })
+
+    it('fetches pending HITL approvals', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({
+        ok: true,
+        pending: [{ id: 'p-1', tool_name: 'int.gmail.send_email', status: 'pending' }]
+      })
+
+      await expect(fetchPendingApprovals()).resolves.toEqual({
+        ok: true,
+        pending: [{ id: 'p-1', tool_name: 'int.gmail.send_email', status: 'pending' }]
+      })
+      expect(rest).toHaveBeenCalledWith('/agents/pending')
+    })
+
+    it('scopes pending by runId when passed', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValue({ ok: true, pending: [] })
+
+      await fetchPendingApprovals('run-1')
+      expect(rest).toHaveBeenCalledWith('/agents/pending?runId=run-1')
+    })
+
+    it('rejects loudly before bindApi', async () => {
+      await expect(fetchAgentSchedules()).rejects.toThrow('ceodigital api not ready')
+      await expect(fetchPendingApprovals()).rejects.toThrow('ceodigital api not ready')
     })
   })
 })

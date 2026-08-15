@@ -64,6 +64,17 @@ export interface CeodigitalMessages {
       hideSteps: string
       steps: string
     }
+    schedules: {
+      title: string
+      empty: string
+      headers: { name: string; cron: string; active: string; lastRun: string }
+    }
+    pending: {
+      title: string
+      empty: string
+      headers: { tool: string; run: string; status: string }
+      goToTenant: string
+    }
   }
   errors: {
     fetch: string

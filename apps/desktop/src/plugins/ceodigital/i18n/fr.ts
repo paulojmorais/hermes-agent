@@ -80,6 +80,26 @@ export const fr: CeodigitalMessages = {
       viewSteps: 'Voir les étapes',
       hideSteps: 'Masquer les étapes',
       steps: 'Étapes'
+    },
+    schedules: {
+      title: 'Planifications d’agents',
+      empty: 'Aucune planification autonome d’agent pour ce tenant.',
+      headers: {
+        name: 'Nom',
+        cron: 'Cron',
+        active: 'Active',
+        lastRun: 'Dernier run'
+      }
+    },
+    pending: {
+      title: 'Approbations en attente',
+      empty: 'Aucune approbation HITL en attente.',
+      headers: {
+        tool: 'Outil',
+        run: 'Run',
+        status: 'Statut'
+      },
+      goToTenant: 'Ouvrir les approbations'
     }
   },
   errors: {

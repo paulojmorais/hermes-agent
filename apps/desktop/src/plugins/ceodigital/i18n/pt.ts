@@ -80,6 +80,26 @@ export const pt: CeodigitalMessages = {
       viewSteps: 'Ver passos',
       hideSteps: 'Ocultar passos',
       steps: 'Passos'
+    },
+    schedules: {
+      title: 'Agendamentos de agentes',
+      empty: 'Não há agendamentos autónomos de agentes para este tenant.',
+      headers: {
+        name: 'Nome',
+        cron: 'Cron',
+        active: 'Ativo',
+        lastRun: 'Último run'
+      }
+    },
+    pending: {
+      title: 'Aprovações pendentes',
+      empty: 'Não há aprovações HITL pendentes.',
+      headers: {
+        tool: 'Ferramenta',
+        run: 'Run',
+        status: 'Estado'
+      },
+      goToTenant: 'Abrir aprovações'
     }
   },
   errors: {

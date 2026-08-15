@@ -491,6 +491,70 @@ def test_agent_run_detail_unknown_id(plugin, client, monkeypatch):
     assert resp.json() == {"ok": False, "error": "not_found"}
 
 
+def test_agent_schedules_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"schedules": [
+            {"id": "s1", "agent_id": "a1", "name": "Daily digest", "cron_expr": "0 9 * * *", "is_active": True},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/agents/schedules")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["schedules"][0]["name"] == "Daily digest"
+
+
+def test_agent_schedules_active_only_query(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({"schedules": []}))
+
+    resp = client.get("/api/plugins/ceodigital/agents/schedules?activeOnly=true")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "schedules": []}
+
+
+def test_agent_pending_approvals_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"pending_calls": [
+            {"id": "p1", "run_id": "r1", "tool_name": "int.gmail.send_email", "status": "pending"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/agents/pending")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["pending"][0]["tool_name"] == "int.gmail.send_email"
+
+
+def test_agent_pending_empty(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({"pending_calls": []}))
+
+    resp = client.get("/api/plugins/ceodigital/agents/pending")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "pending": []}
+
+
+def test_agent_schedules_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({}))
+
+    resp = client.get("/api/plugins/ceodigital/agents/schedules")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
 # ---------------------------------------------------------------------------
 # Config shapes never hardcoded
 # ---------------------------------------------------------------------------

@@ -14,8 +14,10 @@ import { type PluginRestOptions } from '@hermes/plugin-sdk'
 import type {
   AgentAskEnvelope,
   AgentFlowsEnvelope,
+  AgentPendingEnvelope,
   AgentRunEnvelope,
   AgentRunsEnvelope,
+  AgentSchedulesEnvelope,
   AgentsEnvelope,
   DealsEnvelope,
   LeadsEnvelope,
@@ -101,3 +103,20 @@ export const askAgent = (slug: string, prompt: string) =>
 
 export const RUNS_KEY = ['ceodigital', 'agent-runs'] as const
 export const runKey = (runId: string) => ['ceodigital', 'agent-runs', runId] as const
+export const SCHEDULES_KEY = ['ceodigital', 'agent-schedules'] as const
+export const PENDING_KEY = ['ceodigital', 'agent-pending'] as const
+
+/** GET /agents/schedules — autonomous CEO agent schedules (agent.schedules.list). */
+export const fetchAgentSchedules = (params?: { agentId?: string; activeOnly?: boolean }) => {
+  const qs = new URLSearchParams()
+  if (params?.agentId) qs.set('agentId', params.agentId)
+  if (params?.activeOnly) qs.set('activeOnly', 'true')
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<AgentSchedulesEnvelope>(`/agents/schedules${suffix}`)
+}
+
+/** GET /agents/pending — HITL tool calls awaiting decision (read-only; approve stays in tenant UI). */
+export const fetchPendingApprovals = (runId?: string) => {
+  const suffix = runId ? `?runId=${encodeURIComponent(runId)}` : ''
+  return call<AgentPendingEnvelope>(`/agents/pending${suffix}`)
+}

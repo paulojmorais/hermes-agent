@@ -167,6 +167,50 @@ export type AgentRunsEnvelope = AgentRunsResponse | CrmError
 export type AgentRunEnvelope = AgentRunResponse | CrmError
 export type AgentAskEnvelope = AgentAskResponse | CrmError
 
+// ── Agent schedules + pending approvals (W5+ cont.) ─────────────────────────
+
+/** An autonomous CEO agent schedule row (`agent.schedules.list`). */
+export interface AgentScheduleRow {
+  id: string
+  agent_id: string
+  name: string | null
+  prompt?: string | null
+  cron_expr?: string | null
+  timezone?: string | null
+  is_active: boolean
+  last_run_at?: string | null
+  last_run_status?: string | null
+  last_run_id?: string | null
+  [key: string]: unknown
+}
+
+/** A HITL tool call awaiting decision (`agent.runs.pending_calls.list`). */
+export interface PendingCallRow {
+  id: string
+  run_id?: string | null
+  step_index?: number | null
+  tool_name: string
+  tool_input?: unknown
+  status: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+/** GET /agents/schedules — success envelope. */
+export interface AgentSchedulesResponse {
+  ok: true
+  schedules: AgentScheduleRow[]
+}
+
+/** GET /agents/pending — success envelope. */
+export interface AgentPendingResponse {
+  ok: true
+  pending: PendingCallRow[]
+}
+
+export type AgentSchedulesEnvelope = AgentSchedulesResponse | CrmError
+export type AgentPendingEnvelope = AgentPendingResponse | CrmError
+
 /** Statuses the design doc names; anything the backend adds renders via the
  *  i18n fallback (the raw id). */
 export const WORKITEM_STATUSES = [

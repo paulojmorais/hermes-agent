@@ -17,14 +17,25 @@ import {
   AGENTS_KEY,
   askAgent,
   fetchAgentFlows,
+  fetchAgentSchedules,
   fetchAgents,
+  fetchPendingApprovals,
   fetchRun,
   fetchRuns,
+  PENDING_KEY,
   RUNS_KEY,
-  runKey
+  runKey,
+  SCHEDULES_KEY
 } from '../api'
 import { useCeodigital } from '../i18n'
-import type { AgentAskResult, AgentRunRow, AgentRow, CeodigitalErrorCode } from '../types'
+import type {
+  AgentAskResult,
+  AgentRunRow,
+  AgentRow,
+  AgentScheduleRow,
+  CeodigitalErrorCode,
+  PendingCallRow
+} from '../types'
 
 const KNOWN_CODES = ['mcp_not_configured', 'mcp_unreachable', 'tenant_not_found'] as const
 
@@ -85,16 +96,24 @@ export function AgentsPage() {
   const agentsQ = useQuery({ queryKey: AGENTS_KEY, queryFn: fetchAgents as () => Promise<unknown> })
   const flowsQ = useQuery({ queryKey: AGENTFLOWS_KEY, queryFn: fetchAgentFlows as () => Promise<unknown> })
   const runsQ = useQuery({ queryKey: RUNS_KEY, queryFn: fetchRuns as () => Promise<unknown> })
+  const schedulesQ = useQuery({ queryKey: SCHEDULES_KEY, queryFn: fetchAgentSchedules as () => Promise<unknown> })
+  const pendingQ = useQuery({ queryKey: PENDING_KEY, queryFn: fetchPendingApprovals as () => Promise<unknown> })
 
-  const { code, agents, flows, runs } = useMemo(() => {
+  const { code, agents, flows, runs, schedules, pending } = useMemo(() => {
     const agents = pickRows(agentsQ.data, 'agents').map(asAgent)
     const flows = pickRows(flowsQ.data, 'workflows')
     const runs = pickRows(runsQ.data, 'runs').map(asRun)
+    const schedules = pickRows(schedulesQ.data, 'schedules') as unknown as AgentScheduleRow[]
+    const pending = pickRows(pendingQ.data, 'pending') as unknown as PendingCallRow[]
     const failure =
-      agentsErrorCode(agentsQ.error) ?? agentsErrorCode(flowsQ.error) ?? agentsErrorCode(runsQ.error)
+      agentsErrorCode(agentsQ.error) ??
+      agentsErrorCode(flowsQ.error) ??
+      agentsErrorCode(runsQ.error) ??
+      agentsErrorCode(schedulesQ.error) ??
+      agentsErrorCode(pendingQ.error)
     const anyData = agents.length || flows.length || runs.length
-    return { code: anyData ? null : failure, agents, flows, runs }
-  }, [agentsQ.data, agentsQ.error, flowsQ.data, flowsQ.error, runsQ.data, runsQ.error])
+    return { code: anyData ? null : failure, agents, flows, runs, schedules, pending }
+  }, [agentsQ.data, agentsQ.error, flowsQ.data, flowsQ.error, runsQ.data, runsQ.error, schedulesQ.data, schedulesQ.error, pendingQ.data, pendingQ.error])
 
   // Lazy detail fetch for the expanded run row.
   const expandedDetailQ = useQuery({
@@ -103,7 +122,7 @@ export function AgentsPage() {
     enabled: !!expandedRun
   })
 
-  const loading = agentsQ.isLoading || flowsQ.isLoading || runsQ.isLoading
+  const loading = agentsQ.isLoading || flowsQ.isLoading || runsQ.isLoading || schedulesQ.isLoading || pendingQ.isLoading
   const errorCopy = code === null ? k.errors.fetch : k.errors[code]
   const activeSlug = selectedSlug || agents[0]?.slug || ''
 
@@ -252,6 +271,74 @@ export function AgentsPage() {
                       onToggle={() => setExpandedRun(expandedRun === r.id ? null : r.id)}
                       k={k}
                     />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          {/* Pending approvals */}
+          <section className="py-2">
+            <SectionTitle icon="shield" title={k.agents.pending.title} />
+            {pending.length === 0 ? (
+              <p className="px-4 pb-2 text-xs text-(--ui-text-tertiary)">{k.agents.pending.empty}</p>
+            ) : (
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-(--ui-stroke-secondary)">
+                    {(['tool', 'run', 'status'] as const).map(h => (
+                      <th className="px-4 py-1.5 text-[0.625rem] font-medium tracking-wide text-(--ui-text-tertiary)" key={h}>
+                        {k.agents.pending.headers[h]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pending.map(p => (
+                    <tr className="border-b border-(--ui-stroke-secondary) last:border-0" key={p.id}>
+                      <td className="px-3 py-2 font-mono text-[0.6875rem] text-(--ui-text-secondary)">{p.tool_name}</td>
+                      <td className="px-3 py-2 text-[0.75rem] text-(--ui-text-tertiary)">{p.run_id ?? '—'}</td>
+                      <td className="px-3 py-2 text-[0.75rem] text-amber-500">{p.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {pending.length > 0 && (
+              <p className="px-4 pt-1 text-[0.6875rem] text-(--ui-text-tertiary)">
+                {k.agents.pending.goToTenant} →
+              </p>
+            )}
+          </section>
+
+          {/* Agent schedules */}
+          <section className="py-2">
+            <SectionTitle icon="clock" title={k.agents.schedules.title} />
+            {schedules.length === 0 ? (
+              <p className="px-4 pb-2 text-xs text-(--ui-text-tertiary)">{k.agents.schedules.empty}</p>
+            ) : (
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-(--ui-stroke-secondary)">
+                    {(['name', 'cron', 'active', 'lastRun'] as const).map(h => (
+                      <th className="px-4 py-1.5 text-[0.625rem] font-medium tracking-wide text-(--ui-text-tertiary)" key={h}>
+                        {k.agents.schedules.headers[h]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedules.map(s => (
+                    <tr className="border-b border-(--ui-stroke-secondary) last:border-0" key={s.id}>
+                      <td className="px-3 py-2 text-[0.8125rem] text-foreground">{s.name ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-[0.6875rem] text-(--ui-text-tertiary)">{s.cron_expr ?? '—'}</td>
+                      <td className="px-3 py-2 text-[0.75rem] text-(--ui-text-secondary)">
+                        {s.is_active ? '●' : '○'}
+                      </td>
+                      <td className="px-3 py-2 text-[0.75rem] text-(--ui-text-tertiary)">
+                        {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : '—'}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

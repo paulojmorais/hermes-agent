@@ -474,3 +474,44 @@ def get_agent_run(run_id: str) -> JSONResponse:
     except Exception:
         log.exception("ceodigital agent.runs get failed")
         return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/agents/schedules")
+def list_agent_schedules(agentId: Optional[str] = None, activeOnly: bool = False) -> JSONResponse:
+    """List autonomous CEO agent schedules (MCP ``agent.schedules.list``, read-only)."""
+    try:
+        args: Dict[str, Any] = {"activeOnly": bool(activeOnly)}
+        if agentId:
+            args["agentId"] = agentId
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agent.schedules.list", args)
+        rows = _rows_from_key(payload, "schedules")
+        return JSONResponse(content={"ok": True, "schedules": rows})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agent.schedules list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/agents/pending")
+def list_pending_approvals(runId: Optional[str] = None) -> JSONResponse:
+    """List HITL tool calls awaiting decision (MCP ``agent.runs.pending_calls.list``).
+
+    Read-only: approval/denial is intentionally NOT exposed through the MCP —
+    it stays in the tenant UI (per ceodigital design), so this just surfaces
+    pending work + the tenant approval URL for the desktop user.
+    """
+    try:
+        args: Dict[str, Any] = {}
+        if runId:
+            args["runId"] = runId
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agent.runs.pending_calls.list", args)
+        rows = _rows_from_key(payload, "pending_calls")
+        return JSONResponse(content={"ok": True, "pending": rows})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agent.runs.pending_calls list failed")
+        return _maybe_error(ERR_UNREACHABLE)
