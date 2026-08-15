@@ -140,3 +140,46 @@ def test_locales_dir_env_override_ignored_when_missing(tmp_path, monkeypatch):
     assert result.name == "locales"
 
 
+# ---------------------------------------------------------------------------
+# W7 -- branded Portuguese (pt) prose translations
+# ---------------------------------------------------------------------------
+
+
+def test_pt_gateway_prose_is_translated_not_english():
+    """W7: the high-impact gateway prose keys must render in pt-PT, not fall
+    back to English."""
+    pt = _flatten(_load_raw("pt"))
+    for key in (
+        "gateway.context.header",
+        "gateway.context.estimated",
+        "gateway.context.no_data",
+        "gateway.kanban.wake.message",
+        "gateway.kanban.wake.handoff",
+        "gateway.kanban.wake.guidance",
+        "gateway.resume.blocked_not_owner",
+        "gateway.resume.matrix_blocked_no_origin",
+        "gateway.status.context",
+        "gateway.status.tokens",
+    ):
+        value = pt[key]
+        # It must differ from English (translated) and keep the placeholders.
+        en_value = _flatten(_load_raw("en"))[key]
+        assert value != en_value, f"pt {key} still English: {value!r}"
+        import re
+        ph = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+        assert ph.findall(value) == ph.findall(en_value), f"pt {key} placeholder drift"
+
+
+def test_t_pt_gateway_prose_resolves_and_formats():
+    """t() must resolve a W7 pt key and interpolate its placeholders."""
+    i18n.reset_language_cache()
+    try:
+        assert "Janela de Contexto" in i18n.t("gateway.context.header", lang="pt")
+        assert i18n.t("gateway.context.estimated", lang="pt", count=12, messages=3) == (
+            "Contexto estimado: ~12 tokens em 3 mensagens"
+        )
+        assert "bloqueado" in i18n.t("gateway.resume.blocked_not_owner", lang="pt")
+    finally:
+        i18n.reset_language_cache()
+
+
