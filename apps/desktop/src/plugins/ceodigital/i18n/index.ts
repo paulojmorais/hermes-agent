@@ -1,0 +1,91 @@
+/**
+ * Plugin-scoped i18n for CEODigital — parallel bundles per locale
+ * (`en`/`pt`/`fr` from the first commit, proving the ownership-map §6 i18n
+ * layer), shipped under the plugin id via `ctx.i18n.register` — never touching
+ * core `en.ts`. `useCeodigital()` returns the stringly-typed shape-bound
+ * translator so the page keeps typed `k.page.title` access; the plugins also
+ * carry `pt-PT`/`fr-FR` from the start even though the app's core `Locale`
+ * union only selects them after the fork's branding wave extends it.
+ */
+
+import { type PluginLocaleBundles, type PluginMessages, type PluginTranslate, usePluginI18n } from '@hermes/plugin-sdk'
+import { useMemo } from 'react'
+
+import type { WorkItemStatus } from '../types'
+import { en } from './en'
+import { fr } from './fr'
+import { pt } from './pt'
+
+export { en } from './en'
+export { fr } from './fr'
+export { pt } from './pt'
+
+/** The message shape W3 renders. Keys: nav.*, page.*, workitem.*, errors.*. */
+export interface CeodigitalMessages {
+  nav: { label: string }
+  page: {
+    title: string
+    empty: string
+    openCommand: string
+  }
+  workitem: {
+    status: Partial<Record<WorkItemStatus, string>>
+    headers: {
+      id: string
+      title: string
+      status: string
+      assignee: string
+      updated: string
+    }
+    unassigned: string
+  }
+  errors: {
+    fetch: string
+    mcp_not_configured: string
+    mcp_unreachable: string
+    tenant_not_found: string
+  }
+}
+
+/** Registered via `ctx.i18n.register` at plugin load (disposer tracked). The
+ *  `pt`/`fr` keys are NOT in the core `Locale` union yet — that's the branding
+ *  fork's later wave — so the map keeps them via an intersection while still
+ *  looking like a `PluginLocaleBundles` to the SDK's `register`. */
+export const CEODIGITAL_LOCALES: PluginLocaleBundles & Record<'en' | 'pt' | 'fr', PluginMessages> = { en, pt, fr }
+
+// Bind the message SHAPE to a plugin translator: every leaf resolves forward
+// through `t(path)`. One tiny generic instead of a hand-written accessor.
+type Bound<T> = {
+  [K in keyof T]: T[K] extends (...args: never[]) => string
+    ? (...args: Parameters<T[K]>) => string
+    : T[K] extends object
+      ? Bound<T[K]>
+      : string
+}
+
+function bind<T extends object>(t: PluginTranslate, template: T, prefix = ''): Bound<T> {
+  const out = {} as Record<string, unknown>
+
+  for (const [key, value] of Object.entries(template)) {
+    const path = prefix ? `${prefix}.${key}` : key
+    out[key] =
+      value && typeof value === 'object'
+        ? bind(t, value as object, path)
+        : (() => t(path))()
+  }
+
+  return out as Bound<T>
+}
+
+export type CEODIGITALText = Bound<CeodigitalMessages>
+
+/** The CEODigital strings for the active locale — one hook every page reads. */
+export function useCeodigital(): CEODIGITALText {
+  const t = usePluginI18n('ceodigital')
+
+  return useMemo(() => bind(t, en), [t])
+}
+
+/** Status label — named statuses get their bundle copy, anything else its raw id. */
+export const statusLabel = (k: CEODIGITALText, status: string) =>
+  k.workitem.status[status as WorkItemStatus] ?? status

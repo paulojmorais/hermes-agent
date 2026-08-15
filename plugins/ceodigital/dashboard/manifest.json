@@ -1,0 +1,10 @@
+{
+  "name": "ceodigital",
+  "label": "CEODigital",
+  "description": "Manage your CEODigital tenant work items from the Hermes desktop — read-only proxy over the platform MCP (Direction A)",
+  "icon": "Folder",
+  "version": "0.3.0",
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

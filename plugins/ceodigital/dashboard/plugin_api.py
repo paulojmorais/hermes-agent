@@ -1,0 +1,302 @@
+"""CEODigital dashboard plugin — backend API routes (the "plugin door").
+
+Mounted at ``/api/plugins/ceodigital/*`` by the dashboard plugin system
+(``hermes_cli.web_server._mount_plugin_api_routes``), mirroring the kanban
+plugin's ``plugins/kanban/dashboard/plugin_api.py``.
+
+This layer is deliberately thin and read-only (W3): it proxies work items
+from the CEODigital platform over its MCP endpoint (Direction A, march of
+the fork ownership map §3.1/§3.2). The Hermes renderer never sees the MCP
+credentials — tenant slug and MCP token live in the host config, server
+side, and are never rendered into a response.
+
+Security note
+-------------
+* Config (``ceodigital.app_url`` / ``ceodigital.tenant_slug`` /
+  ``ceodigital.mcp_token``) is read from ``HERMES_HOME/config.yaml`` layered
+  with ``HERMES_HOME/ceodigital_overrides.yaml`` and ``CEODIGITAL_*`` env
+  vars. Never hardcoded (ownership map §10.3.2/§10.3.7).
+* The MCP bearer token is never written to logs or error bodies.
+* HTTP responses always use the ``{ok, ...}`` envelope, so the desktop
+  REST caller can branch on ``data.ok`` regardless of the error branch.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+from typing import Any, Dict, List, Optional
+
+import httpx
+
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+from hermes_constants import get_hermes_home
+
+log = logging.getLogger(__name__)
+
+router = APIRouter()
+
+# CEODigital platform MCP mount. The scheme/host are NEVER hardcoded — they
+# come from config (``ceodigital.app_url``). The ``{slug}`` is the tenant's
+# own slug from config (``ceodigital.tenant_slug``), never a production slug.
+_MCP_PATH = "/api/public/mcp"
+
+# Config keys (all optional per se; a missing value yields a typed error).
+CFG_SECTION = "ceodigital"
+CFG_KEYS = ("app_url", "tenant_slug", "mcp_token")
+ENV_KEYS = {
+    "app_url": "CEODIGITAL_APP_URL",
+    "tenant_slug": "CEODIGITAL_TENANT_SLUG",
+    "mcp_token": "CEODIGITAL_MCP_TOKEN",
+}
+
+# Typed error codes (the contract in the design doc §5).
+ERR_NOT_CONFIGURED = "mcp_not_configured"
+ERR_UNREACHABLE = "mcp_unreachable"
+ERR_TENANT_NOT_FOUND = "tenant_not_found"
+
+
+class _TypedError(Exception):
+    """Carries one of the typed envelope error codes (never a secret)."""
+
+    def __init__(self, code: str, *args: Any) -> None:
+        super().__init__(code, *args)
+        self.code = code
+
+
+def _as_error(code: str) -> JSONResponse:
+    """Typed error envelope with a matching HTTP status.
+
+    The desktop renderer branches on ``data.ok`` (design doc §5); the
+    HTTP status is a courtesy for logs/proxies — the envelope body is the
+    contract and never carries the MCP token or a concrete URL/slug.
+    """
+    status = {
+        ERR_NOT_CONFIGURED: 503,
+        ERR_UNREACHABLE: 502,
+        ERR_TENANT_NOT_FOUND: 404,
+        "not_found": 404,
+    }.get(code, 500)
+    return JSONResponse(content={"ok": False, "error": code}, status_code=status)
+
+
+# ---------------------------------------------------------------------------
+# Config (never hard-coded, per ownership map §10.3.2 / §10.3.7)
+# ---------------------------------------------------------------------------
+
+
+def _load_config() -> Dict[str, Any]:
+    """Read the ``ceodigital`` config with layered precedence.
+
+    1. ``HERMES_HOME/config.yaml``  — ``ceodigital:`` section
+    2. ``HERMES_HOME/ceodigital_overrides.yaml`` — dev/provisioning overlay
+    3. ``CEODIGITAL_*`` environment variables — highest precedence
+
+    None of these contain a production URL/slug in this repo's source.
+    """
+    cfg: Dict[str, Any] = {}
+
+    # 1. config.yaml via the project config loader (profile-aware).
+    try:
+        from hermes_cli.config import cfg_get, load_config_readonly
+
+        full = load_config_readonly() or {}
+        section = cfg_get(full, CFG_SECTION)
+        if isinstance(section, dict):
+            cfg.update({k: v for k, v in section.items() if v is not None})
+    except Exception as exc:  # pragma: no cover - host config optional
+        log.warning("ceodigital: config.yaml unavailable: %s", exc)
+
+    # 2. overrides file (provisioning / dev overlay).
+    try:
+        import yaml  # type: ignore
+
+        overrides_path = get_hermes_home() / "ceodigital_overrides.yaml"
+        if overrides_path.exists():
+            raw = yaml.safe_load(overrides_path.read_text(encoding="utf-8")) or {}
+            if isinstance(raw, dict):
+                for k, v in raw.items():
+                    if v is not None:
+                        cfg[k] = v
+    except Exception as exc:  # pragma: no cover - optional overlay
+        log.warning("config: could not read ceodigital_overrides.yaml: %s", exc)
+
+    # 3. environment overrides win over every file layer.
+    for key, env_name in ENV_KEYS.items():
+        if os.environ.get(env_name):
+            cfg[key] = os.environ[env_name]
+
+    return {k: cfg.get(k) for k in CFG_KEYS}
+
+
+def _build_mcp_url(cfg: Dict[str, Any]) -> Optional[str]:
+    """Compose the CEODigital MCP endpoint URL, or ``None`` when config
+    is incomplete (that maps to ``mcp_not_configured``)."""
+    app_url = (cfg.get("app_url") or "").strip().rstrip("/")
+    slug = (cfg.get("tenant_slug") or "").strip()
+    if not app_url or not slug:
+        return None
+    return f"{app_url}{_MCP_PATH}/{slug}"
+
+
+# ---------------------------------------------------------------------------
+# MCP transport (httpx — already a project dependency)
+# ---------------------------------------------------------------------------
+
+
+def _mcp_fetch(cfg: Dict[str, Any], tool_name: str, arguments: Dict[str, Any]) -> Any:
+    """Call a CEODigital MCP tool and return its (unwrapped) payload.
+
+    Raises :class:`_TypedError` with a typed code so handlers can build the
+    envelope without ever exposing the token or a literal URL/slug.
+    """
+    token = (cfg.get("mcp_token") or "").strip()
+    url = _build_mcp_url(cfg)
+    if not url or not token:
+        raise _TypedError(ERR_NOT_CONFIGURED)
+
+    body = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {"name": tool_name, "arguments": arguments},
+    }
+
+    try:
+        resp = httpx.post(
+            url,
+            json=body,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=30.0,
+        )
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout, httpx.HTTPError) as exc:
+        # Never echo the endpoint/headers/token. The code is the contract.
+        log.warning("ceodigital MCP unreachable for tool %s: %s", tool_name, type(exc).__name__)
+        raise _TypedError(ERR_UNREACHABLE)
+
+    if resp.status_code == 404:
+        raise _TypedError(ERR_TENANT_NOT_FOUND)
+    if resp.status_code == 401 or resp.status_code == 403:
+        raise _TypedError(ERR_NOT_CONFIGURED)
+    if resp.status_code >= 400:
+        raise _TypedError(ERR_UNREACHABLE)
+
+    try:
+        payload = resp.json()
+    except ValueError:
+        raise _TypedError(ERR_UNREACHABLE)
+
+    return _unwrap_mcp_result(payload)
+
+
+def _unwrap_mcp_result(payload: Any) -> Any:
+    """Tolerate both a raw CEODigital payload and a JSON-RPC envelope.
+
+    The MCP server may answer with either:
+      * a plain JSON object carrying the data (``{workitems: [...]}``), or
+      * a JSON-RPC result (``{result: {content: [{type: "text", text}]}}``)
+        where the tool output text itself is JSON.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    if "result" in payload:
+        result = payload["result"]
+        if isinstance(result, dict):
+            content = result.get("content")
+            if isinstance(content, list):
+                texts = [
+                    item.get("text")
+                    for item in content
+                    if isinstance(item, dict) and item.get("type") == "text"
+                    and isinstance(item.get("text"), str) and item.get("text")
+                ]
+                if texts:
+                    joined = "\n".join(texts)
+                    try:
+                        return json.loads(joined)
+                    except ValueError:
+                        return {"text": joined}
+            return result
+    return payload
+
+
+# ---------------------------------------------------------------------------
+# Shared output helpers
+# ---------------------------------------------------------------------------
+
+
+def _normalize_workitem(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital work-item row onto the W3 ``WorkItemRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or row.get("workitem_id") or ""),
+        "title": row.get("title") or row.get("name") or "",
+        "status": row.get("status") or row.get("state") or "",
+        "assignee": row.get("assignee"),
+        "summary": row.get("summary") or row.get("description"),
+        "updated_at": row.get("updated_at") or row.get("updatedAt"),
+    }
+
+
+def _rows_from(payload: Any) -> List[Dict[str, Any]]:
+    """Extract a list of item rows from an MCP payload of any tolerated shape."""
+    rows: List[Any]
+    if isinstance(payload, list):
+        rows = payload
+    elif isinstance(payload, dict):
+        data = payload.get("workitems") or payload.get("items") or payload.get("projects") or payload.get("data")
+        rows = data if isinstance(data, list) else []
+    else:
+        rows = []
+    return [_normalize_workitem(r) for r in rows if isinstance(r, dict)]
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+
+def _maybe_error(code: str) -> JSONResponse:
+    return _as_error(code)
+
+
+def _normalize_from_payload(payload: Any) -> List[Dict[str, Any]]:
+    return _rows_from(payload)
+
+
+@router.get("/workitems")
+def list_workitems() -> JSONResponse:
+    """List the caller's CEODigital work items (read-only, MCP ``workitems_list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workitems_list", {})
+        return JSONResponse(content={"ok": True, "workitems": _normalize_from_payload(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: workitems list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/workitems/{workitem_id}")
+def get_workitem(workitem_id: str) -> JSONResponse:
+    """Return a single work item by id (MCP ``workitems_get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workitems_get", {"id": workitem_id})
+        rows = _normalize_from_payload(payload)
+        if not rows:
+            return _maybe_error("not_found")
+        # For detail we keep the row whose id matched, or the first row from
+        # a single-item MCP payload.
+        item = rows[0] if len(rows) > 1 or rows[0]["id"] == workitem_id else rows[0]
+        return JSONResponse(content={"ok": True, "workitem": item})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception as exc:
+        log.exception("ceodigital workitems get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
