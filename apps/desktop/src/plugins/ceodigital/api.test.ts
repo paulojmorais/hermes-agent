@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  AGENTFLOWS_KEY,
+  AGENTS_KEY,
   bindApi,
   DEALS_KEY,
+  fetchAgentFlows,
+  fetchAgents,
   fetchDeals,
   fetchLeads,
   fetchWorkItem,
@@ -11,7 +15,7 @@ import {
   workItemKey,
   WORKITEMS_KEY
 } from './api'
-import type { CrmError, CrmRow, WorkItemRow, WorkItemsError, WorkItemsResponse } from './types'
+import type { AgentRow, CrmError, CrmRow, WorkItemRow, WorkItemsError, WorkItemsResponse } from './types'
 
 type Rest = <T>(path: string, opts?: unknown) => Promise<T>
 
@@ -136,6 +140,52 @@ describe('ceodigital api', () => {
     it('rejects loudly when used before bindApi', async () => {
       await expect(fetchLeads()).rejects.toThrow('ceodigital api not ready')
       await expect(fetchDeals()).rejects.toThrow('ceodigital api not ready')
+    })
+  })
+
+  describe('agents + nativeflows (W5)', () => {
+    const agent: AgentRow = {
+      id: 'a-1',
+      slug: 'ops-lead',
+      name: 'Ops Lead',
+      description: 'Runs ops',
+      status: 'active',
+      is_active: true,
+      exposed_as_mcp_tool: true
+    }
+
+    it('exposes the W5 query keys', () => {
+      expect(AGENTS_KEY).toEqual(['ceodigital', 'agents'])
+      expect(AGENTFLOWS_KEY).toEqual(['ceodigital', 'agentflows'])
+    })
+
+    it('when bound, fetches agents and nativeflows through ctx.rest', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValueOnce({ ok: true, agents: [agent] })
+      rest.mockResolvedValueOnce({ ok: true, workflows: [{ id: 'w-1', name: 'Onboarding', status: 'active' }] })
+
+      await expect(fetchAgents()).resolves.toEqual({ ok: true, agents: [agent] })
+      await expect(fetchAgentFlows()).resolves.toEqual({
+        ok: true,
+        workflows: [expect.anything()]
+      })
+      expect(rest).toHaveBeenCalledWith('/agents')
+      expect(rest).toHaveBeenCalledWith('/agentflows')
+    })
+
+    it('passes through the typed error envelope', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      const error: CrmError = { ok: false, error: 'mcp_not_configured' }
+      rest.mockResolvedValue(error)
+
+      await expect(fetchAgents()).resolves.toEqual(error)
+    })
+
+    it('rejects loudly when used before bindApi', async () => {
+      await expect(fetchAgents()).rejects.toThrow('ceodigital api not ready')
+      await expect(fetchAgentFlows()).rejects.toThrow('ceodigital api not ready')
     })
   })
 })

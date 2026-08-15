@@ -45,6 +45,25 @@ export const en: CeodigitalMessages = {
     },
     unassigned: 'Unassigned'
   },
+  agents: {
+    title: 'CEODigital Agents',
+    empty: 'No CEO agents found for your tenant yet.',
+    headers: {
+      name: 'Name',
+      slug: 'Slug',
+      status: 'Status',
+      exposed: 'Exposed as MCP'
+    },
+    workflows: {
+      title: 'NativeFlows',
+      empty: 'No NativeFlow workflows found for your tenant yet.',
+      headers: {
+        name: 'Name',
+        status: 'Status',
+        trigger: 'Trigger'
+      }
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
     mcp_not_configured: 'CEODigital MCP is not configured. Connect it in your CEODigital settings first.',

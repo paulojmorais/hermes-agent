@@ -45,6 +45,12 @@ export interface CeodigitalMessages {
     headers: { id: string; title: string; status: string; value: string }
     unassigned: string
   }
+  agents: {
+    title: string
+    empty: string
+    headers: { name: string; slug: string; status: string; exposed: string }
+    workflows: { title: string; empty: string; headers: { name: string; status: string; trigger: string } }
+  }
   errors: {
     fetch: string
     mcp_not_configured: string

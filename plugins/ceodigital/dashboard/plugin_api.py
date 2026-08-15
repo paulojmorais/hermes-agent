@@ -335,6 +335,52 @@ def list_deals() -> JSONResponse:
         return _maybe_error(ERR_UNREACHABLE)
 
 
+def _rows_from_key(payload: Any, key: str) -> List[Dict[str, Any]]:
+    """Extract rows from an MCP payload whose success key is ``key`` (e.g.
+    ``agents`` or ``workflows``). Accepts a bare list, a ``{key: [...]}``
+    object, or an already-unwrapped structure. Mirrors ``_rows_from_crm``."""
+    if isinstance(payload, list):
+        return [r for r in payload if isinstance(r, dict)]
+    if isinstance(payload, dict):
+        for candidate in (key, "items", "data", "rows", "results"):
+            rows = payload.get(candidate)
+            if isinstance(rows, list):
+                return [r for r in rows if isinstance(r, dict)]
+        return []
+    return []
+
+
+@router.get("/agents")
+def list_agents() -> JSONResponse:
+    """List the tenant's CEO agents catalog (read-only, MCP ``agents.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agents.list", {"is_active": True})
+        rows = _rows_from_key(payload, "agents")
+        return JSONResponse(content={"ok": True, "agents": rows})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: agents list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/agentflows")
+def list_agentflows() -> JSONResponse:
+    """List the tenant's NativeFlow workflows (read-only, MCP
+    ``agentflow.workflows.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agentflow.workflows.list", {})
+        rows = _rows_from_key(payload, "workflows")
+        return JSONResponse(content={"ok": True, "workflows": rows})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: agentflows list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
 @router.get("/workitems")
 def list_workitems() -> JSONResponse:
     """List the caller's CEODigital work items (read-only, MCP ``workitems_list``)."""

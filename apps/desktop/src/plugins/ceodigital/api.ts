@@ -11,7 +11,14 @@
 
 import { type PluginRestOptions } from '@hermes/plugin-sdk'
 
-import type { DealsEnvelope, LeadsEnvelope, WorkItemResponse, WorkItemsEnvelope } from './types'
+import type {
+  AgentFlowsEnvelope,
+  AgentsEnvelope,
+  DealsEnvelope,
+  LeadsEnvelope,
+  WorkItemResponse,
+  WorkItemsEnvelope
+} from './types'
 
 type Rest = <T>(path: string, opts?: PluginRestOptions) => Promise<T>
 
@@ -23,6 +30,8 @@ export const WORKITEMS_KEY = ['ceodigital', 'workitems'] as const
 export const workItemKey = (id: string) => ['ceodigital', 'workitems', id] as const
 export const LEADS_KEY = ['ceodigital', 'leads'] as const
 export const DEALS_KEY = ['ceodigital', 'deals'] as const
+export const AGENTS_KEY = ['ceodigital', 'agents'] as const
+export const AGENTFLOWS_KEY = ['ceodigital', 'agentflows'] as const
 
 /** Bind the plugin's REST door at register time, return a disposer for
  *  unload/disable. Using any fetch before `bindApi` rejects loudly — a missed
@@ -55,3 +64,11 @@ export const fetchLeads = () => call<LeadsEnvelope>('/leads')
 
 /** GET /deals — the tenant's CRM deals (proxy over MCP crm_deals_list). */
 export const fetchDeals = () => call<DealsEnvelope>('/deals')
+
+// ── Agents + NativeFlows (W5) ──────────────────────────────────────────────
+
+/** GET /agents — the tenant's CEO agents catalog (MCP agents.list). */
+export const fetchAgents = () => call<AgentsEnvelope>('/agents')
+
+/** GET /agentflows — the tenant's NativeFlow workflows (MCP agentflow.workflows.list). */
+export const fetchAgentFlows = () => call<AgentFlowsEnvelope>('/agentflows')

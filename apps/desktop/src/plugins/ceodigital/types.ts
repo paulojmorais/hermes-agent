@@ -71,6 +71,45 @@ export interface CrmError {
 export type LeadsEnvelope = LeadsResponse | CrmError
 export type DealsEnvelope = DealsResponse | CrmError
 
+// ── Agents + NativeFlows (W5) ──────────────────────────────────────────────
+
+/** A CEO agent row from the catalog (`agents.list`). */
+export interface AgentRow {
+  id: string
+  slug: string
+  name: string | null
+  description: string | null
+  status: string | null | undefined
+  is_active: boolean
+  exposed_as_mcp_tool?: boolean
+  [key: string]: unknown
+}
+
+/** A NativeFlow workflow row (`agentflow.workflows.list`). */
+export interface AgentFlowRow {
+  id: string
+  name: string
+  status: 'draft' | 'active' | 'archived' | string
+  trigger_type?: string
+  description?: string | null
+  [key: string]: unknown
+}
+
+/** GET /agents — success envelope. */
+export interface AgentsResponse {
+  ok: true
+  agents: AgentRow[]
+}
+
+/** GET /agentflows — success envelope. */
+export interface AgentFlowsResponse {
+  ok: true
+  workflows: AgentFlowRow[]
+}
+
+export type AgentsEnvelope = AgentsResponse | CrmError
+export type AgentFlowsEnvelope = AgentFlowsResponse | CrmError
+
 /** Statuses the design doc names; anything the backend adds renders via the
  *  i18n fallback (the raw id). */
 export const WORKITEM_STATUSES = [

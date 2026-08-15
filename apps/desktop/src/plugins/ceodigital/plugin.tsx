@@ -22,6 +22,7 @@ import {
 
 import { bindApi } from './api'
 import { CEODIGITAL_LOCALES } from './i18n'
+import { AgentsPage } from './pages/Agents'
 import { DealsPage } from './pages/Deals'
 import { LeadsPage } from './pages/Leads'
 import { ProjectsPage } from './pages/Projects'
@@ -97,6 +98,32 @@ const plugin: HermesPlugin = {
           label: t('crm.deals.title'),
           path: '/ceodigital/deals'
         } satisfies SidebarNavContribution
+      },
+      {
+        id: 'agents-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/agents' } satisfies RouteContribution,
+        render: () => <AgentsPage />
+      },
+      {
+        id: 'agents-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 42,
+        data: {
+          codicon: 'hubot',
+          label: t('agents.title'),
+          path: '/ceodigital/agents'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-agents',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openAgents',
+          label: t('agents.title'),
+          keywords: ['ceodigital', 'agents', 'ceo', 'nativeflow'],
+          run: () => host.navigate('/ceodigital/agents')
+        } satisfies PaletteContribution
       }
     ])
   }

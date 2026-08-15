@@ -344,6 +344,66 @@ def test_deals_not_configured(plugin, client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Agents + NativeFlows (W5)
+# ---------------------------------------------------------------------------
+
+
+def test_agents_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"agents": [
+            {"id": "a1", "slug": "ops-lead", "name": "Ops Lead", "description": "Runs ops", "is_active": True},
+            {"id": "a2", "slug": "research", "name": "Research", "description": None, "is_active": True},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/agents")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [a["slug"] for a in data["agents"]] == ["ops-lead", "research"]
+
+
+def test_agents_empty(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({"agents": []}))
+
+    resp = client.get("/api/plugins/ceodigital/agents")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "agents": []}
+
+
+def test_agentflows_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"workflows": [
+            {"id": "w1", "name": "Onboarding", "status": "active", "trigger_type": "manual"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/agentflows")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["workflows"][0]["name"] == "Onboarding"
+
+
+def test_agentflows_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({}))
+
+    resp = client.get("/api/plugins/ceodigital/agentflows")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
 # Config shapes never hardcoded
 # ---------------------------------------------------------------------------
 
