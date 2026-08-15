@@ -124,3 +124,63 @@ describe('usePluginI18n', () => {
     dispose()
   })
 })
+
+// W2 — branded locales (pt / fr) apply through the plugin translator.
+function SwitchToLocale({ code }: { code: 'pt' | 'fr' }) {
+  const { setLocale } = useI18n()
+
+  return (
+    <button onClick={() => void setLocale(code)} type="button">
+      to {code}
+    </button>
+  )
+}
+
+describe('branded locales (W2)', () => {
+  it('resolves pt and fr literals through the plugin translator', () => {
+    const dispose = registerPluginLocales('ceodigital', {
+      pt: { nav: { label: 'CEODigital' } },
+      fr: { nav: { label: 'CEODigital' } }
+    })
+
+    expect(translatePlugin('ceodigital', 'pt', 'nav.label', [])).toBe('CEODigital')
+    expect(translatePlugin('ceodigital', 'fr', 'nav.label', [])).toBe('CEODigital')
+
+    dispose()
+  })
+
+  it('falls back en → raw key when a branded locale lacks the key', () => {
+    const dispose = registerPluginLocales('ceodigital', { pt: { greet: 'Olá' } })
+
+    // pt has the key
+    expect(translatePlugin('ceodigital', 'pt', 'greet', [])).toBe('Olá')
+    // fr missing → en missing → raw key
+    expect(translatePlugin('ceodigital', 'fr', 'greet', [])).toBe('greet')
+
+    dispose()
+  })
+
+  it('re-renders a plugin view pt→fr on locale switch', () => {
+    const dispose = registerPluginLocales('ceodigital', {
+      pt: { greet: 'Olá' },
+      fr: { greet: 'Bonjour' }
+    })
+
+    render(
+      <I18nProvider configClient={null}>
+        <SwitchToLocale code="fr" />
+        <Probe pluginId="ceodigital" />
+      </I18nProvider>
+    )
+
+    // default en → raw key 'greet'
+    expect(screen.getByTestId('copy').textContent).toBe('greet')
+
+    // switch to fr → 'Bonjour' (the probe just rendered the last bundle, so we
+    // assert that the locale switch triggers a re-render with branded strings).
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.getByTestId('copy').textContent).toBe('Bonjour')
+
+    dispose()
+  })
+})
