@@ -24,13 +24,18 @@ tenant user → menu Connector → descarrega Connector Companion (Tauri)
       → "Instalar ceodigital-agent"
           installLocalApp (resolves release+sha256) → device_outbox kind='app.install'
           daemon → pip/binary (install.go)  ·  PC pessoal OU servidor (kind=desktop/server)
-          provisionAppAccess → gera MCP token (auto-revoga) + config pronto
-               { mcp: { url, header: Bearer } }  → o device fica ligado ao tenant
+      → "Ligar (MCP token)" → provisionAppAccess → gera MCP token + config pronto
+          { mcp: { url, header: Bearer } }  → mostrado 1× ao user
 ```
 
-O `plugin_api.py` lê `app_url` / `tenant_slug` / `mcp_token` de config/env — fonte em
-produção devia ser o que o App Manager provisiona (`config.push` / config do daemon),
-não um overrides manual. O overrides.yaml fica como **dev/fallback** apenas.
+**Como o config chega hoje (semi-manual, AppsTab.tsx):** após "Ligar", o UI mostra
+o JSON de config **uma única vez** com o botão "Copiar config" e a dica de colar em
+`~/.ceodigital/…`. O token NÃO volta a ser apresentado. **Não existe ainda um
+`config.push` automático que escreva o token em disco para o plugin ler** — isso é
+**evolução futura**, não blocker.
+
+Portanto no smoke real: `Instalar` → `Ligar` → **copiar o JSON** para o config da
+app — e o `/ceodigital/projects` lê aí. O overrides.yaml fica como **dev/fallback**.
 
 **O que smoke valida:**
 - Nomes reais das MCP tools no `ToolRegistry` (o backend chama `workitems_list` /
