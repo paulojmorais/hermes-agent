@@ -22,6 +22,15 @@ on:
   push:
     tags:
       - "ceodigital-v*"
+  # Manual trigger from the CEODigital control plane (Definições → Connector →
+  # Releases → Builds). When invoked, `version` comes from `inputs` instead of
+  # the tag; the build job picks whichever source is present.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versão semântica (ex.: 0.1.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write # attach the wheel to a GitHub Release
@@ -44,19 +53,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Extract version from tag
+      - name: Resolve version (tag or workflow_dispatch input)
         id: tag
         shell: bash
         run: |
-          TAG="${GITHUB_REF##*/}"             # ceodigital-v0.3.0
-          VERSION="${TAG#ceodigital-v}"        # 0.3.0
-          if [[ -z "$VERSION" || "$VERSION" == "$TAG" ]]; then
-            echo "::error::tag must be 'ceodigital-v<version>'"
-            exit 1
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="${VERSION_INPUT:-}"
+            if [[ -z "$VERSION" ]]; then
+              echo "::error::workflow_dispatch requires a 'version' input (ex.: 0.1.0)"
+              exit 1
+            fi
+          else
+            TAG="${GITHUB_REF##*/}"             # ceodigital-v0.3.0
+            VERSION="${TAG#ceodigital-v}"        # 0.3.0
+            if [[ -z "$VERSION" || "$VERSION" == "$TAG" ]]; then
+              echo "::error::tag must be 'ceodigital-v<version>'"
+              exit 1
+            fi
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # setuptools names the wheel by the dist-info version; we compute
-          # the expected filename after build (see step below via glob).
+          # The release tag name: on `push: tag` it equals the tag itself; on
+          # `workflow_dispatch` there is no tag, so we synthesize
+          # `ceodigital-v<version>` pointing at the commit that ran — the
+          # release asset shape is then identical either way.
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "tag_name=ceodigital-v${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_name=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -87,7 +113,7 @@ jobs:
         id: release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.tag.outputs.tag_name }}
           name: "CEODigital Agent ${{ steps.tag.outputs.version }}"
           files: dist/
           fail_on_unmatched_files: false
