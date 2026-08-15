@@ -86,6 +86,22 @@ describe('ceodigital plugin', () => {
     ).toBe(true)
   })
 
+  it('registers the CRM pages (leads + deals) and their sidebar rows', () => {
+    h.register()
+
+    const paths = h.contributions
+      .filter(c => c.area === 'routes')
+      .map(c => (c.data as { path?: string }).path)
+    expect(paths).toContain('/ceodigital/leads')
+    expect(paths).toContain('/ceodigital/deals')
+
+    const sidebarPaths = h.contributions
+      .filter(c => c.area === 'sidebar.nav')
+      .map(c => (c.data as { path?: string }).path)
+    expect(sidebarPaths).toContain('/ceodigital/leads')
+    expect(sidebarPaths).toContain('/ceodigital/deals')
+  })
+
   it('routes the palette command to the projects page', () => {
     h.register()
 

@@ -28,6 +28,23 @@ export const pt: CeodigitalMessages = {
     },
     unassigned: 'Sem responsável'
   },
+  crm: {
+    leads: {
+      title: 'Leads CEODigital',
+      empty: 'Ainda não há leads de CRM para o teu tenant.'
+    },
+    deals: {
+      title: 'Negócios CEODigital',
+      empty: 'Ainda não há negócios de CRM para o teu tenant.'
+    },
+    headers: {
+      id: 'ID',
+      title: 'Título',
+      status: 'Estado',
+      value: 'Valor'
+    },
+    unassigned: 'Sem responsável'
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
     mcp_not_configured: 'O MCP do CEODigital não está configurado. Liga-o nas definições CEODigital primeiro.',

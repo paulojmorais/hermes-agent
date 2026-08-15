@@ -11,7 +11,7 @@
 
 import { type PluginRestOptions } from '@hermes/plugin-sdk'
 
-import type { WorkItemResponse, WorkItemsEnvelope } from './types'
+import type { DealsEnvelope, LeadsEnvelope, WorkItemResponse, WorkItemsEnvelope } from './types'
 
 type Rest = <T>(path: string, opts?: PluginRestOptions) => Promise<T>
 
@@ -21,6 +21,8 @@ let rest: null | Rest = null
 
 export const WORKITEMS_KEY = ['ceodigital', 'workitems'] as const
 export const workItemKey = (id: string) => ['ceodigital', 'workitems', id] as const
+export const LEADS_KEY = ['ceodigital', 'leads'] as const
+export const DEALS_KEY = ['ceodigital', 'deals'] as const
 
 /** Bind the plugin's REST door at register time, return a disposer for
  *  unload/disable. Using any fetch before `bindApi` rejects loudly — a missed
@@ -45,3 +47,11 @@ export const fetchWorkItems = () => call<WorkItemsEnvelope>('/workitems')
 
 /** GET /workitems/{id} — one work item's detail. */
 export const fetchWorkItem = (id: string) => call<WorkItemResponse>(`/workitems/${encodeURIComponent(id)}`)
+
+// ── CRM (W4) ────────────────────────────────────────────────────────────────
+
+/** GET /leads — the tenant's CRM leads (proxy over MCP crm_leads_list). */
+export const fetchLeads = () => call<LeadsEnvelope>('/leads')
+
+/** GET /deals — the tenant's CRM deals (proxy over MCP crm_deals_list). */
+export const fetchDeals = () => call<DealsEnvelope>('/deals')

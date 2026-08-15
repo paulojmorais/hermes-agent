@@ -259,6 +259,91 @@ def test_workitem_detail_unknown_id_returns_not_found(plugin, client, monkeypatc
 
 
 # ---------------------------------------------------------------------------
+# CRM (W4): leads + deals
+# ---------------------------------------------------------------------------
+
+
+def test_leads_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"leads": [
+            {"id": "lead-1", "name": "Acme Corp", "status": "new"},
+            {"id": "lead-2", "name": "Beta Lda", "status": "contacted"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/leads")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [l["id"] for l in data["leads"]] == ["lead-1", "lead-2"]
+    # title falls back to name; unknown fields pass through untouched.
+    assert data["leads"][0]["title"] == "Acme Corp"
+    assert data["leads"][0]["name"] == "Acme Corp"
+
+
+def test_leads_tolerates_jsonrpc_content_envelope(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    # A JSON-RPC envelope {result:{content:[{type:text,text:...}]}} whose text
+    # is itself a {"leads": [...]} object.
+    import json as _json
+
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {"content": [{"type": "text", "text": _json.dumps({"leads": [{"id": "l9", "name": "Gamma", "status": "new"}]})}]},
+    }
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse(payload))
+
+    resp = client.get("/api/plugins/ceodigital/leads")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["leads"][0]["id"] == "l9"
+
+
+def test_deals_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"deals": [
+            {"id": "deal-1", "name": "Annual contract", "status": "won"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/deals")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["deals"][0]["id"] == "deal-1"
+    assert data["deals"][0]["title"] == "Annual contract"
+
+
+def test_leads_empty(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({"leads": []}))
+
+    resp = client.get("/api/plugins/ceodigital/leads")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "leads": []}
+
+
+def test_deals_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({}))
+
+    resp = client.get("/api/plugins/ceodigital/deals")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
 # Config shapes never hardcoded
 # ---------------------------------------------------------------------------
 

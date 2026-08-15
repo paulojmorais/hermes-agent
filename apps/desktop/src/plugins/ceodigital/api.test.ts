@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { bindApi, fetchWorkItem, fetchWorkItems, workItemKey, WORKITEMS_KEY } from './api'
-import type { WorkItemRow, WorkItemsError, WorkItemsResponse } from './types'
+import {
+  bindApi,
+  DEALS_KEY,
+  fetchDeals,
+  fetchLeads,
+  fetchWorkItem,
+  fetchWorkItems,
+  LEADS_KEY,
+  workItemKey,
+  WORKITEMS_KEY
+} from './api'
+import type { CrmError, CrmRow, WorkItemRow, WorkItemsError, WorkItemsResponse } from './types'
 
 type Rest = <T>(path: string, opts?: unknown) => Promise<T>
 
@@ -91,5 +101,41 @@ describe('ceodigital api', () => {
     dispose = null
 
     await expect(fetchWorkItems()).rejects.toThrow('ceodigital api not ready')
+  })
+
+  describe('crm (W4)', () => {
+    const lead: CrmRow = { id: 'lead-9', title: 'Acme Corp', status: 'new', value: 1200 }
+    const deal: CrmRow = { id: 'deal-3', title: 'Annual contract', status: 'won' }
+
+    it('exposes the CRM query keys', () => {
+      expect(LEADS_KEY).toEqual(['ceodigital', 'leads'])
+      expect(DEALS_KEY).toEqual(['ceodigital', 'deals'])
+    })
+
+    it('when bound, fetches leads and deals through ctx.rest', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      rest.mockResolvedValueOnce({ ok: true, leads: [lead] })
+      rest.mockResolvedValueOnce({ ok: true, deals: [deal] })
+
+      await expect(fetchLeads()).resolves.toEqual({ ok: true, leads: [lead] })
+      await expect(fetchDeals()).resolves.toEqual({ ok: true, deals: [deal] })
+      expect(rest).toHaveBeenCalledWith('/leads')
+      expect(rest).toHaveBeenCalledWith('/deals')
+    })
+
+    it('passes through the typed CRM error envelope', async () => {
+      const rest = vi.fn()
+      dispose = bindApi(rest as unknown as Rest)
+      const error: CrmError = { ok: false, error: 'mcp_unreachable' }
+      rest.mockResolvedValue(error)
+
+      await expect(fetchLeads()).resolves.toEqual(error)
+    })
+
+    it('rejects loudly when used before bindApi', async () => {
+      await expect(fetchLeads()).rejects.toThrow('ceodigital api not ready')
+      await expect(fetchDeals()).rejects.toThrow('ceodigital api not ready')
+    })
   })
 })

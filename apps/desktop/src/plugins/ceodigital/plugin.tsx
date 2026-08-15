@@ -22,6 +22,8 @@ import {
 
 import { bindApi } from './api'
 import { CEODIGITAL_LOCALES } from './i18n'
+import { DealsPage } from './pages/Deals'
+import { LeadsPage } from './pages/Leads'
 import { ProjectsPage } from './pages/Projects'
 
 const plugin: HermesPlugin = {
@@ -63,6 +65,38 @@ const plugin: HermesPlugin = {
           keywords: ['ceodigital', 'projects', 'work', 'crm', 'tenant'],
           run: () => host.navigate('/ceodigital/projects')
         } satisfies PaletteContribution
+      },
+      {
+        id: 'leads-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/leads' } satisfies RouteContribution,
+        render: () => <LeadsPage />
+      },
+      {
+        id: 'leads-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 40,
+        data: {
+          codicon: 'account',
+          label: t('crm.leads.title'),
+          path: '/ceodigital/leads'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'deals-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/deals' } satisfies RouteContribution,
+        render: () => <DealsPage />
+      },
+      {
+        id: 'deals-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 41,
+        data: {
+          codicon: 'briefcase',
+          label: t('crm.deals.title'),
+          path: '/ceodigital/deals'
+        } satisfies SidebarNavContribution
       }
     ])
   }

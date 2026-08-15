@@ -20,7 +20,7 @@ export { en } from './en'
 export { fr } from './fr'
 export { pt } from './pt'
 
-/** The message shape W3 renders. Keys: nav.*, page.*, workitem.*, errors.*. */
+/** The message shape W3/W4 renders. Keys: nav.*, page.*, workitem.*, crm.*, errors.*. */
 export interface CeodigitalMessages {
   nav: { label: string }
   page: {
@@ -37,6 +37,12 @@ export interface CeodigitalMessages {
       assignee: string
       updated: string
     }
+    unassigned: string
+  }
+  crm: {
+    leads: { title: string; empty: string }
+    deals: { title: string; empty: string }
+    headers: { id: string; title: string; status: string; value: string }
     unassigned: string
   }
   errors: {

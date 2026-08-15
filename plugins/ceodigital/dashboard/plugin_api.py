@@ -268,6 +268,73 @@ def _normalize_from_payload(payload: Any) -> List[Dict[str, Any]]:
     return _rows_from(payload)
 
 
+def _rows_from_crm(payload: Any) -> List[Dict[str, Any]]:
+    """Extract CRM rows (leads/deals) from an MCP payload of any tolerated shape.
+
+    CRM tools (`crm_leads_list` / `crm_deals_list`) may answer with:
+      * ``{"leads": [...]}`` / ``{"deals": [...]}`` (or ``data``/``items``), or
+      * a JSON-RPC envelope ``{result: {content: [...]}}`` unwrapped to the
+        same shapes. We never validate CRM-specific field shapes here — the
+        desktop normalizes. This only guarantees a list of dicts.
+    """
+    if isinstance(payload, list):
+        # Already a list of rows.
+        return [r for r in payload if isinstance(r, dict)]
+    if isinstance(payload, dict):
+        for key in ("leads", "deals", "items", "data", "rows"):
+            rows = payload.get(key)
+            if isinstance(rows, list):
+                return [r for r in rows if isinstance(r, dict)]
+        return []
+    return []
+
+
+def _normalize_crm_row(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital CRM row (lead/deal) onto the W4 contract shape.
+
+    Both leads and deals share the minimal fields the desktop renders; extra
+    fields are passed through untouched so the UI can grow without a backend
+    change.
+    """
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    out.setdefault("status", row.get("status") or row.get("state") or "")
+    return out
+
+
+@router.get("/leads")
+def list_leads() -> JSONResponse:
+    """List the caller's CEODigital CRM leads (read-only, MCP ``crm_leads_list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm_leads_list", {})
+        rows = _rows_from_crm(payload)
+        return JSONResponse(content={"ok": True, "leads": [_normalize_crm_row(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: leads list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/deals")
+def list_deals() -> JSONResponse:
+    """List the caller's CEODigital CRM deals (read-only, MCP ``crm_deals_list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm_deals_list", {})
+        rows = _rows_from_crm(payload)
+        return JSONResponse(content={"ok": True, "deals": [_normalize_crm_row(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: deals list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
 @router.get("/workitems")
 def list_workitems() -> JSONResponse:
     """List the caller's CEODigital work items (read-only, MCP ``workitems_list``)."""

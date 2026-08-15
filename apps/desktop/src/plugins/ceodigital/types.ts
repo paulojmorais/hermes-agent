@@ -39,6 +39,38 @@ export interface WorkItemDetailResponse {
 export type WorkItemResponse = WorkItemDetailResponse | WorkItemsError
 export type WorkItemsEnvelope = WorkItemsResponse | WorkItemsError
 
+// ── CRM (W4) ────────────────────────────────────────────────────────────────
+
+/** A CRM lead/deal row as returned by the MCP proxy. Minimal fields the W4
+ *  pages render; extra fields pass through untouched (backend never strips). */
+export interface CrmRow {
+  id: string
+  title: string
+  status: string
+  [key: string]: unknown
+}
+
+/** GET /leads — success envelope. */
+export interface LeadsResponse {
+  ok: true
+  leads: CrmRow[]
+}
+
+/** GET /deals — success envelope. */
+export interface DealsResponse {
+  ok: true
+  deals: CrmRow[]
+}
+
+/** Shared typed failure envelope for the CRM reads. */
+export interface CrmError {
+  ok: false
+  error: CeodigitalErrorCode | string
+}
+
+export type LeadsEnvelope = LeadsResponse | CrmError
+export type DealsEnvelope = DealsResponse | CrmError
+
 /** Statuses the design doc names; anything the backend adds renders via the
  *  i18n fallback (the raw id). */
 export const WORKITEM_STATUSES = [
