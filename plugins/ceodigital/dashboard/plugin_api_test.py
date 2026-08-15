@@ -533,6 +533,11 @@ def test_agent_pending_approvals_success(plugin, client, monkeypatch):
     data = resp.json()
     assert data["ok"] is True
     assert data["pending"][0]["tool_name"] == "int.gmail.send_email"
+    # The approval URL is built server-side from app_url + tenant_slug (never
+    # the token) so the desktop can deep-link to the tenant HITL UI.
+    assert data["approval_url"] == (
+        "https://ceodigital-example.internal/t/acme-dev/agent/approvals"
+    )
 
 
 def test_agent_pending_empty(plugin, client, monkeypatch):
@@ -542,7 +547,13 @@ def test_agent_pending_empty(plugin, client, monkeypatch):
     resp = client.get("/api/plugins/ceodigital/agents/pending")
 
     assert resp.status_code == 200
-    assert resp.json() == {"ok": True, "pending": []}
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["pending"] == []
+    # approval_url is always present once the tenant MCP works.
+    assert data["approval_url"] == (
+        "https://ceodigital-example.internal/t/acme-dev/agent/approvals"
+    )
 
 
 def test_agent_schedules_not_configured(plugin, client, monkeypatch):

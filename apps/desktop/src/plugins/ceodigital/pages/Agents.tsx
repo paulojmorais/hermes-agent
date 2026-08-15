@@ -99,12 +99,17 @@ export function AgentsPage() {
   const schedulesQ = useQuery({ queryKey: SCHEDULES_KEY, queryFn: fetchAgentSchedules as () => Promise<unknown> })
   const pendingQ = useQuery({ queryKey: PENDING_KEY, queryFn: fetchPendingApprovals as () => Promise<unknown> })
 
-  const { code, agents, flows, runs, schedules, pending } = useMemo(() => {
+  const { code, agents, flows, runs, schedules, pending, approvalUrl } = useMemo(() => {
     const agents = pickRows(agentsQ.data, 'agents').map(asAgent)
     const flows = pickRows(flowsQ.data, 'workflows')
     const runs = pickRows(runsQ.data, 'runs').map(asRun)
     const schedules = pickRows(schedulesQ.data, 'schedules') as unknown as AgentScheduleRow[]
     const pending = pickRows(pendingQ.data, 'pending') as unknown as PendingCallRow[]
+    // approval_url rides on the same ok-envelope as `pending`.
+    const approvalUrl =
+      pendingQ.data && isOk(pendingQ.data)
+        ? String((pendingQ.data as { approval_url?: unknown }).approval_url ?? '')
+        : ''
     const failure =
       agentsErrorCode(agentsQ.error) ??
       agentsErrorCode(flowsQ.error) ??
@@ -112,7 +117,7 @@ export function AgentsPage() {
       agentsErrorCode(schedulesQ.error) ??
       agentsErrorCode(pendingQ.error)
     const anyData = agents.length || flows.length || runs.length
-    return { code: anyData ? null : failure, agents, flows, runs, schedules, pending }
+    return { code: anyData ? null : failure, agents, flows, runs, schedules, pending, approvalUrl }
   }, [agentsQ.data, agentsQ.error, flowsQ.data, flowsQ.error, runsQ.data, runsQ.error, schedulesQ.data, schedulesQ.error, pendingQ.data, pendingQ.error])
 
   // Lazy detail fetch for the expanded run row.
@@ -305,9 +310,23 @@ export function AgentsPage() {
               </table>
             )}
             {pending.length > 0 && (
-              <p className="px-4 pt-1 text-[0.6875rem] text-(--ui-text-tertiary)">
+              <button
+                className="px-4 pt-1 text-left text-[0.6875rem] text-(--ui-accent) hover:underline"
+                disabled={!approvalUrl}
+                onClick={() => {
+                  if (!approvalUrl) return
+                  // Open the tenant HITL approval UI (approval/deny stays
+                  // there by design); prefer the desktop bridge, fall back to
+                  // a new window.
+                  if (window.hermesDesktop?.openExternal) {
+                    void window.hermesDesktop.openExternal(approvalUrl)
+                  } else {
+                    window.open(approvalUrl, '_blank', 'noopener,noreferrer')
+                  }
+                }}
+              >
                 {k.agents.pending.goToTenant} →
-              </p>
+              </button>
             )}
           </section>
 

@@ -206,6 +206,8 @@ export interface AgentSchedulesResponse {
 export interface AgentPendingResponse {
   ok: true
   pending: PendingCallRow[]
+  /** Deep-link to the tenant HITL approval UI (built server-side, never the token). */
+  approval_url: string
 }
 
 export type AgentSchedulesEnvelope = AgentSchedulesResponse | CrmError

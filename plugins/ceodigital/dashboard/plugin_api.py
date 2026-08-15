@@ -509,7 +509,16 @@ def list_pending_approvals(runId: Optional[str] = None) -> JSONResponse:
         cfg = _load_config()
         payload = _mcp_fetch(cfg, "agent.runs.pending_calls.list", args)
         rows = _rows_from_key(payload, "pending_calls")
-        return JSONResponse(content={"ok": True, "pending": rows})
+
+        # Approval URL for the tenant UI (path-only, server-side built from the
+        # configured app_url + tenant_slug). Never exposes the MCP token.
+        app_url = (cfg.get("app_url") or "").strip().rstrip("/")
+        slug = (cfg.get("tenant_slug") or "").strip()
+        approval_url = ""
+        if app_url and slug:
+            approval_url = f"{app_url}/t/{slug}/agent/approvals"
+
+        return JSONResponse(content={"ok": True, "pending": rows, "approval_url": approval_url})
     except _TypedError as exc:
         return _maybe_error(exc.code)
     except Exception:
