@@ -328,14 +328,20 @@ Hermes desktop currently authenticates to CEODigital via MCP user tokens
 
 | Wave | What | Effort | Impact | Estado |
 |---|---|---|---|---|
-| **W1** | Create locale files `pt.ts`, `fr.ts` for desktop | Low–Med | User sees chat in native language | ✅ W1a done (commit `63ffa0927`) — partial pt/fr; expandir W1b+ |
-| **W2** | Wire `display.language` to locale switching | Low | Language config works | ⬜ (mecanismo já existe no core `context.tsx`) |
-| **W3** | Desktop plugin scaffold — `src/plugins/ceodigital/` with sidebar entry + `Projects` page consuming MCP `workitems_list` | Med | **Prova de conceito** "gerir ceodigital daqui" — primeira superfície CEODigital nativa no Hermes | ✅ Implementado (commit) · smoke MCP ⏳ |
-| **W4** | CRM plugin — leads + deals lists (MCP `crm_*` tools) | Med | Painel comercial nativo | ⬜ |
-| **W5** | Agents plugin — CEO Agents catalog, run history | Med | Painel agentes nativo | ⬜ |
-| **W6** | Auth plugin — CEODigital SSO login | Med | Desktop autentica-se ao CEODigital | ⬜ |
-| **W7** | Python-side translation (`agent/i18n/locales/pt.json`) | Low | Agent messages in PT | ⬜ |
-| **W8** | Website translations (Docusaurus pt) | High | Docs in PT | ⬜ |
+| **W1** | Create locale files `pt.ts`, `fr.ts` for desktop | Low–Med | User sees chat in native language | ✅ **W1a done** (`63ffa0927`) + **W1b** expandido a settings/notifications/keybinds (`c2684d272`) — ainda por cobrir profiles/messaging |
+| **W2** | Wire `display.language` to locale switching | Low | Language config works | ✅ **Done** — mecanismo core + **titlebar `LanguageSwitcher`** visível (`81f30ddc9`) |
+| **W3** | Desktop plugin scaffold — `src/plugins/ceodigital/` + Projects page (MCP `workitems_list`) | Med | **Prova de conceito** "gerir ceodigital daqui" | ✅ Implementado (commit) · **smoke MCP ⏳** (ambiente dev) |
+| **W4** | CRM plugin — leads + deals (MCP `crm_*`) | Med | ✅ **Done** (`de54e113a`) — Leads/Deals read-only |
+| **W5** | Agents plugin — CEOs catalog, NativeFlows, run history | Med | ✅ **Done** (`d7919b87d` fork + `33ff81884` ceo MCP `agents.list`) |
+| **W5+** | run/debrief + schedules + pending + deep-link HITL | Med | ✅ **Done** (`d2fd1a260`, `06c2829fd`, `70bc81c60`) |
+| **W6** | Auth plugin — CEODigital SSO login | Med | ⬜ Não iniciado |
+| **W7** | Python-side translation (`agent/i18n/locales/pt.yaml`) | Low | ✅ **Done** (`1ab7165ac`) — gateway prose pt |
+| **W8** | Website translations (Docusaurus pt) | High | ⬜ Não tocado |
+
+> **Distribuição (estado real, 2026-08-16):** `release-wheel.yml` com `workflow_dispatch`
+> (fork `6db271bbb`) + admin Agent Builds no ceodigital (`5bf63d9b9`) + fix do bloco pip
+> (`3b3ca4b48`). Go-live OPS pendente (migração F3b + disparar `ceodigital-v0.1.0` + import).
+> Merge upstream (`ad390a2938`, 771 commits, 0 conflitos) feito e pusheO.
 
 ---
 

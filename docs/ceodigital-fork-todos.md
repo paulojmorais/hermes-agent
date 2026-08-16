@@ -1,15 +1,16 @@
 # Fork CEODigital — Pendências / Follow-up
 
 > Repo: `paulojmorais/ceodigital-agent` (privado) · Branch: `ceodigital-branding`
-> Estado das waves: véase Sec.8 do `ceodigital-fork-ownership-map.md`.
+> Estado das waves: Sec.8 do `ceodigital-fork-ownership-map.md` (tabela viva).
 > Este doc é o rasto de trabalho pendente cruzado com olhar de review. Datado por entrada.
+> **Última atualização: 2026-08-16** — após o merge `upstream/main` (ad390a2938) e W6/W8/CW hot.
 
 ---
 
 ## 1. Pendências que bloqueiam critérios de done (nem code, ambiente)
 
 ### 1.1 Smoke MCP real (W3) — ⏳
-**Bloqueia:** o critério de done §9/§10 da W3 (provar o caminho
+**Bloqueia:** o critério de done do plugin (provar o caminho
 `renderer → ctx.rest → backend → MCP → dados`).
 **Blocker:** precisa do ambiente dev CEODigital (token MCP + tenant slug + app_url).
 
@@ -37,45 +38,72 @@ o JSON de config **uma única vez** com o botão "Copiar config" e a dica de col
 Portanto no smoke real: `Instalar` → `Ligar` → **copiar o JSON** para o config da
 app — e o `/ceodigital/projects` lê aí. O overrides.yaml fica como **dev/fallback**.
 
-**O que smoke valida:**
-- Nomes reais das MCP tools no `ToolRegistry` (o backend chama `workitems_list` /
-  `workitems_get` — confirmar vs. `mcp__ceodigital_*__workitems_list`).
-- Transport **Streamable HTTP**: `httpx.post` JSON-RPC talvez precise de
-  `Accept: application/json, text/event-stream`.
-- Onde o daemon grava o config MCP por-app (`config.push`) — peça a fechar no ceodigital.
-
 ### 1.2 vitest / typecheck desktop — ⚠️
 **Bloqueia:** validação dos testes TS (`languages.test.ts`, `plugin.test.tsx`,
-`api.test.ts`).
+`api.test.ts`) e da UI W3/W4/W5/W5+/W1/W2.
 **Causa:** npm bug #4828 — a rolldown integra binding `wasm32-wasi` em vez de
-`darwin-arm64`; o `@napi-rs/wasm-runtime` instalado ainda resolve
-`rolldown-binding.wasi.cjs` truncado.
+`darwin-arm64`; o binário nativo já estava corrompido (`ERR_DLOPEN_FAILED`,
+`segment '__TEXT' extends beyond end of file`, diagnosticado 2026-08-16).
 **Correção (destrutiva, requer OK):** `rm -rf node_modules && npm ci` (a partir
-do lock versionado, não regenera). Depois correr:
+do lock versionado, não regenera). Depois:
 ```bash
 cd apps/desktop && npx vitest run src/plugins/ceodigital src/i18n
 ```
-**Decisão atual:** adiado para a wave de branding/typecheck (vitest é
-transpile-only; o `tsc` é a validação que interessa e é a wave devida).
+**Decisão atual:** adiado — a correção precisa de executar `npm ci`, que exige
+aprovação explícita (destrutivo). Não executado ainda. Todo o TS/TSX foi validado
+por LSP durante o desenvolvimento; ninguém correu o vitest localmente (rolldown).
 
 ---
 
 ## 2. Melhorias de quality (não bloqueiam, baixo risco)
 
-### 2.1 i18n pt/fr — cobrir mais do core (W1b)
-W1a cobriu o chrome (`common`, `fileMenu`, `boot`, `titlebar`, `language`,
-`sidebar.nav`, `composer`). Expandir gradualmente para `settings.*`,
-`notifications.*`, `keybinds.*`, `profiles.*`, `messaging.*`, etc. Usar
-`defineLocale()` (merge parcial sobre `en`), nunca tocar em `en.ts`.
+### 2.1 Cobertura i18n pt/fr desktop (W1b) — ✅ (feito nesta sessão)
+Expandido `pt/fr` a `settings.*`, `notifications.*`, `keybinds.*` no desktop
+(commit `c2684d272`). Ainda por expandir: `profiles.*`, `messaging.*`, e a
+surface Python já está em pt (W7). Expandir gradualmente se desejado.
 
-### 2.2 Frontend W3 — revisão deep do código TS/TSX
-O plugin frontend foi validado por leitura manual, não por vitest (bloqueado).
-Na wave de branding/typecheck, rever com `tsc` real e os vitest verdes.
+### 2.2 Frontend W3–W5+/W2 — revisão deep durante a wave de typecheck
+O plugin frontend foi validado por leitura + LSP, não por vitest (bloqueado).
+Na wave de branding/typecheck, rever com vitest verdes + `tsc` real.
 
 ---
 
 ## 3. Distribuição / OPS (do ownership map §10)
 
-- [ ] Build pipeline que emita **wheel** do fork, com SHA-256, para `local_app_releases`.
-- [ ] Decisão de **code signing/notarization** (F6c) para o desktop — sem Developer
-      ID, users precisam "botão direito → Abrir" no Gatekeeper.
+- [x] **Build pipeline que emita wheel** do fork, com SHA-256 — criado
+      `.github/workflows/release-wheel.yml` (triggers `ceodigital-v*` + `workflow_dispatch`,
+      commit fork `6db271bbb`; workflow_dispatch adicionado nesta sessão).
+- [x] **Admin Build no ceodigital** — `agent-builds.functions` (dispatch/list/detail),
+      `agent-artifact.functions` (import wheel→bucket→upsert `local_app_releases`),
+      UI `/admin/connector/agent-builds` (commit ceodigital `5bf63d9b9`).
+- [x] **installLocalApp + installPip com SHA-256** — já implementado no ceodigital
+      (o fix do bloco `pip` do `apps.functions.ts` foi corrigido nesta sessão,
+      commit `3b3ca4b48` — o pip não devia correr o bloco binary de release resolution).
+- [ ] **Disparar um build real + importar o wheel** — OPS: criar a migração F3b
+      (ver ceodigital `supabase/migrations/20260815090000_connector_f3b_ceodigital_agent_catalog.sql`),
+      aplicar no Lovable, disparar `ceodigital-v0.1.0`, importar wheel no admin.
+- [ ] **Code signing / notarization (F6c)** para o desktop — sem Developer ID,
+      users precisam "botão direito → Abrir" no Gatekeeper.
+- [ ] **Wheel por arquitetura** (arm64/amd64) ou confirmar `py3-none-any` como
+      suficiente.
+
+---
+
+## 4. Merge upstream (2026-08-16)
+
+- **Feito:** `git merge upstream/main` → commit `ad390a2938` (771 commits upstream),
+  0 conflitos. Backup tag `backup-before-upstream-merge-20260816-101507`.
+- **Validado pós-merge:** pytest plugin 29✓, `test_i18n.py` 38✓, i18n pt resolve,
+  `release-wheel.yml` íntegro, ficheiros aditivos intactos.
+- ⚠️ **Não corrido:** typecheck TS do full desktop/web/TUI (upstream mudou muita
+  assinatura) — ver Sec.1.2. Os nossos ficheiros provão @ intactos nos 7 auto-mergeados.
+
+---
+
+## 5. Pendentes por prioridade (2026-08-16)
+
+1. **Aprovar `npm ci`** → fechar vitest + typecheck desktop (destrava toda a validação).
+2. **Go-live distribuição**: migração F3b + disparar `ceodigital-v0.1.0` + import wheel.
+3. **Smoke MCP real (W3)** — ambiente dev CEODigital.
+4. **W6 — Auth plugin (CEODigital SSO no desktop)** — não iniciado.
+5. **W8 — Website/Docusaurus pt** — não tocado.
