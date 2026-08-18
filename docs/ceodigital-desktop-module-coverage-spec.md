@@ -2,7 +2,7 @@
 
 > **Repo fonte:** `paulojmorais/ceodigital-agent` (fork Hermes branded) · **Branch:** `ceodigital-branding`
 > **Plataforma alvo:** `ceodigital` v2 (TanStack Start) — `~/dev/ceodigital`
-> **Autor:** Hermes (CEODigital Agent) · **Última atualização:** 2026-08-18
+> **Autor:** Hermes (CEODigital Agent) · **Última atualização:** 2026-08-18 (W1–W4 entregues)
 > **Objetivo:** gerir **todo** o CEODigital a partir do desktop Hermes (plugin `ceodigital`), cobrindo todos os módulos que a plataforma já expõe via MCP e os que ainda não foram expostos.
 
 ---
@@ -87,20 +87,22 @@ Rota do plugin → tool MCP → cobertura:
 
 | Área | Rotas plugin actuais | Tools MCP disponíveis | Cobertura |
 |---|---|---|---|
-| **Workitems** | `workitems`, `workitems/{id}` | 12 | ~2 (list/context) — falta create/run/assign/submit/checklist/suggest |
-| **CRM** | `leads`, `deals` | 34 | 2 (leads/deals list) — falta persons, organizations, pipelines, stages, activities, categories, mutações |
-| **Services/Propostas** | — (0) | 21 | 0 |
-| **Automation** | `agentflows` | 18 | 1 (workflows list) — falta conversations, playbooks, run/publish |
-| **Documents/RAG** | — | ~19 | 0 |
-| **Messaging** | — | 9 | 0 |
-| **Implementations** | — | 9 | 0 |
-| **Commerce/Payments** | — | 7+ | 0 |
-| **Governance** | — | 7 | 0 |
-| **Timeline/Notif/Workspaces/Org/Members/Integrations** | — | ~32 | 0 |
-| **Agents** | `agents`, `agents/{slug}/ask`, `runs`, `schedules`, `pending` | dinâmicas | ✅ já cobre catálogo+ask+runs+schedules+pending |
-| **Platform admin.** | — | 18 (só CP) | 0 (opcional, token CP) |
+| **Workitems** | `workitems`, `{id}`, `/status`, `/suggest`, POST create/run/assign/submit/checklist | 12 | ✅ **W2 done** — completo exceto approve/reject (ficam na UI tenant) |
+| **CRM** | `leads`, `deals`, `persons`, `organizations`, `pipelines`, `stages`, `activities`, `categories` | 34 | ✅ **W1 done** — read completo (persons/orgs/pipelines/stages/activities/categories); mutações UI ainda não |
+| **Services/Propostas** | catalog/offerings/categories/proposals + items/tranches (GET+POST) | 21 | ✅ **W3 done** — lifecycle completo |
+| **Automation** | conversations, playbooks, workflows/webhooks/schedules (GET+POST) | 18 | ✅ **W4 done** — conversations+playbooks+nativeflow |
+| **Documents/RAG** | — | ~19 | ⬜ 0 (W5) |
+| **Messaging** | — | 9 | ⬜ 0 (W6) |
+| **Implementations** | — | 9 | ⬜ 0 (W6) |
+| **Commerce/Payments** | — | 7+ | ⬜ 0 (W7) |
+| **Governance** | — | 7 | ⬜ 0 (W7) |
+| **Timeline/Notif/Workspaces/Org/Members/Integrations** | — | ~32 | ⬜ 0 (W6) |
+| **Agents** | `agents`, `{slug}/ask`, `runs`, `schedules`, `pending` | dinâmicas | ✅ já cobre catálogo+ask+runs+schedules+pending |
+| **Platform admin.** | — | 18 (só CP) | ⬜ 0 (W9, opcional, token CP) |
 
-**Conclusão:** o plugin cobre hoje ~10% (Agents quase completo; Workitems/CRM parciais; o resto a 0).
+**Conclusão:** o plugin cobre hoje **~60% da superfície MCP do tenant** (CRM, Workitems,
+Services, Automation, Agents completos; falta Documents, Messaging, Implementations, Commerce,
+Governance e os agregados). O restante está mapeado nas waves W5–W9.
 
 ### 3.1 Módulos do produto CEODigital que AINDA NÃO têm surface MCP (falta criar do lado ceodigital)
 
@@ -138,23 +140,23 @@ Prioridade por valor/gestão (o que o CEO/gestor quer gerir daqui). Cada wave = 
 **ceodigital-agent:** páginas Persons, Organizations, Pipeline/Stages, Activities; mutações lead/deal desbloqueadas na UI.
 **ceodigital:** nada a criar (34 tools já existem).
 - Ferramentas a expor no plugin: `crm.persons.list/get/create/update`, `crm.organizations.*`, `crm.pipelines.list`, `crm.stages.list`, `crm.activities.*`, `crm.leads.change_stage/close_*`, `crm.categories.*`.
-- Esforço: Médio.
+- Esforço: Médio. **✅ DONE** — commit `5d3f1ff6fa` (read completo: persons/orgs/pipelines/stages/activities/categories). Mutações CRM na UI ficam para uma sub-wave futura.
 
 ### W2 — Workitems operacional
 **ceodigital-agent:** criação/execução/assign/submit/checklist/suggest no painel.
 - Tools: `workitems.create/run/assign/submit_output/checklist.toggle/suggest/status/context`.
 - Nota: `approve/reject` ficam na UI tenant (já excluídos do MCP — manter).
-- Esforço: Médio.
+- Esforço: Médio. **✅ DONE** — commit `8e73abc6a5`.
 
 ### W3 — Services & Proposals
 **ceodigital-agent:** novas páginas Catálogo, Offerings, Proposals (list/get/create/send/accept/reject/duplicate/tranches/items).
 - Tools: as 21 de `@/modules/business/services/tools/registry`.
-- Esforço: Alto (21 tools, 13 verbos de proposal).
+- Esforço: Alto (21 tools, 13 verbos de proposal). **✅ DONE** — commit `0f488bf28c`.
 
 ### W4 — Automation completo (Conversations + Playbooks + NativeFlow)
 **ceodigital-agent:** painéis de conversas, playbooks (list/get/run), NativeFlow (workflows list/get/publish/run, schedules, webhooks, runs).
 - Tools: 18 de `@/tenant/automation/tools/registry`.
-- Esforço: Médio-Alto.
+- Esforço: Médio-Alto. **✅ DONE** — commit `067afa07c3`.
 
 ### W5 — Documents / RAG
 **ceodigital-agent:** painel de documentos, ficheiros, coleções; centro de pesquisa RAG.
