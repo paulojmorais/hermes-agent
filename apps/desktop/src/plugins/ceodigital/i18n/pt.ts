@@ -215,6 +215,145 @@ export const pt: CeodigitalMessages = {
       goToTenant: 'Abrir aprovações'
     }
   },
+  services: {
+    catalog: {
+      title: 'Catálogo de Serviços',
+      empty: 'Ainda não há itens de catálogo de serviços para o teu tenant.',
+      searchPlaceholder: 'Pesquisar no catálogo…',
+      produces: 'Produz',
+      allProduces: 'Todos',
+      activeOnly: 'Apenas ativos',
+      offerings: 'Oferta',
+      offeringsEmpty: 'Não há oferta para este item de catálogo.',
+      back: 'Voltar ao catálogo',
+      detail: 'Item de catálogo',
+      headers: { name: 'Nome', code: 'Código', pricing: 'Preçário', model: 'Modelo' }
+    },
+    offerings: {
+      title: 'Oferta de serviços',
+      empty: 'Ainda não há oferta de serviços para o teu tenant.'
+    },
+    categories: {
+      title: 'Categorias de serviços',
+      empty: 'Ainda não há categorias de serviços para o teu tenant.'
+    },
+    proposals: {
+      title: 'Propostas CEODigital',
+      openCommand: 'CEODigital: Abrir Propostas',
+      empty: 'Ainda não há propostas para o teu tenant.',
+      new: 'Nova Proposta',
+      back: 'Voltar às propostas',
+      detail: 'Detalhe da proposta',
+      fields: {
+        title: 'Título',
+        status: 'Estado',
+        description: 'Descrição',
+        currency: 'Moeda',
+        totalValue: 'Valor total',
+        paymentModel: 'Modelo de pagamento',
+        depositPercentage: 'Percentagem de entrada',
+        validUntil: 'Válida até',
+        terms: 'Condições',
+        leadId: 'Id do lead'
+      },
+      status: {
+        draft: 'Rascunho',
+        sent: 'Enviada',
+        accepted: 'Aceite',
+        rejected: 'Rejeitada',
+        cancelled: 'Cancelada',
+        expired: 'Expirada',
+        pending: 'Pendente'
+      },
+      actions: {
+        send: 'Enviar',
+        accept: 'Aceitar',
+        reject: 'Rejeitar',
+        cancel: 'Cancelar',
+        duplicate: 'Duplicar',
+        expire: 'Expirar',
+        addItem: 'Adicionar linha',
+        addTranche: 'Adicionar parcela',
+        save: 'Guardar',
+        remove: 'Remover',
+        sending: 'A enviar…',
+        accepting: 'A aceitar…',
+        rejecting: 'A rejeitar…',
+        cancelling: 'A cancelar…',
+        duplicating: 'A duplicar…',
+        expiring: 'A expirar…'
+      },
+      reject: { reasonPlaceholder: 'Motivo (opcional)…', cancel: 'Cancelar' },
+      items: {
+        headers: {
+          description: 'Descrição',
+          quantity: 'Qtd',
+          unitPrice: 'Preço unitário',
+          discount: 'Desconto',
+          vatRate: 'IVA %',
+          recurrence: 'Recorrência'
+        },
+        empty: 'Ainda não há linhas nesta proposta.',
+        form: {
+          serviceCatalogId: 'Id do catálogo de serviços',
+          serviceOfferingId: 'Id da oferta',
+          quantity: 'Quantidade',
+          unitPrice: 'Preço unitário',
+          discount: 'Desconto',
+          vatRate: 'IVA %',
+          recurrence: 'Recorrência',
+          description: 'Descrição',
+          sortOrder: 'Ordem',
+          add: 'Adicionar linha',
+          update: 'Atualizar linha',
+          cancel: 'Cancelar'
+        }
+      },
+      tranches: {
+        headers: { label: 'Rótulo', amount: 'Montante', dueDate: 'Vencimento', sortOrder: 'Ordem' },
+        empty: 'Ainda não há parcelas de pagamento nesta proposta.',
+        form: {
+          label: 'Rótulo',
+          amount: 'Montante',
+          dueDate: 'Vencimento',
+          sortOrder: 'Ordem',
+          add: 'Adicionar parcela',
+          update: 'Atualizar parcela',
+          cancel: 'Cancelar'
+        }
+      },
+      form: {
+        title: 'Título',
+        leadId: 'Id do lead',
+        description: 'Descrição',
+        totalValue: 'Valor total',
+        paymentModel: 'Modelo de pagamento',
+        depositPercentage: 'Percentagem de entrada',
+        validUntil: 'Válida até',
+        currency: 'Moeda',
+        terms: 'Condições',
+        create: 'Criar proposta',
+        cancel: 'Cancelar'
+      },
+      errors: {
+        create: 'Não foi possível criar a proposta.',
+        send: 'Não foi possível enviar a proposta.',
+        accept: 'Não foi possível aceitar a proposta.',
+        reject: 'Não foi possível rejeitar a proposta.',
+        cancel: 'Não foi possível cancelar a proposta.',
+        duplicate: 'Não foi possível duplicar a proposta.',
+        expire: 'Não foi possível expirar a proposta.',
+        addItem: 'Não foi possível adicionar a linha.',
+        updateItem: 'Não foi possível atualizar a linha.',
+        removeItem: 'Não foi possível remover a linha.',
+        addTranche: 'Não foi possível adicionar a parcela.',
+        updateTranche: 'Não foi possível atualizar a parcela.',
+        removeTranche: 'Não foi possível remover a parcela.',
+        fetchProposal: 'Não foi possível carregar esta proposta.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    }
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
     mcp_not_configured: 'O MCP do CEODigital não está configurado. Liga-o nas definições CEODigital primeiro.',

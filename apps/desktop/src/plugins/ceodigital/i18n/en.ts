@@ -215,6 +215,145 @@ export const en: CeodigitalMessages = {
       goToTenant: 'Open approvals'
     }
   },
+  services: {
+    catalog: {
+      title: 'Services Catalog',
+      empty: 'No services catalog items found for your tenant yet.',
+      searchPlaceholder: 'Search the catalog…',
+      produces: 'Produces',
+      allProduces: 'All',
+      activeOnly: 'Active only',
+      offerings: 'Offerings',
+      offeringsEmpty: 'No offerings found for this catalog item.',
+      back: 'Back to catalog',
+      detail: 'Catalog item',
+      headers: { name: 'Name', code: 'Code', pricing: 'Pricing', model: 'Model' }
+    },
+    offerings: {
+      title: 'Service offerings',
+      empty: 'No service offerings found for your tenant yet.'
+    },
+    categories: {
+      title: 'Services categories',
+      empty: 'No services categories found for your tenant yet.'
+    },
+    proposals: {
+      title: 'CEODigital Proposals',
+      openCommand: 'CEODigital: Open Proposals',
+      empty: 'No proposals found for your tenant yet.',
+      new: 'New Proposal',
+      back: 'Back to proposals',
+      detail: 'Proposal detail',
+      fields: {
+        title: 'Title',
+        status: 'Status',
+        description: 'Description',
+        currency: 'Currency',
+        totalValue: 'Total value',
+        paymentModel: 'Payment model',
+        depositPercentage: 'Deposit %',
+        validUntil: 'Valid until',
+        terms: 'Terms',
+        leadId: 'Lead id'
+      },
+      status: {
+        draft: 'Draft',
+        sent: 'Sent',
+        accepted: 'Accepted',
+        rejected: 'Rejected',
+        cancelled: 'Cancelled',
+        expired: 'Expired',
+        pending: 'Pending'
+      },
+      actions: {
+        send: 'Send',
+        accept: 'Accept',
+        reject: 'Reject',
+        cancel: 'Cancel',
+        duplicate: 'Duplicate',
+        expire: 'Expire',
+        addItem: 'Add line item',
+        addTranche: 'Add tranche',
+        save: 'Save',
+        remove: 'Remove',
+        sending: 'Sending…',
+        accepting: 'Accepting…',
+        rejecting: 'Rejecting…',
+        cancelling: 'Cancelling…',
+        duplicating: 'Duplicating…',
+        expiring: 'Expiring…'
+      },
+      reject: { reasonPlaceholder: 'Reason (optional)…', cancel: 'Cancel' },
+      items: {
+        headers: {
+          description: 'Description',
+          quantity: 'Qty',
+          unitPrice: 'Unit price',
+          discount: 'Discount',
+          vatRate: 'VAT %',
+          recurrence: 'Recurrence'
+        },
+        empty: 'No line items on this proposal yet.',
+        form: {
+          serviceCatalogId: 'Service catalog id',
+          serviceOfferingId: 'Offering id',
+          quantity: 'Quantity',
+          unitPrice: 'Unit price',
+          discount: 'Discount',
+          vatRate: 'VAT %',
+          recurrence: 'Recurrence',
+          description: 'Description',
+          sortOrder: 'Sort order',
+          add: 'Add item',
+          update: 'Update item',
+          cancel: 'Cancel'
+        }
+      },
+      tranches: {
+        headers: { label: 'Label', amount: 'Amount', dueDate: 'Due date', sortOrder: 'Sort order' },
+        empty: 'No payment tranches on this proposal yet.',
+        form: {
+          label: 'Label',
+          amount: 'Amount',
+          dueDate: 'Due date',
+          sortOrder: 'Sort order',
+          add: 'Add tranche',
+          update: 'Update tranche',
+          cancel: 'Cancel'
+        }
+      },
+      form: {
+        title: 'Title',
+        leadId: 'Lead id',
+        description: 'Description',
+        totalValue: 'Total value',
+        paymentModel: 'Payment model',
+        depositPercentage: 'Deposit %',
+        validUntil: 'Valid until',
+        currency: 'Currency',
+        terms: 'Terms',
+        create: 'Create proposal',
+        cancel: 'Cancel'
+      },
+      errors: {
+        create: 'Could not create the proposal.',
+        send: 'Could not send the proposal.',
+        accept: 'Could not accept the proposal.',
+        reject: 'Could not reject the proposal.',
+        cancel: 'Could not cancel the proposal.',
+        duplicate: 'Could not duplicate the proposal.',
+        expire: 'Could not expire the proposal.',
+        addItem: 'Could not add the line item.',
+        updateItem: 'Could not update the line item.',
+        removeItem: 'Could not remove the line item.',
+        addTranche: 'Could not add the tranche.',
+        updateTranche: 'Could not update the tranche.',
+        removeTranche: 'Could not remove the tranche.',
+        fetchProposal: 'Could not load this proposal.',
+        general: 'The action failed. Try again.'
+      }
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
     mcp_not_configured: 'CEODigital MCP is not configured. Connect it in your CEODigital settings first.',

@@ -920,3 +920,521 @@ def list_pending_approvals(runId: Optional[str] = None) -> JSONResponse:
     except Exception:
         log.exception("ceodigital agent.runs.pending_calls list failed")
         return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W3 · Services & Proposals (catalog / offerings / categories / lifecycle)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_catalog_item(row: Any) -> Dict[str, Any]:
+    """Map one services catalog item row onto the desktop ``CatalogRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    return out
+
+
+def _normalize_service_offering(row: Any) -> Dict[str, Any]:
+    """Map one services offering row onto the desktop ``OfferingRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    return out
+
+
+def _normalize_service_category(row: Any) -> Dict[str, Any]:
+    """Map one services category row onto the desktop ``CategoryRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("label") or row.get("name") or "")
+    return out
+
+
+def _normalize_proposal_item(row: Any) -> Dict[str, Any]:
+    """Map one proposal line-item row onto the desktop ``ProposalItem``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("description", row.get("description") or row.get("title") or "")
+    if out.get("unit_price") is None and row.get("unitPrice") is not None:
+        out["unit_price"] = row["unitPrice"]
+    return out
+
+
+def _normalize_proposal_tranche(row: Any) -> Dict[str, Any]:
+    """Map one proposal payment-tranche row onto the desktop ``ProposalTranche``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("label", row.get("label") or row.get("title") or "")
+    if out.get("due_date") is None and row.get("dueDate") is not None:
+        out["due_date"] = row["dueDate"]
+    return out
+
+
+def _normalize_proposal(row: Any) -> Dict[str, Any]:
+    """Map one proposal row onto the desktop ``ProposalRow`` contract.
+
+    ``value``/``currency`` are pinned so the renderer has stable columns, and
+    nested line items/tranches are collected under the stable ``items`` and
+    ``tranches`` keys whatever the MCP payload names them.
+    """
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    out.setdefault("status", row.get("status") or row.get("state") or "")
+
+    value = row.get("value")
+    if value is None:
+        value = row.get("totalValue") or row.get("total_value") or row.get("total_amount")
+    if value is not None:
+        out.setdefault("value", value)
+    currency = row.get("currency") or row.get("currency_code")
+    if currency is not None:
+        out.setdefault("currency", currency)
+
+    items = row.get("items") or row.get("proposal_items") or row.get("line_items")
+    if isinstance(items, list):
+        out["items"] = [_normalize_proposal_item(i) for i in items if isinstance(i, dict)]
+    tranches = row.get("tranches") or row.get("payment_tranches")
+    if isinstance(tranches, list):
+        out["tranches"] = [_normalize_proposal_tranche(t) for t in tranches if isinstance(t, dict)]
+    return out
+
+
+def _rows_from_services(payload: Any, *keys: str) -> List[Dict[str, Any]]:
+    """Extract rows from a services MCP payload under any of ``keys`` (e.g.
+    ``"catalog"``/``"offerings"``), tolerating the JSON-RPC-unwrapped shapes."""
+    if isinstance(payload, list):
+        return [r for r in payload if isinstance(r, dict)]
+    if isinstance(payload, dict):
+        for candidate in (*keys, "items", "data", "rows", "results"):
+            rows = payload.get(candidate)
+            if isinstance(rows, list):
+                return [r for r in rows if isinstance(r, dict)]
+        return []
+    return []
+
+
+def _single_service(payload: Any, *keys: str) -> Optional[Dict[str, Any]]:
+    """Pick the single object out of a services detail payload, or ``None``."""
+    if isinstance(payload, dict):
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, dict):
+                return value
+        rows = _rows_from_services(payload, *keys)
+        if rows:
+            return rows[0]
+    return None
+
+
+def _values_from(body: Any) -> Optional[Dict[str, Any]]:
+    """Pull the ``values`` dict out of a line-item/tranche mutation body."""
+    if not isinstance(body, dict):
+        return None
+    values = body.get("values")
+    return values if isinstance(values, dict) else None
+
+
+def _proposal_action(proposal_id: str, tool: str) -> JSONResponse:
+    """Shared envelope for the id-only proposal lifecycle tools."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, tool, {"id": proposal_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital %s failed: %s", tool, proposal_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/catalog")
+def list_catalog(
+    active: Optional[bool] = None,
+    search: Optional[str] = None,
+    produces: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's services catalog items (read-only, MCP
+    ``services.catalog.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if active is not None:
+            args["active"] = bool(active)
+        if search:
+            args["search"] = str(search)
+        if produces:
+            args["produces"] = str(produces)
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.catalog.list", args)
+        rows = _rows_from_services(payload, "catalog")
+        return JSONResponse(content={"ok": True, "catalog": [_normalize_catalog_item(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: services catalog list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/catalog/{catalog_id}")
+def get_catalog_item(catalog_id: str) -> JSONResponse:
+    """Return one services catalog item by id (MCP ``services.catalog.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.catalog.get", {"id": catalog_id})
+        item = _single_service(payload, "item", "catalog")
+        if item is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "item": _normalize_catalog_item(item)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services catalog get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/offerings")
+def list_offerings(
+    serviceCatalogId: Optional[str] = None,
+    pricingModel: Optional[str] = None,
+    isActive: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List service offerings (read-only, MCP ``services.offerings.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if serviceCatalogId:
+            args["serviceCatalogId"] = serviceCatalogId
+        if pricingModel:
+            args["pricingModel"] = pricingModel
+        if isActive is not None:
+            args["isActive"] = bool(isActive)
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.offerings.list", args)
+        rows = _rows_from_services(payload, "offerings")
+        return JSONResponse(content={"ok": True, "offerings": [_normalize_service_offering(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: services offerings list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/offerings/{offering_id}")
+def get_service_offering(offering_id: str) -> JSONResponse:
+    """Return one service offering by id (MCP ``services.offerings.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.offerings.get", {"id": offering_id})
+        offering = _single_service(payload, "offering")
+        if offering is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "offering": _normalize_service_offering(offering)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services offerings get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/categories")
+def list_service_categories(
+    parentId: Optional[str] = None,
+    isActive: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List services categories (read-only, MCP ``services.categories.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if parentId not in (None, ""):
+            args["parentId"] = parentId
+        if isActive is not None:
+            args["isActive"] = bool(isActive)
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.categories.list", args)
+        rows = _rows_from_services(payload, "categories")
+        return JSONResponse(content={"ok": True, "categories": [_normalize_service_category(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: services categories list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/proposals")
+def list_proposals(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's proposals (read-only, MCP ``services.proposals.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = status
+        if search:
+            args["search"] = search
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.proposals.list", args)
+        rows = _rows_from_services(payload, "proposals")
+        return JSONResponse(content={"ok": True, "proposals": [_normalize_proposal(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: services proposals list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/services/proposals/{proposal_id}")
+def get_proposal(proposal_id: str) -> JSONResponse:
+    """Return one proposal incl. items/tranches (MCP ``services.proposals.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "services.proposals.get", {"id": proposal_id})
+        proposal = _single_service(payload, "proposal")
+        if proposal is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "proposal": _normalize_proposal(proposal)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals")
+def create_proposal(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a proposal (MCP ``services.proposals.create``, needsApproval).
+    Body fields map 1:1 to the tool input; ``title`` is required."""
+    if not isinstance(payload, dict):
+        payload = {}
+    title = payload.get("title")
+    if not title or not str(title).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "title_required"})
+
+    args: Dict[str, Any] = {"title": str(title)}
+    for key in (
+        "leadId", "description", "currency", "totalValue", "paymentModel",
+        "depositPercentage", "validUntil", "terms",
+    ):
+        if payload.get(key) is not None:
+            args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/send")
+def send_proposal(proposal_id: str) -> JSONResponse:
+    """Send a proposal (MCP ``services.proposals.send``, needsApproval)."""
+    return _proposal_action(proposal_id, "services.proposals.send")
+
+
+@router.post("/services/proposals/{proposal_id}/accept")
+def accept_proposal(proposal_id: str) -> JSONResponse:
+    """Accept a proposal (MCP ``services.proposals.accept``, needsApproval)."""
+    return _proposal_action(proposal_id, "services.proposals.accept")
+
+
+@router.post("/services/proposals/{proposal_id}/reject")
+def reject_proposal(proposal_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Reject a proposal (MCP ``services.proposals.reject``, needsApproval).
+    Body: ``{reason?}``."""
+    args: Dict[str, Any] = {"id": proposal_id}
+    if isinstance(payload, dict) and payload.get("reason") is not None:
+        args["reason"] = payload["reason"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.reject", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals reject failed: %s", proposal_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/cancel")
+def cancel_proposal(proposal_id: str) -> JSONResponse:
+    """Cancel a proposal (MCP ``services.proposals.cancel``, needsApproval)."""
+    return _proposal_action(proposal_id, "services.proposals.cancel")
+
+
+@router.post("/services/proposals/{proposal_id}/update")
+def update_proposal(proposal_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update proposal fields (MCP ``services.proposals.update``,
+    needsApproval). Body: optional ``title``/``description``/``currency``/
+    ``terms`` — ``description``/``terms`` may be null to clear them."""
+    args: Dict[str, Any] = {"id": proposal_id}
+    if isinstance(payload, dict):
+        for key in ("title", "description", "currency", "terms"):
+            if key in payload:
+                args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.update", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals update failed: %s", proposal_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/duplicate")
+def duplicate_proposal(proposal_id: str) -> JSONResponse:
+    """Duplicate a proposal (MCP ``services.proposals.duplicate``, needsApproval)."""
+    return _proposal_action(proposal_id, "services.proposals.duplicate")
+
+
+@router.post("/services/proposals/{proposal_id}/expire")
+def expire_proposal(proposal_id: str) -> JSONResponse:
+    """Expire a proposal (MCP ``services.proposals.expire``, needsApproval)."""
+    return _proposal_action(proposal_id, "services.proposals.expire")
+
+
+@router.post("/services/proposals/{proposal_id}/items")
+def add_proposal_item(proposal_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a line item (MCP ``services.proposals.items.add``, needsApproval).
+    Body: ``{values: {serviceCatalogId, unitPrice, ...}}``."""
+    values = _values_from(payload)
+    if values is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "values_required"})
+    if not values.get("serviceCatalogId"):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "service_catalog_id_required"})
+    if values.get("unitPrice") is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "unit_price_required"})
+
+    args: Dict[str, Any] = {"proposalId": proposal_id, "values": values}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.items.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals items add failed: %s", proposal_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/items/{item_id}")
+def update_proposal_item(proposal_id: str, item_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update a line item (MCP ``services.proposals.items.update``,
+    needsApproval). Body: ``{values: {...}}``."""
+    values = _values_from(payload)
+    if values is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "values_required"})
+
+    args: Dict[str, Any] = {"id": item_id, "values": values}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.items.update", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals items update failed: %s", item_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/items/{item_id}/remove")
+def remove_proposal_item(proposal_id: str, item_id: str) -> JSONResponse:
+    """Remove a line item (MCP ``services.proposals.items.remove``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.items.remove", {"id": item_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals items remove failed: %s", item_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/tranches")
+def add_proposal_tranche(proposal_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a payment tranche (MCP ``services.proposals.tranches.add``,
+    needsApproval). Body: ``{values: {label, amount, ...}}``."""
+    values = _values_from(payload)
+    if values is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "values_required"})
+    if not values.get("label"):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "label_required"})
+    if values.get("amount") is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "amount_required"})
+
+    args: Dict[str, Any] = {"proposalId": proposal_id, "values": values}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.tranches.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals tranches add failed: %s", proposal_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/tranches/{tranche_id}")
+def update_proposal_tranche(proposal_id: str, tranche_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update a payment tranche (MCP ``services.proposals.tranches.update``,
+    needsApproval). Body: ``{values: {...}}``."""
+    values = _values_from(payload)
+    if values is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "values_required"})
+
+    args: Dict[str, Any] = {"id": tranche_id, "values": values}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.tranches.update", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals tranches update failed: %s", tranche_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/services/proposals/{proposal_id}/tranches/{tranche_id}/remove")
+def remove_proposal_tranche(proposal_id: str, tranche_id: str) -> JSONResponse:
+    """Remove a payment tranche (MCP ``services.proposals.tranches.remove``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "services.proposals.tranches.remove", {"id": tranche_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital services proposals tranches remove failed: %s", tranche_id)
+        return _maybe_error(ERR_UNREACHABLE)

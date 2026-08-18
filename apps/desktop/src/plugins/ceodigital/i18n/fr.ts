@@ -215,6 +215,145 @@ export const fr: CeodigitalMessages = {
       goToTenant: 'Ouvrir les approbations'
     }
   },
+  services: {
+    catalog: {
+      title: 'Catalogue de services',
+      empty: 'Aucun élément de catalogue de services pour votre tenant pour le moment.',
+      searchPlaceholder: 'Rechercher dans le catalogue…',
+      produces: 'Produit',
+      allProduces: 'Tous',
+      activeOnly: 'Actifs uniquement',
+      offerings: 'Offres',
+      offeringsEmpty: 'Aucune offre pour cet élément de catalogue.',
+      back: 'Retour au catalogue',
+      detail: 'Élément du catalogue',
+      headers: { name: 'Nom', code: 'Code', pricing: 'Tarification', model: 'Modèle' }
+    },
+    offerings: {
+      title: 'Offres de services',
+      empty: 'Aucune offre de services pour votre tenant pour le moment.'
+    },
+    categories: {
+      title: 'Catégories de services',
+      empty: 'Aucune catégorie de services pour votre tenant pour le moment.'
+    },
+    proposals: {
+      title: 'Propositions CEODigital',
+      openCommand: 'CEODigital : Ouvrir les propositions',
+      empty: 'Aucune proposition pour votre tenant pour le moment.',
+      new: 'Nouvelle proposition',
+      back: 'Retour aux propositions',
+      detail: 'Détail de la proposition',
+      fields: {
+        title: 'Titre',
+        status: 'Statut',
+        description: 'Description',
+        currency: 'Devise',
+        totalValue: 'Valeur totale',
+        paymentModel: 'Modèle de paiement',
+        depositPercentage: 'Acompte %',
+        validUntil: 'Valable jusqu’au',
+        terms: 'Conditions',
+        leadId: 'Id du lead'
+      },
+      status: {
+        draft: 'Brouillon',
+        sent: 'Envoyée',
+        accepted: 'Acceptée',
+        rejected: 'Rejetée',
+        cancelled: 'Annulée',
+        expired: 'Expirée',
+        pending: 'En attente'
+      },
+      actions: {
+        send: 'Envoyer',
+        accept: 'Accepter',
+        reject: 'Rejeter',
+        cancel: 'Annuler',
+        duplicate: 'Dupliquer',
+        expire: 'Expirer',
+        addItem: 'Ajouter une ligne',
+        addTranche: 'Ajouter une échéance',
+        save: 'Enregistrer',
+        remove: 'Retirer',
+        sending: 'Envoi…',
+        accepting: 'Acceptation…',
+        rejecting: 'Rejet…',
+        cancelling: 'Annulation…',
+        duplicating: 'Duplication…',
+        expiring: 'Expiration…'
+      },
+      reject: { reasonPlaceholder: 'Motif (facultatif)…', cancel: 'Annuler' },
+      items: {
+        headers: {
+          description: 'Description',
+          quantity: 'Qté',
+          unitPrice: 'Prix unitaire',
+          discount: 'Remise',
+          vatRate: 'TVA %',
+          recurrence: 'Récurrence'
+        },
+        empty: 'Aucune ligne sur cette proposition pour le moment.',
+        form: {
+          serviceCatalogId: 'Id du catalogue de services',
+          serviceOfferingId: 'Id de l’offre',
+          quantity: 'Quantité',
+          unitPrice: 'Prix unitaire',
+          discount: 'Remise',
+          vatRate: 'TVA %',
+          recurrence: 'Récurrence',
+          description: 'Description',
+          sortOrder: 'Ordre',
+          add: 'Ajouter la ligne',
+          update: 'Mettre à jour la ligne',
+          cancel: 'Annuler'
+        }
+      },
+      tranches: {
+        headers: { label: 'Libellé', amount: 'Montant', dueDate: 'Échéance', sortOrder: 'Ordre' },
+        empty: 'Aucune échéance de paiement sur cette proposition pour le moment.',
+        form: {
+          label: 'Libellé',
+          amount: 'Montant',
+          dueDate: 'Échéance',
+          sortOrder: 'Ordre',
+          add: 'Ajouter l’échéance',
+          update: 'Mettre à jour l’échéance',
+          cancel: 'Annuler'
+        }
+      },
+      form: {
+        title: 'Titre',
+        leadId: 'Id du lead',
+        description: 'Description',
+        totalValue: 'Valeur totale',
+        paymentModel: 'Modèle de paiement',
+        depositPercentage: 'Acompte %',
+        validUntil: 'Valable jusqu’au',
+        currency: 'Devise',
+        terms: 'Conditions',
+        create: 'Créer la proposition',
+        cancel: 'Annuler'
+      },
+      errors: {
+        create: 'Impossible de créer la proposition.',
+        send: 'Impossible d’envoyer la proposition.',
+        accept: 'Impossible d’accepter la proposition.',
+        reject: 'Impossible de rejeter la proposition.',
+        cancel: 'Impossible d’annuler la proposition.',
+        duplicate: 'Impossible de dupliquer la proposition.',
+        expire: 'Impossible de faire expirer la proposition.',
+        addItem: 'Impossible d’ajouter la ligne.',
+        updateItem: 'Impossible de mettre à jour la ligne.',
+        removeItem: 'Impossible de retirer la ligne.',
+        addTranche: 'Impossible d’ajouter l’échéance.',
+        updateTranche: 'Impossible de mettre à jour l’échéance.',
+        removeTranche: 'Impossible de retirer l’échéance.',
+        fetchProposal: 'Impossible de charger cette proposition.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    }
+  },
   errors: {
     fetch: 'Impossible de charger les projets CEODigital.',
     mcp_not_configured: "Le MCP CEODigital n'est pas configuré. Connectez-le d'abord dans vos paramètres CEODigital.",

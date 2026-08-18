@@ -452,3 +452,219 @@ export type RunWorkItemEnvelope = RunWorkItemResponse | CrmError
 export type AssignWorkItemEnvelope = AssignWorkItemResponse | CrmError
 export type SubmitWorkItemEnvelope = SubmitWorkItemResponse | CrmError
 export type ChecklistToggleEnvelope = ChecklistToggleResponse | CrmError
+
+// ── Services & Proposals (W3) ──────────────────────────────────────────────
+
+/** A services catalog item (`services.catalog.list` / `get`). */
+export interface CatalogRow {
+  id: string
+  title: string
+  name?: null | string
+  code?: null | string
+  pricing?: null | string
+  produces?: null | string
+  is_active?: null | boolean
+  [key: string]: unknown
+}
+
+/** A service offering (`services.offerings.list` / `get`). */
+export interface OfferingRow {
+  id: string
+  title: string
+  name?: null | string
+  service_catalog_id?: null | string
+  serviceCatalogId?: null | string
+  pricing_model?: null | string
+  pricingModel?: null | string
+  is_active?: null | boolean
+  isActive?: null | boolean
+  [key: string]: unknown
+}
+
+/** A proposal payment tranche (`services.proposals.get`, normalized). */
+export interface ProposalTranche {
+  id: string
+  label: string
+  amount?: null | number
+  due_date?: null | string
+  sort_order?: null | number
+  [key: string]: unknown
+}
+
+/** A proposal line item (`services.proposals.get`, normalized). */
+export interface ProposalItem {
+  id: string
+  description: string
+  service_catalog_id?: null | string
+  serviceCatalogId?: null | string
+  service_offering_id?: null | string
+  serviceOfferingId?: null | string
+  quantity?: null | number
+  unit_price?: null | number
+  discount?: null | number
+  vat_rate?: null | number
+  recurrence?: null | string
+  sort_order?: null | number
+  [key: string]: unknown
+}
+
+/** A services proposal (`services.proposals.list` / `get`, normalized). */
+export interface ProposalRow {
+  id: string
+  title: string
+  name?: null | string
+  status: string
+  lead_id?: null | string
+  leadId?: null | string
+  description?: null | string
+  currency?: null | string
+  total_value?: null | number
+  totalValue?: null | number
+  value?: null | number
+  payment_model?: null | string
+  paymentModel?: null | string
+  deposit_percentage?: null | number
+  depositPercentage?: null | number
+  valid_until?: null | string
+  validUntil?: null | string
+  terms?: null | string
+  items?: ProposalItem[]
+  tranches?: ProposalTranche[]
+  [key: string]: unknown
+}
+
+// ── Services reads — query params + envelopes ───────────────────────────────
+
+/** GET /services/catalog — list query params (map 1:1 to MCP). */
+export interface CatalogListParams {
+  active?: boolean
+  search?: string
+  produces?: string
+  limit?: number
+}
+
+/** GET /services/offerings — list query params (map 1:1 to MCP). */
+export interface OfferingsListParams {
+  serviceCatalogId?: string
+  pricingModel?: string
+  isActive?: boolean
+  limit?: number
+}
+
+/** GET /services/categories — list query params (map 1:1 to MCP). */
+export interface ServiceCategoriesParams {
+  parentId?: string
+  isActive?: boolean
+  limit?: number
+}
+
+/** GET /services/proposals — list query params (map 1:1 to MCP). */
+export interface ProposalsListParams {
+  status?: string
+  search?: string
+  limit?: number
+}
+
+/** GET /services/catalog — success envelope. */
+export interface CatalogResponse {
+  ok: true
+  catalog: CatalogRow[]
+}
+
+/** GET /services/catalog/{id} — success envelope. */
+export interface CatalogItemResponse {
+  ok: true
+  item: CatalogRow
+}
+
+/** GET /services/offerings — success envelope. */
+export interface OfferingsResponse {
+  ok: true
+  offerings: OfferingRow[]
+}
+
+/** GET /services/offerings/{id} — success envelope. */
+export interface OfferingResponse {
+  ok: true
+  offering: OfferingRow
+}
+
+/** GET /services/proposals — success envelope. */
+export interface ProposalsResponse {
+  ok: true
+  proposals: ProposalRow[]
+}
+
+/** GET /services/proposals/{id} — success envelope. */
+export interface ProposalResponse {
+  ok: true
+  proposal: ProposalRow
+}
+
+/** POST /services/proposals — success envelope (raw MCP result). */
+export interface CreateProposalResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+/** POST /services/proposals/{id}/... — mutation success envelope. */
+export interface ProposalActionResultResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+// ── Services mutations — input bodies ───────────────────────────────────────
+
+/** POST /services/proposals — create input (maps 1:1 to MCP). */
+export interface CreateProposalInput {
+  title: string
+  leadId?: string
+  description?: string
+  currency?: string
+  totalValue?: number
+  paymentModel?: string
+  depositPercentage?: number
+  validUntil?: string
+  terms?: string
+}
+
+/** POST /services/proposals/{id}/update — body (null clears a field). */
+export interface UpdateProposalInput {
+  title?: string
+  description?: string | null
+  currency?: string
+  terms?: string | null
+}
+
+/** Line-item mutation values (`services.proposals.items.add|update`). */
+export interface ProposalItemValues {
+  serviceCatalogId: string
+  serviceOfferingId?: string
+  quantity?: number
+  unitPrice: number
+  discount?: number
+  vatRate?: number
+  recurrence?: string
+  description?: string
+  sortOrder?: number
+}
+
+/** Tranche mutation values (`services.proposals.tranches.add|update`). */
+export interface ProposalTrancheValues {
+  label: string
+  amount: number
+  dueDate?: string
+  sortOrder?: number
+}
+
+/** Typed failure envelope shared by the services reads/mutations. */
+export type ServicesError = CrmError
+
+export type CatalogEnvelope = CatalogResponse | ServicesError
+export type CatalogItemEnvelope = CatalogItemResponse | ServicesError
+export type OfferingsEnvelope = OfferingsResponse | ServicesError
+export type OfferingEnvelope = OfferingResponse | ServicesError
+export type ProposalsEnvelope = ProposalsResponse | ServicesError
+export type ProposalEnvelope = ProposalResponse | ServicesError
+export type CreateProposalEnvelope = CreateProposalResponse | ServicesError
+export type ProposalActionEnvelope = ProposalActionResultResponse | ServicesError

@@ -24,12 +24,14 @@ import { bindApi } from './api'
 import { CEODIGITAL_LOCALES } from './i18n'
 import { ActivitiesPage } from './pages/Activities'
 import { AgentsPage } from './pages/Agents'
+import { CatalogPage } from './pages/Catalog'
 import { DealsPage } from './pages/Deals'
 import { LeadsPage } from './pages/Leads'
 import { OrganizationsPage } from './pages/Organizations'
 import { PersonsPage } from './pages/Persons'
 import { PipelinesPage } from './pages/Pipelines'
 import { ProjectsPage } from './pages/Projects'
+import { ProposalsPage } from './pages/Proposals'
 import { WorkitemsPage } from './pages/Workitems'
 
 const plugin: HermesPlugin = {
@@ -46,6 +48,58 @@ const plugin: HermesPlugin = {
     const t = ctx.i18n.t
 
     ctx.registerMany([
+      {
+        id: 'catalog-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/catalog' } satisfies RouteContribution,
+        render: () => <CatalogPage />
+      },
+      {
+        id: 'catalog-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 47,
+        data: {
+          codicon: 'package',
+          label: t('services.catalog.title'),
+          path: '/ceodigital/catalog'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-catalog',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openCatalog',
+          label: t('services.catalog.title'),
+          keywords: ['ceodigital', 'services', 'catalog', 'offerings'],
+          run: () => host.navigate('/ceodigital/catalog')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'proposals-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/proposals' } satisfies RouteContribution,
+        render: () => <ProposalsPage />
+      },
+      {
+        id: 'proposals-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 48,
+        data: {
+          codicon: 'file',
+          label: t('services.proposals.title'),
+          path: '/ceodigital/proposals'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-proposals',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openProposals',
+          label: t('services.proposals.title'),
+          keywords: ['ceodigital', 'services', 'proposals', 'quotes'],
+          run: () => host.navigate('/ceodigital/proposals')
+        } satisfies PaletteContribution
+      },
       {
         id: 'workitems-page',
         area: ROUTES_AREA,

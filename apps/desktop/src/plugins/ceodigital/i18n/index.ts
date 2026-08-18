@@ -172,6 +172,123 @@ export interface CeodigitalMessages {
       goToTenant: string
     }
   }
+  services: {
+    catalog: {
+      title: string
+      empty: string
+      searchPlaceholder: string
+      produces: string
+      allProduces: string
+      activeOnly: string
+      offerings: string
+      offeringsEmpty: string
+      back: string
+      detail: string
+      headers: { name: string; code: string; pricing: string; model: string }
+    }
+    offerings: { title: string; empty: string }
+    categories: { title: string; empty: string }
+    proposals: {
+      title: string
+      openCommand: string
+      empty: string
+      new: string
+      back: string
+      detail: string
+      fields: {
+        title: string
+        status: string
+        description: string
+        currency: string
+        totalValue: string
+        paymentModel: string
+        depositPercentage: string
+        validUntil: string
+        terms: string
+        leadId: string
+      }
+      status: Partial<Record<string, string>>
+      actions: {
+        send: string
+        accept: string
+        reject: string
+        cancel: string
+        duplicate: string
+        expire: string
+        addItem: string
+        addTranche: string
+        save: string
+        remove: string
+        sending: string
+        accepting: string
+        rejecting: string
+        cancelling: string
+        duplicating: string
+        expiring: string
+      }
+      reject: { reasonPlaceholder: string; cancel: string }
+      items: {
+        headers: {
+          description: string
+          quantity: string
+          unitPrice: string
+          discount: string
+          vatRate: string
+          recurrence: string
+        }
+        empty: string
+        form: {
+          serviceCatalogId: string
+          serviceOfferingId: string
+          quantity: string
+          unitPrice: string
+          discount: string
+          vatRate: string
+          recurrence: string
+          description: string
+          sortOrder: string
+          add: string
+          update: string
+          cancel: string
+        }
+      }
+      tranches: {
+        headers: { label: string; amount: string; dueDate: string; sortOrder: string }
+        empty: string
+        form: { label: string; amount: string; dueDate: string; sortOrder: string; add: string; update: string; cancel: string }
+      }
+      form: {
+        title: string
+        leadId: string
+        description: string
+        totalValue: string
+        paymentModel: string
+        depositPercentage: string
+        validUntil: string
+        currency: string
+        terms: string
+        create: string
+        cancel: string
+      }
+      errors: {
+        create: string
+        send: string
+        accept: string
+        reject: string
+        cancel: string
+        duplicate: string
+        expire: string
+        addItem: string
+        updateItem: string
+        removeItem: string
+        addTranche: string
+        updateTranche: string
+        removeTranche: string
+        fetchProposal: string
+        general: string
+      }
+    }
+  }
   errors: {
     fetch: string
     mcp_not_configured: string
@@ -222,3 +339,7 @@ export function useCeodigital(): CEODIGITALText {
 /** Status label — named statuses get their bundle copy, anything else its raw id. */
 export const statusLabel = (k: CEODIGITALText, status: string) =>
   k.workitem.status[status as WorkItemStatus] ?? status
+
+/** Proposal status label — named statuses get their bundle copy, else the raw id. */
+export const proposalStatusLabel = (k: CEODIGITALText, status: string) =>
+  k.services.proposals.status[status] ?? status

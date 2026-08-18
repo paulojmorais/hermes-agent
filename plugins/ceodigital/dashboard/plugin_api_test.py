@@ -1084,3 +1084,566 @@ def test_config_never_hardcodes_url_or_slug(plugin):
     # The env names exist so operators can provision without code edits.
     for env in ("CEODIGITAL_APP_URL", "CEODIGITAL_TENANT_SLUG", "CEODIGITAL_MCP_TOKEN"):
         assert env in source
+
+
+# ---------------------------------------------------------------------------
+# W3 · Services & Proposals — reads (catalog / offerings / categories)
+# ---------------------------------------------------------------------------
+
+
+def _fake_mcp(captured, payload):
+    """Return a ``_mcp_fetch`` fake that records tool/args and yields ``payload``."""
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return payload
+
+    return fake_mcp_fetch
+
+
+def test_services_catalog_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"catalog": [
+            {"id": "ci-1", "name": "Onboarding", "produces": "implementation", "active": True},
+            {"id": "ci-2", "title": "Retainer", "produces": "subscription", "active": False},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/catalog?search=onb&produces=implementation&active=true&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [c["id"] for c in data["catalog"]] == ["ci-1", "ci-2"]
+    assert data["catalog"][0]["title"] == "Onboarding"  # name → title fallback
+    assert captured["tool"] == "services.catalog.list"
+    assert captured["args"] == {"search": "onb", "produces": "implementation", "active": True, "limit": 5}
+
+
+def test_services_catalog_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"catalog": []}))
+
+    resp = client.get("/api/plugins/ceodigital/services/catalog")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "catalog": []}
+    assert captured["args"] == {}
+
+
+def test_services_catalog_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"catalog": {"id": "ci-7", "name": "Sprint Boost", "produces": "implementation"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/catalog/ci-7")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["item"]["id"] == "ci-7"
+    assert data["item"]["title"] == "Sprint Boost"
+    assert captured["tool"] == "services.catalog.get"
+    assert captured["args"] == {"id": "ci-7"}
+
+
+def test_services_catalog_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp({}, {}))
+
+    resp = client.get("/api/plugins/ceodigital/services/catalog/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_services_offerings_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"offerings": [
+            {"id": "of-1", "name": "Starter", "pricing_model": "fixed", "price": 500},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/offerings?serviceCatalogId=ci-1&pricingModel=fixed&isActive=true")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["offerings"][0]["title"] == "Starter"
+    assert captured["tool"] == "services.offerings.list"
+    assert captured["args"] == {"serviceCatalogId": "ci-1", "pricingModel": "fixed", "isActive": True}
+
+
+def test_services_offerings_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"offering": {"id": "of-9", "name": "Pro", "pricing_model": "per_unit"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/offerings/of-9")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["offering"]["id"] == "of-9"
+    assert data["offering"]["title"] == "Pro"
+    assert captured["args"] == {"id": "of-9"}
+
+
+def test_services_categories_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"categories": [
+            {"id": "cat-1", "label": "Implementation", "parent_id": None},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/categories?isActive=true")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["categories"][0]["title"] == "Implementation"  # label → title fallback
+    assert captured["tool"] == "services.categories.list"
+    assert captured["args"] == {"isActive": True}
+
+
+def test_services_categories_parent_id(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"categories": []}))
+
+    resp = client.get("/api/plugins/ceodigital/services/categories?parentId=cat-1")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "categories": []}
+    assert captured["args"] == {"parentId": "cat-1"}
+
+
+def test_services_proposals_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"proposals": [
+            {"id": "pr-1", "title": "Acme renewal", "status": "draft", "totalValue": 1200, "currency": "EUR"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/proposals?status=draft&search=acme&limit=10")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    proposal = data["proposals"][0]
+    assert proposal["id"] == "pr-1"
+    assert proposal["value"] == 1200  # totalValue → value pinned by the normalizer
+    assert proposal["currency"] == "EUR"
+    assert captured["tool"] == "services.proposals.list"
+    assert captured["args"] == {"status": "draft", "search": "acme", "limit": 10}
+
+
+def test_services_proposals_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"proposal": {
+            "id": "pr-2",
+            "title": "Beta onboarding",
+            "status": "sent",
+            "items": [{"id": "it-1", "description": "Setup", "unitPrice": 900}],
+            "payment_tranches": [{"id": "tr-1", "label": "Deposit", "amount": 300, "dueDate": "2026-09-01"}],
+        }}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/services/proposals/pr-2")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["proposal"]["id"] == "pr-2"
+    assert data["proposal"]["items"][0]["unit_price"] == 900  # unitPrice pinned
+    assert data["proposal"]["tranches"][0]["due_date"] == "2026-09-01"  # dueDate pinned
+    assert captured["args"] == {"id": "pr-2"}
+
+
+def test_services_proposals_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp({}, {}))
+
+    resp = client.get("/api/plugins/ceodigital/services/proposals/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_services_reads_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for route in ("services/catalog", "services/offerings", "services/categories", "services/proposals"):
+        resp = client.get(f"/api/plugins/ceodigital/{route}")
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W3 · Services & Proposals — proposal lifecycle mutations
+# ---------------------------------------------------------------------------
+
+
+def test_services_proposals_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"id": "pr-new", "title": "Acme onboarding", "status": "draft"}),
+    )
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals",
+        json={
+            "title": "Acme onboarding",
+            "leadId": "lead-1",
+            "description": "Full onboarding sprint",
+            "currency": "EUR",
+            "totalValue": 2500,
+            "paymentModel": "milestone_based",
+            "depositPercentage": 20,
+            "validUntil": "2026-10-01",
+            "terms": "Net 30",
+        },
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["result"]["id"] == "pr-new"
+    assert captured["tool"] == "services.proposals.create"
+    assert captured["args"] == {
+        "title": "Acme onboarding",
+        "leadId": "lead-1",
+        "description": "Full onboarding sprint",
+        "currency": "EUR",
+        "totalValue": 2500,
+        "paymentModel": "milestone_based",
+        "depositPercentage": 20,
+        "validUntil": "2026-10-01",
+        "terms": "Net 30",
+    }
+
+
+def test_services_proposals_create_requires_title(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals", json={"currency": "EUR"})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "title_required"}
+
+
+def test_services_proposals_send_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "sent"}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/send", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.send"
+    assert captured["args"] == {"id": "pr-1"}
+
+
+def test_services_proposals_accept_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "accepted"}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/accept", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.accept"
+    assert captured["args"] == {"id": "pr-1"}
+
+
+def test_services_proposals_reject_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "rejected"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals/pr-1/reject",
+        json={"reason": "budget too high"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.reject"
+    assert captured["args"] == {"id": "pr-1", "reason": "budget too high"}
+
+
+def test_services_proposals_reject_without_reason(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "rejected"}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/reject", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["args"] == {"id": "pr-1"}
+
+
+def test_services_proposals_cancel_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "cancelled"}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/cancel", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.cancel"
+    assert captured["args"] == {"id": "pr-1"}
+
+
+def test_services_proposals_update_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "draft"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals/pr-1/update",
+        json={"title": "Renamed", "description": None, "terms": "Net 15"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.update"
+    # description:null is passed through so the MCP tool can clear the field.
+    assert captured["args"] == {"id": "pr-1", "title": "Renamed", "description": None, "terms": "Net 15"}
+
+
+def test_services_proposals_duplicate_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "pr-dup"}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/duplicate", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.duplicate"
+    assert captured["args"] == {"id": "pr-1"}
+
+
+def test_services_proposals_expire_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"status": "expired"}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/expire", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.expire"
+    assert captured["args"] == {"id": "pr-1"}
+
+
+def test_services_mutations_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/send", json={})
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W3 · Services & Proposals — line items + tranches mutations
+# ---------------------------------------------------------------------------
+
+
+def test_services_proposals_items_add_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "it-new"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals/pr-1/items",
+        json={"values": {
+            "serviceCatalogId": "ci-1",
+            "serviceOfferingId": "of-1",
+            "quantity": 2,
+            "unitPrice": 450,
+            "discount": 10,
+            "vatRate": 23,
+            "recurrence": "monthly",
+            "description": "Two seats",
+        }},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.items.add"
+    assert captured["args"] == {
+        "proposalId": "pr-1",
+        "values": {
+            "serviceCatalogId": "ci-1",
+            "serviceOfferingId": "of-1",
+            "quantity": 2,
+            "unitPrice": 450,
+            "discount": 10,
+            "vatRate": 23,
+            "recurrence": "monthly",
+            "description": "Two seats",
+        },
+    }
+
+
+def test_services_proposals_items_add_requires_fields(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/items", json={})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "values_required"}
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/items", json={"values": {"unitPrice": 100}})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "service_catalog_id_required"}
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/items", json={"values": {"serviceCatalogId": "ci-1"}})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "unit_price_required"}
+
+
+def test_services_proposals_items_update_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "it-1"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals/pr-1/items/it-1",
+        json={"values": {"quantity": 3, "unitPrice": 400}},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.items.update"
+    assert captured["args"] == {"id": "it-1", "values": {"quantity": 3, "unitPrice": 400}}
+
+
+def test_services_proposals_items_update_requires_values(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/items/it-1", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "values_required"}
+
+
+def test_services_proposals_items_remove_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"removed": True}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/items/it-1/remove", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.items.remove"
+    assert captured["args"] == {"id": "it-1"}
+
+
+def test_services_proposals_tranches_add_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "tr-new"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals/pr-1/tranches",
+        json={"values": {"label": "Deposit", "amount": 300, "dueDate": "2026-09-01"}},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.tranches.add"
+    assert captured["args"] == {
+        "proposalId": "pr-1",
+        "values": {"label": "Deposit", "amount": 300, "dueDate": "2026-09-01"},
+    }
+
+
+def test_services_proposals_tranches_add_requires_fields(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/tranches", json={"values": {"amount": 100}})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "label_required"}
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/tranches", json={"values": {"label": "Deposit"}})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "amount_required"}
+
+
+def test_services_proposals_tranches_update_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "tr-1"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/services/proposals/pr-1/tranches/tr-1",
+        json={"values": {"label": "Milestone", "amount": 700}},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.tranches.update"
+    assert captured["args"] == {"id": "tr-1", "values": {"label": "Milestone", "amount": 700}}
+
+
+def test_services_proposals_tranches_remove_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"removed": True}))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/tranches/tr-1/remove", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "services.proposals.tranches.remove"
+    assert captured["args"] == {"id": "tr-1"}
+
+
+def test_services_proposals_tranches_update_requires_values(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/services/proposals/pr-1/tranches/tr-1", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "values_required"}
