@@ -2618,3 +2618,674 @@ def test_documents_mutations_not_configured(plugin, client, monkeypatch):
         resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body) if body is not None else client.get(f"/api/plugins/ceodigital{route}")
         assert resp.status_code == 503
         assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W6a · Messaging (messaging.*) — threads / messages / reactions / attachments
+# ---------------------------------------------------------------------------
+
+
+def _fake_fetch(plugin, monkeypatch, payload, capture=None):
+    """Monkeypatch ``_mcp_fetch`` to return ``payload`` and (optionally) record
+    the tool name + arguments into ``capture``."""
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        if capture is not None:
+            capture["tool"] = tool_name
+            capture["args"] = arguments
+        return payload
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+
+def test_messaging_threads_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"threads": [{"id": "th-1", "subject": "Beta onboarding", "thread_type": "internal"}]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads?threadType=internal&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["threads"][0]["id"] == "th-1"
+    assert data["threads"][0]["title"] == "Beta onboarding"
+    assert captured["tool"] == "messaging.threads.list"
+    assert captured["args"] == {"threadType": "internal", "limit": 5}
+
+
+def test_messaging_threads_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"threads": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "threads": []}
+    assert captured["tool"] == "messaging.threads.list"
+    assert captured["args"] == {}
+
+
+def test_messaging_threads_list_by_ref(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"threads": [{"_id": "th-2", "title": "Deal thread"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads?refTable=project&refId=pr-1")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert resp.json()["threads"][0]["id"] == "th-2"
+    assert captured["tool"] == "messaging.threads.list_by_ref"
+    assert captured["args"] == {"refTable": "project", "refId": "pr-1"}
+
+
+def test_messaging_threads_list_by_ref_requires_ref_table(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads?refId=pr-1")
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "ref_table_required"}
+
+
+def test_messaging_thread_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"thread": {"id": "th-1", "subject": "Beta onboarding", "messages": [{"id": "m-1", "body": "hi"}]}},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads/th-1?messageLimit=10")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["thread"]["id"] == "th-1"
+    assert len(data["thread"]["messages"]) == 1
+    assert captured["tool"] == "messaging.threads.get"
+    assert captured["args"] == {"id": "th-1", "messageLimit": 10}
+
+
+def test_messaging_thread_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"threads": []})
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads/th-nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_messaging_messages_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"messages": [{"id": "m-1", "body": "hello"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/messaging/threads/th-1/messages?limit=25")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["messages"][0]["id"] == "m-1"
+    assert captured["tool"] == "messaging.messages.list"
+    assert captured["args"] == {"threadId": "th-1", "limit": 25}
+
+
+def test_messaging_threads_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"id": "th-new"}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/messaging/threads",
+        json={"refTable": "deal", "refId": "dl-1", "threadType": "internal", "subject": "Follow up"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "messaging.threads.create"
+    assert captured["args"] == {"refTable": "deal", "refId": "dl-1", "threadType": "internal", "subject": "Follow up"}
+
+
+def test_messaging_messages_post_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"id": "m-9"}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/messaging/threads/th-1/messages", json={"body": "Hello there"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "messaging.messages.post"
+    assert captured["args"] == {"threadId": "th-1", "body": "Hello there"}
+
+
+def test_messaging_messages_post_requires_body(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/messaging/threads/th-1/messages", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "body_required"}
+
+
+def test_messaging_messages_react_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/messaging/messages/m-1/react", json={"emoji": "👍"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "messaging.messages.react"
+    assert captured["args"] == {"messageId": "m-1", "emoji": "👍"}
+
+
+def test_messaging_messages_react_requires_emoji(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/messaging/messages/m-1/react", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "emoji_required"}
+
+
+def test_messaging_messages_read_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/messaging/messages/m-1/read")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "messaging.messages.read"
+    assert captured["args"] == {"messageId": "m-1"}
+
+
+def test_messaging_attachments_upload_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"attachment_id": "a-1"}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/messaging/messages/m-1/attachments",
+        json={"fileId": "f-1", "name": "quote.pdf"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "messaging.attachments.upload"
+    assert captured["args"] == {"messageId": "m-1", "fileId": "f-1", "name": "quote.pdf"}
+
+
+def test_messaging_attachments_upload_requires_file_id(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/messaging/messages/m-1/attachments", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "file_id_required"}
+
+
+def test_messaging_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/messaging/threads", None),
+        ("GET", "/messaging/threads/th-1", None),
+        ("GET", "/messaging/threads/th-1/messages", None),
+        ("POST", "/messaging/threads", {"subject": "Hi"}),
+        ("POST", "/messaging/threads/th-1/messages", {"body": "Hi"}),
+        ("POST", "/messaging/messages/m-1/react", {"emoji": "👍"}),
+        ("POST", "/messaging/messages/m-1/read", None),
+        ("POST", "/messaging/messages/m-1/attachments", {"fileId": "f-1"}),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W6a · Notifications (notifications.*)
+# ---------------------------------------------------------------------------
+
+
+def test_notifications_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"notifications": [{"id": "n-1", "title": "Payment received", "is_read": False}]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/notifications?unreadOnly=true&limit=20")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["notifications"][0]["id"] == "n-1"
+    assert captured["tool"] == "notifications.list"
+    assert captured["args"] == {"unreadOnly": True, "limit": 20}
+
+
+def test_notifications_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"notifications": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/notifications")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "notifications": []}
+    assert captured["args"] == {}
+
+
+def test_notifications_unread_count_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"unread_count": 4}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/notifications/unread-count")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "unread_count": 4}
+    assert captured["tool"] == "notifications.unread_count"
+    assert captured["args"] == {}
+
+
+def test_notifications_mark_read_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/notifications/n-1/read")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "notifications.mark_read"
+    assert captured["args"] == {"id": "n-1"}
+
+
+def test_notifications_mark_all_read_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/notifications/read-all")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "notifications.mark_all_read"
+    assert captured["args"] == {}
+
+
+def test_notifications_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/notifications", None),
+        ("GET", "/notifications/unread-count", None),
+        ("POST", "/notifications/n-1/read", None),
+        ("POST", "/notifications/read-all", None),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W6a · Timeline (timeline.*) — events, pins, reactions
+# ---------------------------------------------------------------------------
+
+
+def test_timeline_events_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"events": [{"id": "e-1", "event_type": "project.created", "pinned": True}]},
+        captured,
+    )
+
+    resp = client.get(
+        "/api/plugins/ceodigital/timeline/events"
+        "?entityType=project&actorUserId=u-1&eventGlob=*.created&from=2026-01-01&to=2026-08-01&limit=10"
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["events"][0]["id"] == "e-1"
+    assert captured["tool"] == "timeline.events.list"
+    assert captured["args"] == {
+        "entityType": "project",
+        "actorUserId": "u-1",
+        "eventGlob": "*.created",
+        "from": "2026-01-01",
+        "to": "2026-08-01",
+        "limit": 10,
+    }
+
+
+def test_timeline_events_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"events": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/timeline/events")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "events": []}
+    assert captured["args"] == {}
+
+
+def test_timeline_event_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"event": {"id": "e-1", "summary": "Phase 1 kicked off"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/timeline/events/e-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["event"]["id"] == "e-1"
+    assert data["event"]["title"] == "Phase 1 kicked off"
+    assert captured["tool"] == "timeline.events.get"
+    assert captured["args"] == {"id": "e-1"}
+
+
+def test_timeline_event_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"events": []})
+
+    resp = client.get("/api/plugins/ceodigital/timeline/events/e-nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_timeline_event_pin_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/timeline/events/e-1/pin")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "timeline.pins.add"
+    assert captured["args"] == {"event_id": "e-1"}
+
+
+def test_timeline_event_unpin_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/timeline/events/e-1/unpin")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "timeline.pins.remove"
+    assert captured["args"] == {"event_id": "e-1"}
+
+
+def test_timeline_reactions_add_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/timeline/events/e-1/reactions", json={"reaction_type": "like"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "timeline.reactions.add"
+    assert captured["args"] == {"event_id": "e-1", "reaction_type": "like"}
+
+
+def test_timeline_reactions_remove_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/timeline/events/e-1/reactions/remove", json={"reaction_type": "like"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "timeline.reactions.remove"
+    assert captured["args"] == {"event_id": "e-1", "reaction_type": "like"}
+
+
+def test_timeline_reactions_requires_reaction_type(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/timeline/events/e-1/reactions", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "reaction_type_required"}
+
+
+def test_timeline_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/timeline/events", None),
+        ("GET", "/timeline/events/e-1", None),
+        ("POST", "/timeline/events/e-1/pin", None),
+        ("POST", "/timeline/events/e-1/unpin", None),
+        ("POST", "/timeline/events/e-1/reactions", {"reaction_type": "like"}),
+        ("POST", "/timeline/events/e-1/reactions/remove", {"reaction_type": "like"}),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W6a · Implementations (implementations.*) — projects / phases / files / messages
+# ---------------------------------------------------------------------------
+
+
+def test_implementations_projects_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"projects": [{"id": "p-1", "name": "Website relaunch", "status": "in_progress"}]},
+        captured,
+    )
+
+    resp = client.get(
+        "/api/plugins/ceodigital/implementations/projects?status=in_progress&search=web&clientVisible=true&limit=5"
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["projects"][0]["id"] == "p-1"
+    assert data["projects"][0]["title"] == "Website relaunch"
+    assert captured["tool"] == "implementations.projects.list"
+    assert captured["args"] == {"status": "in_progress", "search": "web", "clientVisible": True, "limit": 5}
+
+
+def test_implementations_projects_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"projects": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/implementations/projects")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "projects": []}
+    assert captured["args"] == {}
+
+
+def test_implementation_project_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"project": {"id": "p-1", "title": "Website relaunch", "status": "planned"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/implementations/projects/p-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["project"]["id"] == "p-1"
+    assert captured["tool"] == "implementations.projects.get"
+    assert captured["args"] == {"id": "p-1"}
+
+
+def test_implementation_project_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"projects": []})
+
+    resp = client.get("/api/plugins/ceodigital/implementations/projects/p-nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_implementation_phases_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"phases": [{"id": "ph-1", "name": "Design", "status": "done"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/implementations/projects/p-1/phases?status=done")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["phases"][0]["id"] == "ph-1"
+    assert data["phases"][0]["title"] == "Design"
+    assert captured["tool"] == "implementations.phases.list"
+    assert captured["args"] == {"projectId": "p-1", "status": "done"}
+
+
+def test_implementation_change_status_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/implementations/projects/p-1/status", json={"status": "delivered"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "implementations.projects.change_status"
+    assert captured["args"] == {"id": "p-1", "status": "delivered"}
+
+
+def test_implementation_change_status_requires_status(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/implementations/projects/p-1/status", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "status_required"}
+
+
+def test_implementation_complete_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/implementations/projects/p-1/complete")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "implementations.projects.complete"
+    assert captured["args"] == {"id": "p-1"}
+
+
+def test_implementation_cancel_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/implementations/projects/p-1/cancel")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "implementations.projects.cancel"
+    assert captured["args"] == {"id": "p-1"}
+
+
+def test_implementation_phase_change_status_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/implementations/phases/ph-1/status", json={"status": "in_progress"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "implementations.phases.change_status"
+    assert captured["args"] == {"id": "ph-1", "status": "in_progress"}
+
+
+def test_implementation_files_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"files": [{"id": "f-1", "name": "scope.md"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/implementations/projects/p-1/files?limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["files"][0]["id"] == "f-1"
+    assert data["files"][0]["title"] == "scope.md"
+    assert captured["tool"] == "implementations.files.list"
+    assert captured["args"] == {"projectId": "p-1", "limit": 5}
+
+
+def test_implementation_messages_post_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/implementations/projects/p-1/messages", json={"body": "Kicking off"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "implementations.messages.post"
+    assert captured["args"] == {"projectId": "p-1", "body": "Kicking off"}
+
+
+def test_implementation_messages_post_requires_body(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/implementations/projects/p-1/messages", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "body_required"}
+
+
+def test_implementations_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/implementations/projects", None),
+        ("GET", "/implementations/projects/p-1", None),
+        ("GET", "/implementations/projects/p-1/phases", None),
+        ("POST", "/implementations/projects/p-1/status", {"status": "delivered"}),
+        ("POST", "/implementations/projects/p-1/complete", None),
+        ("POST", "/implementations/projects/p-1/cancel", None),
+        ("POST", "/implementations/phases/ph-1/status", {"status": "done"}),
+        ("GET", "/implementations/projects/p-1/files", None),
+        ("POST", "/implementations/projects/p-1/messages", {"body": "Hi"}),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}

@@ -615,6 +615,150 @@ export const pt: CeodigitalMessages = {
       }
     }
   },
+  messaging: {
+    title: 'Mensagens CEODigital',
+    openCommand: 'CEODigital: Abrir Mensagens',
+    empty: 'Ainda não existem fios de mensagens para este tenant.',
+    newThread: 'Novo fio',
+    allTypes: 'Todos os tipos',
+    threadType: 'Tipo de fio',
+    refTable: 'Tabela de referência',
+    refId: 'Id de referência',
+    back: 'Voltar aos fios',
+    detail: 'Detalhe do fio',
+    messagesEmpty: 'Ainda não existem mensagens neste fio.',
+    postPlaceholder: 'Escreve uma mensagem…',
+    emojiPlaceholder: 'Emoji',
+    fileId: 'Id do ficheiro',
+    attachmentName: 'Nome do anexo',
+    headers: { id: 'ID', title: 'Título', type: 'Tipo', created: 'Criado' },
+    form: {
+      subject: 'Assunto',
+      subjectPlaceholder: 'Assunto do fio',
+      create: 'Criar fio',
+      cancel: 'Cancelar'
+    },
+    actions: {
+      post: 'Enviar',
+      react: 'Reagir',
+      markRead: 'Marcar como lida',
+      uploadAttachment: 'Anexar',
+      posting: 'A enviar…',
+      reacting: 'A reagir…',
+      uploading: 'A carregar…'
+    },
+    errors: {
+      list: 'Não foi possível carregar os fios de mensagens.',
+      create: 'Não foi possível criar o fio.',
+      post: 'Não foi possível enviar a mensagem.',
+      react: 'Não foi possível reagir à mensagem.',
+      markRead: 'Não foi possível marcar a mensagem como lida.',
+      upload: 'Não foi possível anexar o ficheiro.',
+      fetchMessages: 'Não foi possível carregar as mensagens.',
+      fetchThread: 'Não foi possível carregar este fio.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  notifications: {
+    title: 'Notificações CEODigital',
+    openCommand: 'CEODigital: Abrir Notificações',
+    empty: 'Não tens notificações neste momento.',
+    all: 'Todas',
+    unreadOnly: 'Não lidas',
+    unreadCount: 'Não lidas',
+    markAllRead: 'Marcar todas como lidas',
+    markRead: 'Marcar como lida',
+    marking: 'A marcar…',
+    headers: { id: 'ID', title: 'Título', type: 'Tipo', created: 'Criada' },
+    errors: {
+      list: 'Não foi possível carregar as notificações.',
+      markRead: 'Não foi possível marcar a notificação como lida.',
+      markAll: 'Não foi possível marcar todas as notificações como lidas.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  timeline: {
+    title: 'Linha do tempo CEODigital',
+    openCommand: 'CEODigital: Abrir Linha do tempo',
+    empty: 'Ainda não existem eventos na linha do tempo para este tenant.',
+    entityType: 'Tipo de entidade',
+    entityId: 'Id da entidade',
+    actorUserId: 'Id do ator',
+    eventGlob: 'Glob de evento',
+    pin: 'Afixar',
+    unpin: 'Desafixar',
+    addReaction: 'Reagir',
+    removeReaction: 'Remover',
+    reactions: 'Reações',
+    headers: { id: 'ID', event: 'Evento', entity: 'Entidade', actor: 'Ator', at: 'Em' },
+    actions: {
+      pinning: 'A afixar…',
+      unpinning: 'A desafixar…',
+      reacting: 'A reagir…'
+    },
+    errors: {
+      list: 'Não foi possível carregar os eventos da linha do tempo.',
+      pin: 'Não foi possível afixar o evento.',
+      unpin: 'Não foi possível desafixar o evento.',
+      addReaction: 'Não foi possível adicionar a reação.',
+      removeReaction: 'Não foi possível remover a reação.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  implementations: {
+    title: 'Implementações CEODigital',
+    openCommand: 'CEODigital: Abrir Implementações',
+    empty: 'Ainda não existem projetos de implementação para este tenant.',
+    search: 'Pesquisar projetos…',
+    allStatuses: 'Todos os estados',
+    status: 'Estado',
+    clientVisible: 'Visível ao cliente',
+    back: 'Voltar aos projetos',
+    detail: 'Detalhe do projeto',
+    phases: 'Fases',
+    phasesEmpty: 'Ainda não existem fases neste projeto.',
+    files: 'Ficheiros',
+    filesEmpty: 'Ainda não existem ficheiros neste projeto.',
+    messages: 'Mensagens',
+    messagesEmpty: 'Ainda não existem mensagens neste projeto.',
+    changeStatus: 'Alterar estado',
+    complete: 'Concluir',
+    completing: 'A concluir…',
+    cancel: 'Cancelar',
+    cancelling: 'A cancelar…',
+    postMessage: 'Publicar mensagem',
+    messagePlaceholder: 'Escreve uma mensagem…',
+    posting: 'A publicar…',
+    projectStatus: {
+      planned: 'Planeado',
+      in_progress: 'Em curso',
+      on_hold: 'Em espera',
+      delivered: 'Entregue',
+      cancelled: 'Cancelado'
+    },
+    phaseStatus: {
+      planned: 'Planeada',
+      in_progress: 'Em curso',
+      done: 'Concluída',
+      cancelled: 'Cancelada'
+    },
+    headers: { id: 'ID', title: 'Título', status: 'Estado', clientVisible: 'Cliente' },
+    phaseHeaders: { id: 'ID', title: 'Título', status: 'Estado' },
+    fileHeaders: { id: 'ID', name: 'Nome', size: 'Tamanho' },
+    errors: {
+      list: 'Não foi possível carregar os projetos de implementação.',
+      fetchProject: 'Não foi possível carregar este projeto.',
+      changeStatus: 'Não foi possível alterar o estado do projeto.',
+      complete: 'Não foi possível concluir o projeto.',
+      cancel: 'Não foi possível cancelar o projeto.',
+      changePhaseStatus: 'Não foi possível alterar o estado da fase.',
+      fetchPhases: 'Não foi possível carregar as fases.',
+      fetchFiles: 'Não foi possível carregar os ficheiros.',
+      fetchMessages: 'Não foi possível carregar as mensagens.',
+      postMessage: 'Não foi possível publicar a mensagem.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
     general: 'A ação falhou. Tenta novamente.',

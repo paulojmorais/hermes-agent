@@ -615,6 +615,150 @@ export const fr: CeodigitalMessages = {
       }
     }
   },
+  messaging: {
+    title: 'Messagerie CEODigital',
+    openCommand: 'CEODigital : Ouvrir la messagerie',
+    empty: 'Aucun fil de discussion trouvé pour votre tenant.',
+    newThread: 'Nouveau fil',
+    allTypes: 'Tous les types',
+    threadType: 'Type de fil',
+    refTable: 'Table de référence',
+    refId: 'Id de référence',
+    back: 'Retour aux fils',
+    detail: 'Détail du fil',
+    messagesEmpty: 'Aucun message dans ce fil.',
+    postPlaceholder: 'Écrire un message…',
+    emojiPlaceholder: 'Emoji',
+    fileId: 'Id du fichier',
+    attachmentName: 'Nom de la pièce jointe',
+    headers: { id: 'ID', title: 'Titre', type: 'Type', created: 'Créé' },
+    form: {
+      subject: 'Objet',
+      subjectPlaceholder: 'Objet du fil',
+      create: 'Créer le fil',
+      cancel: 'Annuler'
+    },
+    actions: {
+      post: 'Envoyer',
+      react: 'Réagir',
+      markRead: 'Marquer lu',
+      uploadAttachment: 'Joindre',
+      posting: 'Envoi…',
+      reacting: 'Réaction…',
+      uploading: 'Téléversement…'
+    },
+    errors: {
+      list: 'Impossible de charger les fils de discussion.',
+      create: 'Impossible de créer le fil.',
+      post: "Impossible d'envoyer le message.",
+      react: 'Impossible de réagir au message.',
+      markRead: 'Impossible de marquer le message comme lu.',
+      upload: 'Impossible de joindre le fichier.',
+      fetchMessages: 'Impossible de charger les messages.',
+      fetchThread: 'Impossible de charger ce fil.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  notifications: {
+    title: 'Notifications CEODigital',
+    openCommand: 'CEODigital : Ouvrir les notifications',
+    empty: 'Aucune notification pour le moment.',
+    all: 'Toutes',
+    unreadOnly: 'Non lues',
+    unreadCount: 'Non lues',
+    markAllRead: 'Tout marquer lu',
+    markRead: 'Lire',
+    marking: 'Marquage…',
+    headers: { id: 'ID', title: 'Titre', type: 'Type', created: 'Créé' },
+    errors: {
+      list: 'Impossible de charger vos notifications.',
+      markRead: 'Impossible de marquer la notification comme lue.',
+      markAll: 'Impossible de marquer toutes les notifications comme lues.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  timeline: {
+    title: 'Chronologie CEODigital',
+    openCommand: 'CEODigital : Ouvrir la chronologie',
+    empty: 'Aucun événement de chronologie trouvé pour votre tenant.',
+    entityType: 'Type d’entité',
+    entityId: 'Id d’entité',
+    actorUserId: 'Id de l’acteur',
+    eventGlob: 'Glob d’événement',
+    pin: 'Épingler',
+    unpin: 'Désépingler',
+    addReaction: 'Réagir',
+    removeReaction: 'Retirer',
+    reactions: 'Réactions',
+    headers: { id: 'ID', event: 'Événement', entity: 'Entité', actor: 'Acteur', at: 'À' },
+    actions: {
+      pinning: 'Épinglage…',
+      unpinning: 'Désépinglage…',
+      reacting: 'Réaction…'
+    },
+    errors: {
+      list: 'Impossible de charger les événements de la chronologie.',
+      pin: 'Impossible d’épingler l’événement.',
+      unpin: 'Impossible de désépingler l’événement.',
+      addReaction: 'Impossible d’ajouter la réaction.',
+      removeReaction: 'Impossible de retirer la réaction.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  implementations: {
+    title: 'Implémentations CEODigital',
+    openCommand: 'CEODigital : Ouvrir les implémentations',
+    empty: 'Aucun projet d’implémentation trouvé pour votre tenant.',
+    search: 'Rechercher des projets…',
+    allStatuses: 'Tous les statuts',
+    status: 'Statut',
+    clientVisible: 'Visible client',
+    back: 'Retour aux projets',
+    detail: 'Détail du projet',
+    phases: 'Phases',
+    phasesEmpty: 'Aucune phase sur ce projet.',
+    files: 'Fichiers',
+    filesEmpty: 'Aucun fichier sur ce projet.',
+    messages: 'Messages',
+    messagesEmpty: 'Aucun message sur ce projet.',
+    changeStatus: 'Changer le statut',
+    complete: 'Terminer',
+    completing: 'Finalisation…',
+    cancel: 'Annuler',
+    cancelling: 'Annulation…',
+    postMessage: 'Publier un message',
+    messagePlaceholder: 'Écrire un message…',
+    posting: 'Publication…',
+    projectStatus: {
+      planned: 'Planifié',
+      in_progress: 'En cours',
+      on_hold: 'En attente',
+      delivered: 'Livré',
+      cancelled: 'Annulé'
+    },
+    phaseStatus: {
+      planned: 'Planifiée',
+      in_progress: 'En cours',
+      done: 'Terminée',
+      cancelled: 'Annulée'
+    },
+    headers: { id: 'ID', title: 'Titre', status: 'Statut', clientVisible: 'Client' },
+    phaseHeaders: { id: 'ID', title: 'Titre', status: 'Statut' },
+    fileHeaders: { id: 'ID', name: 'Nom', size: 'Taille' },
+    errors: {
+      list: 'Impossible de charger les projets d’implémentation.',
+      fetchProject: 'Impossible de charger ce projet.',
+      changeStatus: 'Impossible de changer le statut du projet.',
+      complete: 'Impossible de terminer le projet.',
+      cancel: 'Impossible d’annuler le projet.',
+      changePhaseStatus: 'Impossible de changer le statut de la phase.',
+      fetchPhases: 'Impossible de charger les phases.',
+      fetchFiles: 'Impossible de charger les fichiers.',
+      fetchMessages: 'Impossible de charger les messages.',
+      postMessage: 'Impossible de publier le message.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
   errors: {
     fetch: 'Impossible de charger les projets CEODigital.',
     general: "L'action a échoué. Réessayez.",

@@ -11,7 +11,7 @@
 import { type PluginLocaleBundles, type PluginMessages, type PluginTranslate, usePluginI18n } from '@hermes/plugin-sdk'
 import { useMemo } from 'react'
 
-import type { WorkItemStatus } from '../types'
+import type { ProjectStatus, PhaseStatus, WorkItemStatus } from '../types'
 import { en } from './en'
 import { fr } from './fr'
 import { pt } from './pt'
@@ -526,6 +526,139 @@ export interface CeodigitalMessages {
         detach: string
         general: string
       }
+    }
+  }
+  messaging: {
+    title: string
+    openCommand: string
+    empty: string
+    newThread: string
+    allTypes: string
+    threadType: string
+    refTable: string
+    refId: string
+    back: string
+    detail: string
+    messagesEmpty: string
+    postPlaceholder: string
+    emojiPlaceholder: string
+    fileId: string
+    attachmentName: string
+    headers: { id: string; title: string; type: string; created: string }
+    form: {
+      subject: string
+      subjectPlaceholder: string
+      create: string
+      cancel: string
+    }
+    actions: {
+      post: string
+      react: string
+      markRead: string
+      uploadAttachment: string
+      posting: string
+      reacting: string
+      uploading: string
+    }
+    errors: {
+      list: string
+      create: string
+      post: string
+      react: string
+      markRead: string
+      upload: string
+      fetchMessages: string
+      fetchThread: string
+      general: string
+    }
+  }
+  notifications: {
+    title: string
+    openCommand: string
+    empty: string
+    all: string
+    unreadOnly: string
+    unreadCount: string
+    markAllRead: string
+    markRead: string
+    marking: string
+    headers: { id: string; title: string; type: string; created: string }
+    errors: {
+      list: string
+      markRead: string
+      markAll: string
+      general: string
+    }
+  }
+  timeline: {
+    title: string
+    openCommand: string
+    empty: string
+    entityType: string
+    entityId: string
+    actorUserId: string
+    eventGlob: string
+    pin: string
+    unpin: string
+    addReaction: string
+    removeReaction: string
+    reactions: string
+    headers: { id: string; event: string; entity: string; actor: string; at: string }
+    actions: {
+      pinning: string
+      unpinning: string
+      reacting: string
+    }
+    errors: {
+      list: string
+      pin: string
+      unpin: string
+      addReaction: string
+      removeReaction: string
+      general: string
+    }
+  }
+  implementations: {
+    title: string
+    openCommand: string
+    empty: string
+    search: string
+    allStatuses: string
+    status: string
+    clientVisible: string
+    back: string
+    detail: string
+    phases: string
+    phasesEmpty: string
+    files: string
+    filesEmpty: string
+    messages: string
+    messagesEmpty: string
+    changeStatus: string
+    complete: string
+    completing: string
+    cancel: string
+    cancelling: string
+    postMessage: string
+    messagePlaceholder: string
+    posting: string
+    projectStatus: Partial<Record<ProjectStatus, string>>
+    phaseStatus: Partial<Record<PhaseStatus, string>>
+    headers: { id: string; title: string; status: string; clientVisible: string }
+    phaseHeaders: { id: string; title: string; status: string }
+    fileHeaders: { id: string; name: string; size: string }
+    errors: {
+      list: string
+      fetchProject: string
+      changeStatus: string
+      complete: string
+      cancel: string
+      changePhaseStatus: string
+      fetchPhases: string
+      fetchFiles: string
+      fetchMessages: string
+      postMessage: string
+      general: string
     }
   }
   errors: {

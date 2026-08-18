@@ -40,26 +40,40 @@ import type {
   CreateConversationInput,
   CreateProposalEnvelope,
   CreateProposalInput,
+  CreateThreadInput,
   CreateWorkItemEnvelope,
   DealsEnvelope,
   DocumentsActionEnvelope,
   FileEnvelope,
   FilesEnvelope,
   FilesListParams,
+  ImplFilesEnvelope,
+  ImplFilesParams,
+  ImplPhasesEnvelope,
+  ImplPhasesListParams,
+  ImplProjectEnvelope,
+  ImplProjectsEnvelope,
+  ImplProjectsListParams,
   LeadsEnvelope,
+  MessagesEnvelope,
+  MessagesListParams,
   MoveFileInput,
+  NotificationsEnvelope,
+  NotificationsListParams,
   OfferingsEnvelope,
   OfferingsListParams,
   OrganizationEnvelope,
   OrganizationsEnvelope,
   PersonsEnvelope,
   PersonEnvelope,
+  PhaseStatus,
   PipelinesEnvelope,
   PlaybookEnvelope,
   PlaybookRunsEnvelope,
   PlaybookRunsListParams,
   PlaybooksEnvelope,
   PlaybooksListParams,
+  ProjectStatus,
   ProposalActionEnvelope,
   ProposalEnvelope,
   ProposalItemValues,
@@ -79,8 +93,17 @@ import type {
   SubmitBody,
   SubmitWorkItemEnvelope,
   SuggestEnvelope,
+  ThreadEnvelope,
+  ThreadsEnvelope,
+  ThreadsListParams,
+  TimelineEventEnvelope,
+  TimelineEventsEnvelope,
+  TimelineEventsParams,
+  UnreadCountEnvelope,
   UpdateProposalInput,
+  UploadAttachmentInput,
   UploadFileInput,
+  W6aActionEnvelope,
   WebhooksEnvelope,
   WebhooksListParams,
   WorkItemInput,
@@ -658,3 +681,213 @@ export const detachBinding = (rowId: string) =>
 /** POST /documents/reindex — RAG reindex of a namespace (MCP documents.rag.reindex). */
 export const reindexDocuments = (body: ReindexInput) =>
   call<DocumentsActionEnvelope>('/documents/reindex', { method: 'POST', body })
+
+// ── Messaging (W6a) ─────────────────────────────────────────────────────────
+
+export const THREADS_KEY = ['ceodigital', 'messaging', 'threads'] as const
+export const threadKey = (id: string) => ['ceodigital', 'messaging', 'threads', id] as const
+export const threadMessagesKey = (id: string) => ['ceodigital', 'messaging', 'threads', id, 'messages'] as const
+
+/** GET /messaging/threads — the tenant's threads (MCP messaging.threads.list;
+ *  a refId delegates to messaging.threads.list_by_ref). */
+export const fetchThreads = (params?: ThreadsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.threadType) qs.set('threadType', params.threadType)
+  if (params?.refTable) qs.set('refTable', params.refTable)
+  if (params?.refId) qs.set('refId', params.refId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ThreadsEnvelope>(`/messaging/threads${suffix}`)
+}
+
+/** GET /messaging/threads/{id} — one thread incl. recent messages (MCP messaging.threads.get). */
+export const fetchThread = (id: string, messageLimit?: number) => {
+  const suffix = messageLimit !== undefined ? `?messageLimit=${String(messageLimit)}` : ''
+  return call<ThreadEnvelope>(`/messaging/threads/${encodeURIComponent(id)}${suffix}`)
+}
+
+/** GET /messaging/threads/{id}/messages — messages for a thread (MCP messaging.messages.list). */
+export const fetchMessages = (threadId: string, params?: MessagesListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<MessagesEnvelope>(`/messaging/threads/${encodeURIComponent(threadId)}/messages${suffix}`)
+}
+
+/** POST /messaging/threads — create a thread (MCP messaging.threads.create). */
+export const createThread = (input: CreateThreadInput) =>
+  call<W6aActionEnvelope>('/messaging/threads', { method: 'POST', body: input })
+
+/** POST /messaging/threads/{id}/messages — post a message (MCP messaging.messages.post). */
+export const postMessage = (threadId: string, body: string) =>
+  call<W6aActionEnvelope>(`/messaging/threads/${encodeURIComponent(threadId)}/messages`, {
+    method: 'POST',
+    body: { body }
+  })
+
+/** POST /messaging/messages/{id}/react — react to a message (MCP messaging.messages.react). */
+export const reactToMessage = (messageId: string, emoji: string) =>
+  call<W6aActionEnvelope>(`/messaging/messages/${encodeURIComponent(messageId)}/react`, {
+    method: 'POST',
+    body: { emoji }
+  })
+
+/** POST /messaging/messages/{id}/read — mark a message read (MCP messaging.messages.read). */
+export const markMessageRead = (messageId: string) =>
+  call<W6aActionEnvelope>(`/messaging/messages/${encodeURIComponent(messageId)}/read`, { method: 'POST', body: {} })
+
+/** POST /messaging/messages/{id}/attachments — attach a file (MCP messaging.attachments.upload). */
+export const uploadAttachment = (messageId: string, input: UploadAttachmentInput) =>
+  call<W6aActionEnvelope>(`/messaging/messages/${encodeURIComponent(messageId)}/attachments`, {
+    method: 'POST',
+    body: input
+  })
+
+// ── Notifications (W6a) ─────────────────────────────────────────────────────
+
+export const NOTIFICATIONS_KEY = ['ceodigital', 'notifications'] as const
+export const UNREAD_COUNT_KEY = ['ceodigital', 'notifications', 'unread-count'] as const
+
+/** GET /notifications — the caller's notifications (MCP notifications.list). */
+export const fetchNotifications = (params?: NotificationsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.unreadOnly !== undefined) qs.set('unreadOnly', String(params.unreadOnly))
+  if (params?.cursor) qs.set('cursor', params.cursor)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<NotificationsEnvelope>(`/notifications${suffix}`)
+}
+
+/** GET /notifications/unread-count — unread count (MCP notifications.unread_count). */
+export const fetchUnreadCount = () => call<UnreadCountEnvelope>('/notifications/unread-count')
+
+/** POST /notifications/{id}/read — mark one read (MCP notifications.mark_read). */
+export const markNotificationRead = (id: string) =>
+  call<W6aActionEnvelope>(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', body: {} })
+
+/** POST /notifications/read-all — mark all read (MCP notifications.mark_all_read). */
+export const markAllNotificationsRead = () =>
+  call<W6aActionEnvelope>('/notifications/read-all', { method: 'POST', body: {} })
+
+// ── Timeline (W6a) ──────────────────────────────────────────────────────────
+
+export const TIMELINE_EVENTS_KEY = ['ceodigital', 'timeline', 'events'] as const
+export const timelineEventKey = (id: string) => ['ceodigital', 'timeline', 'events', id] as const
+
+/** GET /timeline/events — the activity feed (MCP timeline.events.list). */
+export const fetchTimelineEvents = (params?: TimelineEventsParams) => {
+  const qs = new URLSearchParams()
+  if (params?.entityType) qs.set('entityType', params.entityType)
+  if (params?.entityId) qs.set('entityId', params.entityId)
+  if (params?.actorUserId) qs.set('actorUserId', params.actorUserId)
+  if (params?.eventGlob) qs.set('eventGlob', params.eventGlob)
+  if (params?.from) qs.set('from', params.from)
+  if (params?.to) qs.set('to', params.to)
+  if (params?.cursor) qs.set('cursor', params.cursor)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<TimelineEventsEnvelope>(`/timeline/events${suffix}`)
+}
+
+/** GET /timeline/events/{id} — one event (MCP timeline.events.get). */
+export const fetchTimelineEvent = (id: string) =>
+  call<TimelineEventEnvelope>(`/timeline/events/${encodeURIComponent(id)}`)
+
+/** POST /timeline/events/{id}/pin — pin an event (MCP timeline.pins.add). */
+export const pinEvent = (id: string) =>
+  call<W6aActionEnvelope>(`/timeline/events/${encodeURIComponent(id)}/pin`, { method: 'POST', body: {} })
+
+/** POST /timeline/events/{id}/unpin — unpin an event (MCP timeline.pins.remove). */
+export const unpinEvent = (id: string) =>
+  call<W6aActionEnvelope>(`/timeline/events/${encodeURIComponent(id)}/unpin`, { method: 'POST', body: {} })
+
+/** POST /timeline/events/{id}/reactions — react to an event (MCP timeline.reactions.add). */
+export const addEventReaction = (id: string, reactionType: string) =>
+  call<W6aActionEnvelope>(`/timeline/events/${encodeURIComponent(id)}/reactions`, {
+    method: 'POST',
+    body: { reaction_type: reactionType }
+  })
+
+/** POST /timeline/events/{id}/reactions/remove — drop a reaction (MCP timeline.reactions.remove). */
+export const removeEventReaction = (id: string, reactionType: string) =>
+  call<W6aActionEnvelope>(`/timeline/events/${encodeURIComponent(id)}/reactions/remove`, {
+    method: 'POST',
+    body: { reaction_type: reactionType }
+  })
+
+// ── Implementations (W6a) ───────────────────────────────────────────────────
+
+export const IMPL_PROJECTS_KEY = ['ceodigital', 'implementations', 'projects'] as const
+export const implProjectKey = (id: string) => ['ceodigital', 'implementations', 'projects', id] as const
+export const implPhasesKey = (id: string) => ['ceodigital', 'implementations', 'projects', id, 'phases'] as const
+export const implFilesKey = (id: string) => ['ceodigital', 'implementations', 'projects', id, 'files'] as const
+export const implMessagesKey = (id: string) => ['ceodigital', 'implementations', 'projects', id, 'messages'] as const
+
+/** GET /implementations/projects — the tenant's implementation projects
+ *  (MCP implementations.projects.list). */
+export const fetchImplementationProjects = (params?: ImplProjectsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.search) qs.set('search', params.search)
+  if (params?.clientVisible !== undefined) qs.set('clientVisible', String(params.clientVisible))
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ImplProjectsEnvelope>(`/implementations/projects${suffix}`)
+}
+
+/** GET /implementations/projects/{id} — one project (MCP implementations.projects.get). */
+export const fetchImplementationProject = (id: string) =>
+  call<ImplProjectEnvelope>(`/implementations/projects/${encodeURIComponent(id)}`)
+
+/** GET /implementations/projects/{id}/phases — phases for a project
+ *  (MCP implementations.phases.list). */
+export const fetchProjectPhases = (id: string, params?: ImplPhasesListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ImplPhasesEnvelope>(`/implementations/projects/${encodeURIComponent(id)}/phases${suffix}`)
+}
+
+/** POST /implementations/projects/{id}/status — change project status
+ *  (MCP implementations.projects.change_status). */
+export const changeProjectStatus = (id: string, status: ProjectStatus | string) =>
+  call<W6aActionEnvelope>(`/implementations/projects/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: { status }
+  })
+
+/** POST /implementations/projects/{id}/complete — complete a project
+ *  (MCP implementations.projects.complete). */
+export const completeProject = (id: string) =>
+  call<W6aActionEnvelope>(`/implementations/projects/${encodeURIComponent(id)}/complete`, { method: 'POST', body: {} })
+
+/** POST /implementations/projects/{id}/cancel — cancel a project
+ *  (MCP implementations.projects.cancel). */
+export const cancelProject = (id: string) =>
+  call<W6aActionEnvelope>(`/implementations/projects/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: {} })
+
+/** POST /implementations/phases/{id}/status — change a phase status
+ *  (MCP implementations.phases.change_status). */
+export const changePhaseStatus = (id: string, status: PhaseStatus | string) =>
+  call<W6aActionEnvelope>(`/implementations/phases/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: { status }
+  })
+
+/** GET /implementations/projects/{id}/files — files on a project
+ *  (MCP implementations.files.list). */
+export const fetchProjectFiles = (id: string, params?: ImplFilesParams) => {
+  const qs = new URLSearchParams()
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ImplFilesEnvelope>(`/implementations/projects/${encodeURIComponent(id)}/files${suffix}`)
+}
+
+/** POST /implementations/projects/{id}/messages — post on a project
+ *  (MCP implementations.messages.post). */
+export const postProjectMessage = (id: string, body: string) =>
+  call<W6aActionEnvelope>(`/implementations/projects/${encodeURIComponent(id)}/messages`, {
+    method: 'POST',
+    body: { body }
+  })

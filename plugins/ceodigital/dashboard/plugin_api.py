@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Query
 from fastapi.responses import JSONResponse
 
 from hermes_constants import get_hermes_home
@@ -2360,4 +2360,679 @@ def reindex_documents(payload: Dict[str, Any] = Body(default={})) -> JSONRespons
         return _maybe_error(exc.code)
     except Exception:
         log.exception("ceodigital documents rag reindex failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6a · Messaging (messaging.*) — threads / messages / reactions / attachments
+# ---------------------------------------------------------------------------
+
+
+def _normalize_thread(row: Any) -> Dict[str, Any]:
+    """Map one messaging thread row onto the desktop ``ThreadRow``. Pass-through
+    plus stable ``id``/``title`` (subject fallback); extra fields stay."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("subject") or row.get("title") or row.get("name") or "")
+    return out
+
+
+def _normalize_message(row: Any) -> Dict[str, Any]:
+    """Map one messaging message row onto the desktop ``MessageRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    return out
+
+
+def _rows_from_threads(payload: Any) -> List[Dict[str, Any]]:
+    return [_normalize_thread(r) for r in _rows_from_key(payload, "threads")]
+
+
+def _rows_from_messages(payload: Any) -> List[Dict[str, Any]]:
+    return [_normalize_message(r) for r in _rows_from_key(payload, "messages")]
+
+
+@router.get("/messaging/threads")
+def list_threads(
+    threadType: Optional[str] = None,
+    refTable: Optional[str] = None,
+    refId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List messaging threads (read-only, MCP ``messaging.threads.list``). When
+    ``refId`` is supplied, delegates to ``messaging.threads.list_by_ref`` (which
+    requires ``refTable``)."""
+    if refId:
+        if not refTable or not str(refTable).strip():
+            return JSONResponse(status_code=422, content={"ok": False, "error": "ref_table_required"})
+        args: Dict[str, Any] = {"refTable": str(refTable)[:64], "refId": str(refId)}
+        tool = "messaging.threads.list_by_ref"
+    else:
+        tool = "messaging.threads.list"
+        args = {}
+        if threadType:
+            args["threadType"] = threadType
+        if refTable:
+            args["refTable"] = str(refTable)[:64]
+        if limit is not None:
+            args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, tool, args)
+        return JSONResponse(content={"ok": True, "threads": _rows_from_threads(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: messaging threads list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/messaging/threads/{thread_id}")
+def get_thread(thread_id: str, messageLimit: Optional[int] = None) -> JSONResponse:
+    """Return one messaging thread incl. its recent messages (read-only, MCP
+    ``messaging.threads.get``)."""
+    args: Dict[str, Any] = {"id": thread_id}
+    if messageLimit is not None:
+        args["messageLimit"] = int(messageLimit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "messaging.threads.get", args)
+        thread = _single_service(payload, "thread")
+        if thread is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "thread": _normalize_thread(thread)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging threads get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/messaging/threads/{thread_id}/messages")
+def list_thread_messages(thread_id: str, limit: Optional[int] = None) -> JSONResponse:
+    """List messages in a thread (read-only, MCP ``messaging.messages.list``)."""
+    args: Dict[str, Any] = {"threadId": thread_id}
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "messaging.messages.list", args)
+        return JSONResponse(content={"ok": True, "messages": _rows_from_messages(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging messages list failed: %s", thread_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/messaging/threads")
+def create_thread(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a messaging thread (MCP ``messaging.threads.create``, needsApproval).
+    Body: ``{refTable?, refId?, threadType?, subject?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    args: Dict[str, Any] = {}
+    if payload.get("refTable") is not None:
+        args["refTable"] = str(payload["refTable"])[:64]
+    if payload.get("refId") is not None:
+        args["refId"] = payload["refId"]
+    if payload.get("threadType") is not None:
+        args["threadType"] = payload["threadType"]
+    if payload.get("subject") is not None:
+        args["subject"] = str(payload["subject"])[:240]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "messaging.threads.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging threads create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/messaging/threads/{thread_id}/messages")
+def post_message(thread_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Post a message to a thread (MCP ``messaging.messages.post``, needsApproval).
+    Body: ``{body}`` (required, ≤20000)."""
+    body = payload.get("body") if isinstance(payload, dict) else None
+    if not body or not str(body).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "body_required"})
+
+    args: Dict[str, Any] = {"threadId": thread_id, "body": str(body)[:20000]}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "messaging.messages.post", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging messages post failed: %s", thread_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/messaging/messages/{message_id}/react")
+def react_to_message(message_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """React to a message (MCP ``messaging.messages.react``, needsApproval).
+    Body: ``{emoji}`` (required, ≤16)."""
+    emoji = payload.get("emoji") if isinstance(payload, dict) else None
+    if not emoji or not str(emoji).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "emoji_required"})
+
+    args: Dict[str, Any] = {"messageId": message_id, "emoji": str(emoji)[:16]}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "messaging.messages.react", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging messages react failed: %s", message_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/messaging/messages/{message_id}/read")
+def mark_message_read(message_id: str) -> JSONResponse:
+    """Mark a message read (MCP ``messaging.messages.read``)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "messaging.messages.read", {"messageId": message_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging messages read failed: %s", message_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/messaging/messages/{message_id}/attachments")
+def upload_attachment(message_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Attach a file to a message (MCP ``messaging.attachments.upload``,
+    needsApproval). Body: ``{fileId, name?}``."""
+    file_id = payload.get("fileId") if isinstance(payload, dict) else None
+    if not file_id or not str(file_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "file_id_required"})
+
+    args: Dict[str, Any] = {"messageId": message_id, "fileId": str(file_id)}
+    if isinstance(payload, dict) and payload.get("name") is not None:
+        args["name"] = str(payload["name"])[:240]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "messaging.attachments.upload", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital messaging attachments upload failed: %s", message_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6a · Notifications (notifications.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_notification(row: Any) -> Dict[str, Any]:
+    """Map one notification row onto the desktop ``NotificationRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("message") or row.get("type") or "")
+    return out
+
+
+# The literal ``/notifications/unread-count`` must be declared before any
+# parametrized ``/notifications/{id}/...`` route; none exists on GET here, but
+# keeping the literal first mirrors the workitems/playbooks guard convention.
+
+@router.get("/notifications/unread-count")
+def get_unread_count() -> JSONResponse:
+    """Return the caller's unread notification count (MCP ``notifications.unread_count``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "notifications.unread_count", {})
+        count = payload.get("unread_count") if isinstance(payload, dict) else payload
+        if isinstance(count, (int, float)):
+            count = int(count)
+        else:
+            count = 0
+        return JSONResponse(content={"ok": True, "unread_count": count})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital notifications unread_count failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/notifications")
+def list_notifications(
+    unreadOnly: Optional[bool] = None,
+    cursor: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the caller's notifications (read-only, MCP ``notifications.list``)."""
+    args: Dict[str, Any] = {}
+    if unreadOnly is not None:
+        args["unreadOnly"] = bool(unreadOnly)
+    if cursor:
+        args["cursor"] = str(cursor)
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "notifications.list", args)
+        rows = _rows_from_key(payload, "notifications")
+        return JSONResponse(content={"ok": True, "notifications": [_normalize_notification(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: notifications list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/notifications/read-all")
+def mark_all_notifications_read() -> JSONResponse:
+    """Mark all notifications read (MCP ``notifications.mark_all_read``)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "notifications.mark_all_read", {})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital notifications mark_all_read failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: str) -> JSONResponse:
+    """Mark one notification read (MCP ``notifications.mark_read``)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "notifications.mark_read", {"id": notification_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital notifications mark_read failed: %s", notification_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6a · Timeline (timeline.*) — events, pins, reactions
+# ---------------------------------------------------------------------------
+
+
+def _normalize_event(row: Any) -> Dict[str, Any]:
+    """Map one timeline event row onto the desktop ``TimelineEventRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault(
+        "title",
+        row.get("title") or row.get("summary") or row.get("event_type") or row.get("eventType") or "",
+    )
+    return out
+
+
+def _rows_from_events(payload: Any) -> List[Dict[str, Any]]:
+    return [_normalize_event(r) for r in _rows_from_key(payload, "events")]
+
+
+@router.get("/timeline/events")
+def list_timeline_events(
+    entityType: Optional[str] = None,
+    entityId: Optional[str] = None,
+    actorUserId: Optional[str] = None,
+    eventGlob: Optional[str] = None,
+    from_: Optional[str] = Query(None, alias="from"),
+    to: Optional[str] = None,
+    cursor: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List timeline events (read-only, MCP ``timeline.events.list``). Optional
+    filters: entity, actor, event glob, from/to window, cursor + limit."""
+    args: Dict[str, Any] = {}
+    if entityType:
+        args["entityType"] = entityType
+    if entityId:
+        args["entityId"] = entityId
+    if actorUserId:
+        args["actorUserId"] = actorUserId
+    if eventGlob:
+        args["eventGlob"] = eventGlob
+    if from_:
+        args["from"] = from_
+    if to:
+        args["to"] = to
+    if cursor:
+        args["cursor"] = cursor
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "timeline.events.list", args)
+        return JSONResponse(content={"ok": True, "events": _rows_from_events(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: timeline events list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/timeline/events/{event_id}")
+def get_timeline_event(event_id: str) -> JSONResponse:
+    """Return one timeline event by id (MCP ``timeline.events.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "timeline.events.get", {"id": event_id})
+        event = _single_service(payload, "event")
+        if event is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "event": _normalize_event(event)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital timeline events get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+def _timeline_event_action(event_id: str, tool: str) -> JSONResponse:
+    """Shared envelope for the id-only timeline event tools (pins)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, tool, {"event_id": event_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital %s failed: %s", tool, event_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/timeline/events/{event_id}/pin")
+def pin_timeline_event(event_id: str) -> JSONResponse:
+    """Pin a timeline event (MCP ``timeline.pins.add``)."""
+    return _timeline_event_action(event_id, "timeline.pins.add")
+
+
+@router.post("/timeline/events/{event_id}/unpin")
+def unpin_timeline_event(event_id: str) -> JSONResponse:
+    """Unpin a timeline event (MCP ``timeline.pins.remove``)."""
+    return _timeline_event_action(event_id, "timeline.pins.remove")
+
+
+@router.post("/timeline/events/{event_id}/reactions")
+def add_event_reaction(event_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """React to a timeline event (MCP ``timeline.reactions.add``).
+    Body: ``{reaction_type}`` (required)."""
+    reaction_type = payload.get("reaction_type") if isinstance(payload, dict) else None
+    if not reaction_type or not str(reaction_type).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "reaction_type_required"})
+
+    args: Dict[str, Any] = {"event_id": event_id, "reaction_type": str(reaction_type)}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "timeline.reactions.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital timeline reactions add failed: %s", event_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/timeline/events/{event_id}/reactions/remove")
+def remove_event_reaction(event_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Remove a reaction from a timeline event (MCP ``timeline.reactions.remove``).
+    Body: ``{reaction_type}`` (required)."""
+    reaction_type = payload.get("reaction_type") if isinstance(payload, dict) else None
+    if not reaction_type or not str(reaction_type).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "reaction_type_required"})
+
+    args: Dict[str, Any] = {"event_id": event_id, "reaction_type": str(reaction_type)}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "timeline.reactions.remove", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital timeline reactions remove failed: %s", event_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6a · Implementations (implementations.*) — projects, phases, files, messages
+# ---------------------------------------------------------------------------
+
+
+def _normalize_impl_project(row: Any) -> Dict[str, Any]:
+    """Map one implementation project row onto the desktop ``ImplProjectRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    out.setdefault("status", row.get("status") or row.get("state") or "")
+    return out
+
+
+def _normalize_impl_phase(row: Any) -> Dict[str, Any]:
+    """Map one implementation phase row onto the desktop ``ImplPhaseRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    out.setdefault("status", row.get("status") or row.get("state") or "")
+    return out
+
+
+def _normalize_impl_file(row: Any) -> Dict[str, Any]:
+    """Map one implementation file row onto the desktop ``ImplFileRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or row.get("filename") or "")
+    return out
+
+
+def _rows_from_projects(payload: Any) -> List[Dict[str, Any]]:
+    return [_normalize_impl_project(r) for r in _rows_from_key(payload, "projects")]
+
+
+def _rows_from_phases(payload: Any) -> List[Dict[str, Any]]:
+    return [_normalize_impl_phase(r) for r in _rows_from_key(payload, "phases")]
+
+
+def _rows_from_impl_files(payload: Any) -> List[Dict[str, Any]]:
+    return [_normalize_impl_file(r) for r in _rows_from_key(payload, "files")]
+
+
+@router.get("/implementations/projects")
+def list_implementation_projects(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    clientVisible: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List implementation projects (read-only, MCP ``implementations.projects.list``)."""
+    args: Dict[str, Any] = {}
+    if status:
+        args["status"] = status
+    if search:
+        args["search"] = str(search)[:200]
+    if clientVisible is not None:
+        args["clientVisible"] = bool(clientVisible)
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "implementations.projects.list", args)
+        return JSONResponse(content={"ok": True, "projects": _rows_from_projects(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: implementations projects list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/implementations/projects/{project_id}")
+def get_implementation_project(project_id: str) -> JSONResponse:
+    """Return one implementation project by id (MCP ``implementations.projects.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "implementations.projects.get", {"id": project_id})
+        project = _single_service(payload, "project")
+        if project is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "project": _normalize_impl_project(project)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital implementations projects get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/implementations/projects/{project_id}/phases")
+def list_implementation_phases(
+    project_id: str,
+    status: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List phases of an implementation project (read-only, MCP
+    ``implementations.phases.list``)."""
+    args: Dict[str, Any] = {"projectId": project_id}
+    if status:
+        args["status"] = status
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "implementations.phases.list", args)
+        return JSONResponse(content={"ok": True, "phases": _rows_from_phases(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital implementations phases list failed: %s", project_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+def _implementation_status_action(
+    id_value: str, tool: str, body: Dict[str, Any], arg_key: str
+) -> JSONResponse:
+    """Shared envelope for the implementation status mutations (project/phase)."""
+    status = body.get("status") if isinstance(body, dict) else None
+    if not status or not str(status).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "status_required"})
+
+    args: Dict[str, Any] = {arg_key: id_value, "status": str(status)}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, tool, args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital %s failed: %s", tool, id_value)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/implementations/projects/{project_id}/status")
+def change_implementation_project_status(project_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Change an implementation project's status (MCP
+    ``implementations.projects.change_status``, needsApproval). Body: ``{status}``."""
+    return _implementation_status_action(project_id, "implementations.projects.change_status", payload, "id")
+
+
+@router.post("/implementations/phases/{phase_id}/status")
+def change_implementation_phase_status(phase_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Change an implementation phase's status (MCP
+    ``implementations.phases.change_status``, needsApproval). Body: ``{status}``."""
+    return _implementation_status_action(phase_id, "implementations.phases.change_status", payload, "id")
+
+
+@router.post("/implementations/projects/{project_id}/complete")
+def complete_implementation_project(project_id: str) -> JSONResponse:
+    """Mark an implementation project complete (MCP ``implementations.projects.complete``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "implementations.projects.complete", {"id": project_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital implementations projects complete failed: %s", project_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/implementations/projects/{project_id}/cancel")
+def cancel_implementation_project(project_id: str) -> JSONResponse:
+    """Cancel an implementation project (MCP ``implementations.projects.cancel``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "implementations.projects.cancel", {"id": project_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital implementations projects cancel failed: %s", project_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/implementations/projects/{project_id}/files")
+def list_implementation_files(project_id: str, limit: Optional[int] = None) -> JSONResponse:
+    """List files attached to an implementation project (read-only, MCP
+    ``implementations.files.list``)."""
+    args: Dict[str, Any] = {"projectId": project_id}
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "implementations.files.list", args)
+        return JSONResponse(content={"ok": True, "files": _rows_from_impl_files(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital implementations files list failed: %s", project_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/implementations/projects/{project_id}/messages")
+def post_implementation_message(project_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Post a message on an implementation project (MCP ``implementations.messages.post``,
+    needsApproval). Body: ``{body}`` (required)."""
+    body = payload.get("body") if isinstance(payload, dict) else None
+    if not body or not str(body).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "body_required"})
+
+    args: Dict[str, Any] = {"projectId": project_id, "body": str(body)}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "implementations.messages.post", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital implementations messages post failed: %s", project_id)
         return _maybe_error(ERR_UNREACHABLE)

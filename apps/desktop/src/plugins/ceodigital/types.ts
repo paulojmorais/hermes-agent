@@ -1090,3 +1090,291 @@ export type FileEnvelope = FileResponse | CrmError
 export type CollectionsEnvelope = CollectionsResponse | CrmError
 export type BindingsEnvelope = BindingsResponse | CrmError
 export type DocumentsActionEnvelope = DocumentsActionResponse | CrmError
+
+// ── Messaging (W6a) ─────────────────────────────────────────────────────────
+
+export type ThreadType = 'internal' | 'client'
+
+/** A messaging thread (`messaging.threads.list` / `list_by_ref` / `get`). */
+export interface ThreadRow {
+  id: string
+  title: string
+  subject?: null | string
+  thread_type?: null | ThreadType | string
+  threadType?: null | string
+  ref_table?: null | string
+  refTable?: null | string
+  ref_id?: null | string
+  refId?: null | string
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** A messaging message (`messaging.messages.list` / embedded in thread.get). */
+export interface MessageRow {
+  id: string
+  thread_id?: null | string
+  threadId?: null | string
+  body?: null | string
+  sender_id?: null | string
+  senderId?: null | string
+  author_name?: null | string
+  authorName?: null | string
+  is_read?: null | boolean
+  isRead?: null | boolean
+  created_at?: null | string
+  createdAt?: null | string
+  [key: string]: unknown
+}
+
+// ── Messaging — query params + inputs ───────────────────────────────────────
+
+/** GET /messaging/threads — list query params (map 1:1 to MCP). */
+export interface ThreadsListParams {
+  threadType?: ThreadType | string
+  refTable?: string
+  refId?: string
+  limit?: number
+}
+
+/** GET /messaging/threads/{id}/messages — list query params. */
+export interface MessagesListParams {
+  limit?: number
+}
+
+/** POST /messaging/threads — create input (all fields optional). */
+export interface CreateThreadInput {
+  refTable?: string
+  refId?: string
+  threadType?: ThreadType | string
+  subject?: string
+}
+
+/** POST /messaging/messages/{id}/attachments — attach input (fileId required). */
+export interface UploadAttachmentInput {
+  fileId: string
+  name?: string
+}
+
+// ── Messaging — envelopes ───────────────────────────────────────────────────
+
+/** GET /messaging/threads — success envelope. */
+export interface ThreadsResponse {
+  ok: true
+  threads: ThreadRow[]
+}
+
+/** GET /messaging/threads/{id} — success envelope (messages embedded). */
+export interface ThreadResponse {
+  ok: true
+  thread: ThreadRow & { messages?: MessageRow[] }
+}
+
+/** GET /messaging/threads/{id}/messages — success envelope. */
+export interface MessagesResponse {
+  ok: true
+  messages: MessageRow[]
+}
+
+export type ThreadsEnvelope = ThreadsResponse | CrmError
+export type ThreadEnvelope = ThreadResponse | CrmError
+export type MessagesEnvelope = MessagesResponse | CrmError
+
+// ── Notifications (W6a) ─────────────────────────────────────────────────────
+
+/** A notification row (`notifications.list`). */
+export interface NotificationRow {
+  id: string
+  title?: null | string
+  message?: null | string
+  type?: null | string
+  read?: null | boolean
+  is_read?: null | boolean
+  isRead?: null | boolean
+  created_at?: null | string
+  createdAt?: null | string
+  [key: string]: unknown
+}
+
+/** GET /notifications — list query params (map 1:1 to MCP). */
+export interface NotificationsListParams {
+  unreadOnly?: boolean
+  cursor?: string
+  limit?: number
+}
+
+/** GET /notifications — success envelope. */
+export interface NotificationsResponse {
+  ok: true
+  notifications: NotificationRow[]
+}
+
+/** GET /notifications/unread-count — success envelope. */
+export interface UnreadCountResponse {
+  ok: true
+  unread_count: number
+}
+
+export type NotificationsEnvelope = NotificationsResponse | CrmError
+export type UnreadCountEnvelope = UnreadCountResponse | CrmError
+
+// ── Timeline (W6a) ──────────────────────────────────────────────────────────
+
+/** A timeline event (`timeline.events.list` / `get`). */
+export interface TimelineEventRow {
+  id: string
+  title?: null | string
+  summary?: null | string
+  event_type?: null | string
+  eventType?: null | string
+  entity_type?: null | string
+  entityType?: null | string
+  entity_id?: null | string
+  entityId?: null | string
+  actor_user_id?: null | string
+  actorUserId?: null | string
+  actor_name?: null | string
+  happened_at?: null | string
+  happenedAt?: null | string
+  created_at?: null | string
+  pinned?: null | boolean
+  reactions?: null | unknown[]
+  [key: string]: unknown
+}
+
+/** GET /timeline/events — list query params (map 1:1 to MCP). */
+export interface TimelineEventsParams {
+  entityType?: string
+  entityId?: string
+  actorUserId?: string
+  eventGlob?: string
+  from?: string
+  to?: string
+  cursor?: string
+  limit?: number
+}
+
+/** GET /timeline/events — success envelope. */
+export interface TimelineEventsResponse {
+  ok: true
+  events: TimelineEventRow[]
+}
+
+/** GET /timeline/events/{id} — success envelope. */
+export interface TimelineEventResponse {
+  ok: true
+  event: TimelineEventRow
+}
+
+export type TimelineEventsEnvelope = TimelineEventsResponse | CrmError
+export type TimelineEventEnvelope = TimelineEventResponse | CrmError
+
+// ── Implementations (W6a) — projects / phases / files / messages ───────────
+
+export const PROJECT_STATUSES = [
+  'planned',
+  'in_progress',
+  'on_hold',
+  'delivered',
+  'cancelled'
+] as const
+
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number]
+
+export const PHASE_STATUSES = ['planned', 'in_progress', 'done', 'cancelled'] as const
+
+export type PhaseStatus = (typeof PHASE_STATUSES)[number]
+
+/** An implementation project (`implementations.projects.list` / `get`). */
+export interface ImplProjectRow {
+  id: string
+  title: string
+  name?: null | string
+  status: ProjectStatus | string
+  client_visible?: null | boolean
+  clientVisible?: null | boolean
+  description?: null | string
+  [key: string]: unknown
+}
+
+/** An implementation phase (`implementations.phases.list`). */
+export interface ImplPhaseRow {
+  id: string
+  title: string
+  name?: null | string
+  project_id?: null | string
+  projectId?: null | string
+  status: PhaseStatus | string
+  [key: string]: unknown
+}
+
+/** An implementation file (`implementations.files.list`). */
+export interface ImplFileRow {
+  id: string
+  title: string
+  name?: null | string
+  size?: null | number
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+// ── Implementations — query params ──────────────────────────────────────────
+
+/** GET /implementations/projects — list query params (map 1:1 to MCP). */
+export interface ImplProjectsListParams {
+  status?: ProjectStatus | string
+  search?: string
+  clientVisible?: boolean
+  limit?: number
+}
+
+/** GET /implementations/projects/{id}/phases — list query params. */
+export interface ImplPhasesListParams {
+  status?: PhaseStatus | string
+  limit?: number
+}
+
+/** GET /implementations/projects/{id}/files — list query params. */
+export interface ImplFilesParams {
+  limit?: number
+}
+
+// ── Implementations — envelopes ─────────────────────────────────────────────
+
+/** GET /implementations/projects — success envelope. */
+export interface ImplProjectsResponse {
+  ok: true
+  projects: ImplProjectRow[]
+}
+
+/** GET /implementations/projects/{id} — success envelope. */
+export interface ImplProjectResponse {
+  ok: true
+  project: ImplProjectRow
+}
+
+/** GET /implementations/projects/{id}/phases — success envelope. */
+export interface ImplPhasesResponse {
+  ok: true
+  phases: ImplPhaseRow[]
+}
+
+/** GET /implementations/projects/{id}/files — success envelope. */
+export interface ImplFilesResponse {
+  ok: true
+  files: ImplFileRow[]
+}
+
+export type ImplProjectsEnvelope = ImplProjectsResponse | CrmError
+export type ImplProjectEnvelope = ImplProjectResponse | CrmError
+export type ImplPhasesEnvelope = ImplPhasesResponse | CrmError
+export type ImplFilesEnvelope = ImplFilesResponse | CrmError
+
+/** POST /messaging|notifications|timeline|implementations/** — mutation success
+ *  envelope (raw MCP result). */
+export interface W6aActionResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+export type W6aActionEnvelope = W6aActionResponse | CrmError

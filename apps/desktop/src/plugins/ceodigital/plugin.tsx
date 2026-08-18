@@ -30,13 +30,17 @@ import { CollectionsPage } from './pages/Collections'
 import { ConversationsPage } from './pages/Conversations'
 import { DealsPage } from './pages/Deals'
 import { DocumentsPage } from './pages/Documents'
+import { ImplementationsPage } from './pages/Implementations'
 import { LeadsPage } from './pages/Leads'
+import { MessagingPage } from './pages/Messaging'
+import { NotificationsPage } from './pages/Notifications'
 import { OrganizationsPage } from './pages/Organizations'
 import { PersonsPage } from './pages/Persons'
 import { PipelinesPage } from './pages/Pipelines'
 import { PlaybooksPage } from './pages/Playbooks'
 import { ProjectsPage } from './pages/Projects'
 import { ProposalsPage } from './pages/Proposals'
+import { TimelinePage } from './pages/Timeline'
 import { WorkflowsPage } from './pages/Workflows'
 import { WorkitemsPage } from './pages/Workitems'
 
@@ -474,6 +478,110 @@ const plugin: HermesPlugin = {
           label: t('documents.bindings.title'),
           keywords: ['ceodigital', 'documents', 'bindings', 'links'],
           run: () => host.navigate('/ceodigital/bindings')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'messaging-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/messaging' } satisfies RouteContribution,
+        render: () => <MessagingPage />
+      },
+      {
+        id: 'messaging-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 56,
+        data: {
+          codicon: 'comment-discussion',
+          label: t('messaging.title'),
+          path: '/ceodigital/messaging'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-messaging',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openMessaging',
+          label: t('messaging.title'),
+          keywords: ['ceodigital', 'messaging', 'threads', 'messages', 'chat'],
+          run: () => host.navigate('/ceodigital/messaging')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'notifications-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/notifications' } satisfies RouteContribution,
+        render: () => <NotificationsPage />
+      },
+      {
+        id: 'notifications-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 57,
+        data: {
+          codicon: 'bell',
+          label: t('notifications.title'),
+          path: '/ceodigital/notifications'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-notifications',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openNotifications',
+          label: t('notifications.title'),
+          keywords: ['ceodigital', 'notifications', 'inbox', 'alerts'],
+          run: () => host.navigate('/ceodigital/notifications')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'timeline-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/timeline' } satisfies RouteContribution,
+        render: () => <TimelinePage />
+      },
+      {
+        id: 'timeline-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 58,
+        data: {
+          codicon: 'list-unordered',
+          label: t('timeline.title'),
+          path: '/ceodigital/timeline'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-timeline',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openTimeline',
+          label: t('timeline.title'),
+          keywords: ['ceodigital', 'timeline', 'events', 'activity', 'feed'],
+          run: () => host.navigate('/ceodigital/timeline')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'implementations-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/implementations' } satisfies RouteContribution,
+        render: () => <ImplementationsPage />
+      },
+      {
+        id: 'implementations-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 59,
+        data: {
+          codicon: 'rocket',
+          label: t('implementations.title'),
+          path: '/ceodigital/implementations'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-implementations',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openImplementations',
+          label: t('implementations.title'),
+          keywords: ['ceodigital', 'implementations', 'projects', 'phases', 'delivery'],
+          run: () => host.navigate('/ceodigital/implementations')
         } satisfies PaletteContribution
       }
     ])

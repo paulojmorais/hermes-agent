@@ -615,6 +615,150 @@ export const en: CeodigitalMessages = {
       }
     }
   },
+  messaging: {
+    title: 'CEODigital Messaging',
+    openCommand: 'CEODigital: Open Messaging',
+    empty: 'No messaging threads found for your tenant yet.',
+    newThread: 'New Thread',
+    allTypes: 'All types',
+    threadType: 'Thread type',
+    refTable: 'Ref table',
+    refId: 'Ref id',
+    back: 'Back to threads',
+    detail: 'Thread detail',
+    messagesEmpty: 'No messages in this thread yet.',
+    postPlaceholder: 'Write a message…',
+    emojiPlaceholder: 'Emoji',
+    fileId: 'File id',
+    attachmentName: 'Attachment name',
+    headers: { id: 'ID', title: 'Title', type: 'Type', created: 'Created' },
+    form: {
+      subject: 'Subject',
+      subjectPlaceholder: 'Thread subject',
+      create: 'Create thread',
+      cancel: 'Cancel'
+    },
+    actions: {
+      post: 'Send',
+      react: 'React',
+      markRead: 'Mark read',
+      uploadAttachment: 'Attach',
+      posting: 'Sending…',
+      reacting: 'Reacting…',
+      uploading: 'Uploading…'
+    },
+    errors: {
+      list: 'Could not load the messaging threads.',
+      create: 'Could not create the thread.',
+      post: 'Could not post the message.',
+      react: 'Could not react to the message.',
+      markRead: 'Could not mark the message read.',
+      upload: 'Could not attach the file.',
+      fetchMessages: 'Could not load the messages.',
+      fetchThread: 'Could not load this thread.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  notifications: {
+    title: 'CEODigital Notifications',
+    openCommand: 'CEODigital: Open Notifications',
+    empty: 'No notifications for you right now.',
+    all: 'All',
+    unreadOnly: 'Unread',
+    unreadCount: 'Unread',
+    markAllRead: 'Mark all read',
+    markRead: 'Read',
+    marking: 'Marking…',
+    headers: { id: 'ID', title: 'Title', type: 'Type', created: 'Created' },
+    errors: {
+      list: 'Could not load your notifications.',
+      markRead: 'Could not mark the notification read.',
+      markAll: 'Could not mark all notifications read.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  timeline: {
+    title: 'CEODigital Timeline',
+    openCommand: 'CEODigital: Open Timeline',
+    empty: 'No timeline events found for your tenant yet.',
+    entityType: 'Entity type',
+    entityId: 'Entity id',
+    actorUserId: 'Actor id',
+    eventGlob: 'Event glob',
+    pin: 'Pin',
+    unpin: 'Unpin',
+    addReaction: 'React',
+    removeReaction: 'Remove',
+    reactions: 'Reactions',
+    headers: { id: 'ID', event: 'Event', entity: 'Entity', actor: 'Actor', at: 'At' },
+    actions: {
+      pinning: 'Pinning…',
+      unpinning: 'Unpinning…',
+      reacting: 'Reacting…'
+    },
+    errors: {
+      list: 'Could not load the timeline events.',
+      pin: 'Could not pin the event.',
+      unpin: 'Could not unpin the event.',
+      addReaction: 'Could not add the reaction.',
+      removeReaction: 'Could not remove the reaction.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  implementations: {
+    title: 'CEODigital Implementations',
+    openCommand: 'CEODigital: Open Implementations',
+    empty: 'No implementation projects found for your tenant yet.',
+    search: 'Search projects…',
+    allStatuses: 'All statuses',
+    status: 'Status',
+    clientVisible: 'Client visible',
+    back: 'Back to projects',
+    detail: 'Project detail',
+    phases: 'Phases',
+    phasesEmpty: 'No phases on this project yet.',
+    files: 'Files',
+    filesEmpty: 'No files on this project yet.',
+    messages: 'Messages',
+    messagesEmpty: 'No messages on this project yet.',
+    changeStatus: 'Change status',
+    complete: 'Complete',
+    completing: 'Completing…',
+    cancel: 'Cancel',
+    cancelling: 'Cancelling…',
+    postMessage: 'Post message',
+    messagePlaceholder: 'Write a message…',
+    posting: 'Posting…',
+    projectStatus: {
+      planned: 'Planned',
+      in_progress: 'In progress',
+      on_hold: 'On hold',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled'
+    },
+    phaseStatus: {
+      planned: 'Planned',
+      in_progress: 'In progress',
+      done: 'Done',
+      cancelled: 'Cancelled'
+    },
+    headers: { id: 'ID', title: 'Title', status: 'Status', clientVisible: 'Client' },
+    phaseHeaders: { id: 'ID', title: 'Title', status: 'Status' },
+    fileHeaders: { id: 'ID', name: 'Name', size: 'Size' },
+    errors: {
+      list: 'Could not load the implementation projects.',
+      fetchProject: 'Could not load this project.',
+      changeStatus: 'Could not change the project status.',
+      complete: 'Could not complete the project.',
+      cancel: 'Could not cancel the project.',
+      changePhaseStatus: 'Could not change the phase status.',
+      fetchPhases: 'Could not load the phases.',
+      fetchFiles: 'Could not load the files.',
+      fetchMessages: 'Could not load the messages.',
+      postMessage: 'Could not post the message.',
+      general: 'The action failed. Try again.'
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
     general: 'The action failed. Try again.',
