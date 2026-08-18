@@ -3898,3 +3898,259 @@ def test_w6b_not_configured(plugin, client, monkeypatch):
         resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
         assert resp.status_code == 503
         assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+# ────────────────────────────────────────────────────────────────────────────
+# W7 — Commerce / Payments + Governance
+# ────────────────────────────────────────────────────────────────────────────
+
+def test_orders_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"orders": [{"id": "o-1", "status": "confirmed", "total": "120.00"}]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/commerce/orders?status=confirmed&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["orders"][0]["id"] == "o-1"
+    assert captured["tool"] == "orders.list"
+    assert captured["args"] == {"status": "confirmed", "limit": 5}
+
+
+def test_orders_list_search_capped(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"orders": []}, captured)
+
+    long = "x" * 300
+    resp = client.get(f"/api/plugins/ceodigital/commerce/orders?search={long}")
+
+    assert resp.status_code == 200
+    assert captured["args"]["search"] == "x" * 200
+
+
+def test_order_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"order": {"id": "o-1", "status": "paid"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/commerce/orders/o-1")
+
+    assert resp.status_code == 200
+    assert resp.json()["order"]["id"] == "o-1"
+    assert captured["tool"] == "orders.get"
+    assert captured["args"] == {"id": "o-1"}
+
+
+def test_order_update_status_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/commerce/orders/o-1/status",
+        json={"status": "shipped"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "orders.update_status"
+    assert captured["args"] == {"id": "o-1", "status": "shipped"}
+
+
+def test_order_update_status_requires_field(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/commerce/orders/o-1/status", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "status_required"}
+
+
+def test_payments_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"payments": [{"id": "pay-1", "status": "paid"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/commerce/payments?status=paid")
+
+    assert resp.status_code == 200
+    assert resp.json()["payments"][0]["id"] == "pay-1"
+    assert captured["tool"] == "payments.list"
+    assert captured["args"] == {"status": "paid"}
+
+
+def test_payment_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"payment": {"id": "pay-1"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/commerce/payments/pay-1")
+
+    assert resp.status_code == 200
+    assert resp.json()["payment"]["id"] == "pay-1"
+    assert captured["tool"] == "payments.get"
+    assert captured["args"] == {"id": "pay-1"}
+
+
+def test_payment_link_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True, "url": "https://pay/link-1"}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/commerce/payment-links",
+        json={"orderId": "o-1", "customerEmail": "a@b.c", "amountCents": 1000},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "payments.links.create"
+    assert captured["args"]["orderId"] == "o-1"
+    assert captured["args"]["amountCents"] == 1000
+
+
+def test_payment_link_cancel_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/commerce/payment-links/l-1/cancel",
+        json={"reason": "changed mind"},
+    )
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "payments.links.cancel"
+    assert captured["args"] == {"id": "l-1", "reason": "changed mind"}
+
+
+def test_governance_dsr_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"requests": [{"id": "r-1", "status": "pending"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/governance/dsr?status=pending&requestType=export")
+
+    assert resp.status_code == 200
+    assert resp.json()["requests"][0]["id"] == "r-1"
+    assert captured["tool"] == "governance.dsr.list"
+    assert captured["args"] == {"status": "pending", "requestType": "export"}
+
+
+def test_governance_dsr_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True, "request": {"id": "r-1"}}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/governance/dsr",
+        json={"userId": "u-1", "requestType": "deletion"},
+    )
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "governance.dsr.create"
+    assert captured["args"] == {"userId": "u-1", "requestType": "deletion"}
+
+
+def test_governance_dsr_create_invalid_type(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/governance/dsr", json={"userId": "u-1", "requestType": "bogus"})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "invalid_request_type"}
+
+
+def test_governance_dsr_route_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/governance/dsr/r-1/route", json={"processedBy": "u-2"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "governance.dsr.route"
+    assert captured["args"] == {"id": "r-1", "processedBy": "u-2"}
+
+
+def test_governance_consents_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"consents": [{"id": "c-1"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/governance/consents?userId=u-1")
+
+    assert resp.status_code == 200
+    assert resp.json()["consents"][0]["id"] == "c-1"
+    assert captured["tool"] == "governance.consents.list"
+    assert captured["args"] == {"userId": "u-1"}
+
+
+def test_governance_consents_record_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True, "consent": {"id": "c-1"}}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/governance/consents",
+        json={"userId": "u-1", "termsVersion": "v1"},
+    )
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "governance.consents.record"
+    assert captured["args"] == {"userId": "u-1", "termsVersion": "v1"}
+
+
+def test_governance_processing_records_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"records": [{"id": "pr-1"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/governance/processing-records?isActive=true")
+
+    assert resp.status_code == 200
+    assert resp.json()["records"][0]["id"] == "pr-1"
+    assert captured["tool"] == "governance.processing_records.list"
+    assert captured["args"] == {"isActive": True}
+
+
+def test_governance_retention_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"policies": [{"id": "rt-1"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/governance/retention?entity=orders")
+
+    assert resp.status_code == 200
+    assert resp.json()["policies"][0]["id"] == "rt-1"
+    assert captured["tool"] == "governance.retention.list"
+    assert captured["args"] == {"entity": "orders"}
+
+
+def test_w7_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/commerce/orders", None),
+        ("GET", "/commerce/orders/o-1", None),
+        ("POST", "/commerce/orders/o-1/status", {"status": "shipped"}),
+        ("GET", "/commerce/payments", None),
+        ("GET", "/commerce/payments/pay-1", None),
+        ("POST", "/commerce/payment-links", {"orderId": "o-1"}),
+        ("POST", "/commerce/payment-links/l-1/cancel", {"reason": "x"}),
+        ("GET", "/governance/dsr", None),
+        ("POST", "/governance/dsr", {"userId": "u-1", "requestType": "export"}),
+        ("POST", "/governance/dsr/r-1/route", {"processedBy": "u-2"}),
+        ("GET", "/governance/consents", None),
+        ("POST", "/governance/consents", {"userId": "u-1"}),
+        ("GET", "/governance/processing-records", None),
+        ("GET", "/governance/retention", None),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}

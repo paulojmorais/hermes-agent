@@ -37,7 +37,10 @@ import { LeadsPage } from './pages/Leads'
 import { MembersPage } from './pages/Members'
 import { MessagingPage } from './pages/Messaging'
 import { NotificationsPage } from './pages/Notifications'
+import { OrdersPage } from './pages/Orders'
 import { OrganizationsPage } from './pages/Organizations'
+import { PaymentsPage } from './pages/Payments'
+import { GovernancePage } from './pages/Governance'
 import { PersonsPage } from './pages/Persons'
 import { PipelinesPage } from './pages/Pipelines'
 import { PlaybooksPage } from './pages/Playbooks'
@@ -690,6 +693,84 @@ const plugin: HermesPlugin = {
           label: t('integrations.title'),
           keywords: ['ceodigital', 'integrations', 'connectors', 'providers'],
           run: () => host.navigate('/ceodigital/integrations')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'orders-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/orders' } satisfies RouteContribution,
+        render: () => <OrdersPage />
+      },
+      {
+        id: 'orders-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 64,
+        data: {
+          codicon: 'credit-card',
+          label: t('commerce.orders.title'),
+          path: '/ceodigital/orders'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-orders',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openOrders',
+          label: t('commerce.orders.title'),
+          keywords: ['ceodigital', 'orders', 'commerce', 'sales'],
+          run: () => host.navigate('/ceodigital/orders')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'payments-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/payments' } satisfies RouteContribution,
+        render: () => <PaymentsPage />
+      },
+      {
+        id: 'payments-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 65,
+        data: {
+          codicon: 'bank',
+          label: t('commerce.payments.title'),
+          path: '/ceodigital/payments'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-payments',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openPayments',
+          label: t('commerce.payments.title'),
+          keywords: ['ceodigital', 'payments', 'links', 'billing'],
+          run: () => host.navigate('/ceodigital/payments')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'governance-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/governance' } satisfies RouteContribution,
+        render: () => <GovernancePage />
+      },
+      {
+        id: 'governance-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 66,
+        data: {
+          codicon: 'law',
+          label: t('governance.title'),
+          path: '/ceodigital/governance'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-governance',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openGovernance',
+          label: t('governance.title'),
+          keywords: ['ceodigital', 'governance', 'dsr', 'consents', 'gdpr'],
+          run: () => host.navigate('/ceodigital/governance')
         } satisfies PaletteContribution
       }
     ])

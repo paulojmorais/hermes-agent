@@ -913,6 +913,188 @@ export const fr: CeodigitalMessages = {
       general: 'L’action a échoué. Réessayez.'
     }
   },
+  commerce: {
+    openCommand: 'CEODigital : Ouvrir Commerce & Paiements',
+    orders: {
+      title: 'Commandes',
+      empty: 'Aucune commande trouvée pour votre tenant pour le moment.',
+      allStatuses: 'Tous les statuts',
+      allPaymentStatuses: 'Tous les statuts de paiement',
+      allFulfillmentStatuses: 'Tous les statuts de traitement',
+      searchPlaceholder: 'Rechercher des commandes…',
+      statuses: {
+        pending: 'En attente',
+        confirmed: 'Confirmée',
+        processing: 'En traitement',
+        shipped: 'Expédiée',
+        delivered: 'Livrée',
+        cancelled: 'Annulée'
+      },
+      fulfillments: { unfulfilled: 'Non traitée', partial: 'Partielle', fulfilled: 'Traitée' },
+      back: 'Retour aux commandes',
+      detail: 'Détail de la commande',
+      changeStatus: 'Changer le statut',
+      statusLabel: 'Statut',
+      fulfillmentLabel: 'Traitement',
+      updateStatus: 'Mettre à jour',
+      cancellationReason: 'Motif d’annulation',
+      cancellationReasonPlaceholder: 'Pourquoi la commande est-elle annulée ?',
+      updating: 'Mise à jour…',
+      headers: {
+        id: 'ID',
+        status: 'Statut',
+        payment: 'Paiement',
+        fulfillment: 'Traitement',
+        customer: 'Client',
+        total: 'Total'
+      },
+      detailHeaders: {
+        id: 'ID',
+        status: 'Statut',
+        payment: 'Paiement',
+        fulfillment: 'Traitement',
+        customer: 'Client',
+        total: 'Total',
+        created: 'Créée'
+      },
+      errors: {
+        list: 'Impossible de charger les commandes.',
+        fetchOrder: 'Impossible de charger cette commande.',
+        updateStatus: 'Impossible de mettre à jour le statut de la commande.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    },
+    payments: {
+      title: 'Paiements',
+      empty: 'Aucun paiement trouvé pour votre tenant pour le moment.',
+      allStatuses: 'Tous les statuts',
+      statuses: { pending: 'En attente', paid: 'Payé', failed: 'Échoué', refunded: 'Remboursé' },
+      headers: {
+        id: 'ID',
+        status: 'Statut',
+        order: 'Commande',
+        customer: 'Client',
+        amount: 'Montant',
+        created: 'Créé'
+      },
+      linksTitle: 'Liens de paiement',
+      linksEmpty: 'Aucun lien de paiement créé pour le moment.',
+      newLink: 'Nouveau lien de paiement',
+      cancelLink: 'Annuler',
+      cancelling: 'Annulation…',
+      createForm: {
+        email: 'Email du client',
+        emailPlaceholder: 'client@exemple.fr',
+        name: 'Nom du client',
+        namePlaceholder: 'Nom du client',
+        phone: 'Téléphone du client',
+        phonePlaceholder: '+33 6 12 34 56 78',
+        amountCents: 'Montant (centimes)',
+        amountCentsPlaceholder: '1490',
+        currency: 'Devise',
+        currencyPlaceholder: 'EUR',
+        expiresInDays: 'Expire dans (jours)',
+        orderId: 'ID de la commande',
+        orderIdPlaceholder: 'ID de commande (facultatif)',
+        create: 'Créer le lien',
+        cancel: 'Annuler'
+      },
+      url: 'URL',
+      cancelReason: 'Motif d’annulation',
+      cancelReasonPlaceholder: 'Motif (facultatif)',
+      errors: {
+        list: 'Impossible de charger les paiements.',
+        fetchPayment: 'Impossible de charger ce paiement.',
+        createLink: 'Impossible de créer le lien de paiement.',
+        cancelLink: 'Impossible d’annuler le lien de paiement.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    }
+  },
+  governance: {
+    openCommand: 'CEODigital : Ouvrir Gouvernance',
+    tabs: { dsr: 'Demandes DSR', consents: 'Consentements', processing: 'Traitement', retention: 'Rétention' },
+    dsr: {
+      title: 'Demandes de personnes concernées',
+      empty: 'Aucune demande de personne concernée trouvée.',
+      allStatuses: 'Tous les statuts',
+      allTypes: 'Tous les types',
+      requestTypes: { export: 'Exportation', deletion: 'Suppression' },
+      statuses: { pending: 'En attente', processing: 'En traitement', completed: 'Terminée', failed: 'Échouée' },
+      newRequest: 'Nouvelle demande',
+      route: 'Acheminer',
+      routing: 'Acheminement…',
+      createForm: {
+        userId: 'ID utilisateur',
+        userIdPlaceholder: 'utilisateur@tenant ou uuid',
+        requestType: 'Type de demande',
+        create: 'Créer la demande',
+        cancel: 'Annuler'
+      },
+      processedBy: 'Traité par',
+      processedByPlaceholder: 'id utilisateur',
+      headers: {
+        id: 'ID',
+        type: 'Type',
+        status: 'Statut',
+        user: 'Utilisateur',
+        processedBy: 'Traité par',
+        created: 'Créée'
+      },
+      errors: {
+        list: 'Impossible de charger les demandes de personnes concernées.',
+        create: 'Impossible de créer la demande.',
+        route: 'Impossible d’acheminer la demande.',
+        invalidRequestType: 'Choisissez un type de demande valide.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    },
+    consents: {
+      title: 'Consentements',
+      empty: 'Aucun consentement enregistré pour le moment.',
+      record: 'Enregistrer un consentement',
+      recordForm: {
+        userId: 'ID utilisateur',
+        userIdPlaceholder: 'utilisateur@tenant ou uuid',
+        termsVersion: 'Version des conditions',
+        privacyVersion: 'Version de confidentialité',
+        termsDocumentId: 'ID du document des conditions',
+        privacyDocumentId: 'ID du document de confidentialité',
+        ipAddress: 'Adresse IP',
+        userAgent: 'User agent',
+        record: 'Enregistrer',
+        cancel: 'Annuler'
+      },
+      headers: { id: 'ID', user: 'Utilisateur', terms: 'Conditions', privacy: 'Confidentialité', ip: 'IP', created: 'Créé' },
+      errors: {
+        list: 'Impossible de charger les consentements.',
+        record: 'Impossible d’enregistrer le consentement.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    },
+    processing: {
+      title: 'Registres de traitement',
+      empty: 'Aucun registre de traitement trouvé.',
+      allActivity: 'Tous',
+      activeOnly: 'Actifs uniquement',
+      headers: { id: 'ID', entity: 'Entité', status: 'Statut', active: 'Actif', started: 'Démarré' },
+      errors: {
+        list: 'Impossible de charger les registres de traitement.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    },
+    retention: {
+      title: 'Politiques de rétention',
+      empty: 'Aucune politique de rétention trouvée.',
+      allActivity: 'Toutes',
+      activeOnly: 'Actives uniquement',
+      headers: { id: 'ID', entity: 'Entité', days: 'Jours', active: 'Active' },
+      errors: {
+        list: 'Impossible de charger les politiques de rétention.',
+        general: 'L’action a échoué. Réessayez.'
+      }
+    }
+  },
   errors: {
     fetch: 'Impossible de charger les projets CEODigital.',
     general: "L'action a échoué. Réessayez.",

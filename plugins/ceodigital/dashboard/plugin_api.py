@@ -3610,3 +3610,518 @@ def disconnect_integration(integration_id: str) -> JSONResponse:
     except Exception:
         log.exception("ceodigital integrations disconnect failed: %s", integration_id)
         return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# Commerce & payments (W7) — proxy over the commerce/payments MCP tools.
+# Reads: orders.*.list/get, payments.*.list/get, payments.links.cancel.
+# Mutations (needApproval there): orders.update_status, payments.links.create.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_order(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital order row onto the ``OrderRow`` contract (snake/camel)."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "status": row.get("status") or "",
+        "payment_status": row.get("paymentStatus") or row.get("payment_status") or row.get("payment_state") or "",
+        "fulfillment_status": row.get("fulfillmentStatus") or row.get("fulfillment_status") or "",
+        "customer_id": row.get("customerId") or row.get("customer_id") or row.get("customer") or "",
+        "customer_email": row.get("customerEmail") or row.get("customer_email") or "",
+        "total_cents": row.get("totalCents") or row.get("total_cents") or row.get("amountCents") or row.get("amount_cents"),
+        "currency": row.get("currency") or "",
+        "created_at": row.get("createdAt") or row.get("created_at"),
+        "updated_at": row.get("updatedAt") or row.get("updated_at"),
+    }
+
+
+def _normalize_payment(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital payment row onto the ``PaymentRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "status": row.get("status") or "",
+        "order_id": row.get("orderId") or row.get("order_id") or "",
+        "customer_email": row.get("customerEmail") or row.get("customer_email") or row.get("email") or "",
+        "amount_cents": row.get("amountCents") or row.get("amount_cents") or row.get("amount") or row.get("total"),
+        "currency": row.get("currency") or "",
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+def _normalize_payment_link(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital payment-link row onto the ``PaymentLinkRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "url": row.get("url") or row.get("link") or "",
+        "status": row.get("status") or "",
+        "amount_cents": row.get("amountCents") or row.get("amount_cents") or row.get("amount"),
+        "currency": row.get("currency") or "",
+        "customer_email": row.get("customerEmail") or row.get("customer_email") or "",
+        "customer_name": row.get("customerName") or row.get("customer_name") or "",
+        "customer_phone": row.get("customerPhone") or row.get("customer_phone") or "",
+        "expires_at": row.get("expiresAt") or row.get("expires_at"),
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+def _normalize_dsr(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital DSR request row onto the ``DsrRequestRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "status": row.get("status") or "",
+        "request_type": row.get("requestType") or row.get("request_type") or "",
+        "user_id": str(row.get("userId") or row.get("user_id") or ""),
+        "processed_by": row.get("processedBy") or row.get("processed_by") or "",
+        "created_at": row.get("createdAt") or row.get("created_at"),
+        "processed_at": row.get("processedAt") or row.get("processed_at"),
+    }
+
+
+def _normalize_consent(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital consent row onto the ``ConsentRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "user_id": str(row.get("userId") or row.get("user_id") or ""),
+        "terms_version": row.get("termsVersion") or row.get("terms_version") or "",
+        "privacy_version": row.get("privacyVersion") or row.get("privacy_version") or "",
+        "ip_address": row.get("ipAddress") or row.get("ip_address") or "",
+        "user_agent": row.get("userAgent") or row.get("user_agent") or "",
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+def _normalize_processing_record(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital processing record onto the ``ProcessingRecordRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "entity_type": row.get("entityType") or row.get("entity_type") or "",
+        "entity_id": row.get("entityId") or row.get("entity_id") or "",
+        "status": row.get("status") or "",
+        "is_active": row.get("isActive") if row.get("isActive") is not None else row.get("is_active"),
+        "started_at": row.get("startedAt") or row.get("started_at"),
+        "completed_at": row.get("completedAt") or row.get("completed_at"),
+    }
+
+
+def _normalize_retention_policy(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital retention policy onto the ``RetentionPolicyRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "entity": row.get("entity") or "",
+        "retention_days": row.get("retentionDays") or row.get("retention_days") or row.get("days"),
+        "is_active": row.get("isActive") if row.get("isActive") is not None else row.get("is_active"),
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+def _single_row(payload: Any, *keys: str) -> Optional[Dict[str, Any]]:
+    """Pick the single object out of a commerce/governance detail payload."""
+    if isinstance(payload, dict):
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, dict):
+                return value
+        rows = _rows_from_services(payload, *keys)
+        if rows:
+            return rows[0]
+    return None
+
+
+@router.get("/commerce/orders")
+def list_orders(
+    status: Optional[str] = None,
+    paymentStatus: Optional[str] = None,
+    fulfillmentStatus: Optional[str] = None,
+    customerId: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's orders (read-only, MCP ``orders.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = status
+        if paymentStatus:
+            args["paymentStatus"] = paymentStatus
+        if fulfillmentStatus:
+            args["fulfillmentStatus"] = fulfillmentStatus
+        if customerId:
+            args["customerId"] = str(customerId)[:64]
+        if search is not None:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "orders.list", args)
+        rows = _rows_from_services(payload, "orders", "items")
+        return JSONResponse(content={"ok": True, "orders": [_normalize_order(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital orders list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/commerce/orders/{order_id}")
+def get_order(order_id: str) -> JSONResponse:
+    """Return a single order by id (MCP ``orders.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "orders.get", {"id": order_id})
+        order = _single_row(payload, "order", "orders")
+        if order is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "order": _normalize_order(order)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital orders get failed: %s", order_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/commerce/orders/{order_id}/status")
+def update_order_status(order_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update an order's status/fulfillment (MCP ``orders.update_status``,
+    needsApproval). Body: ``{status?, fulfillmentStatus?, cancellationReason?}`` —
+    at least one field is required.
+
+    Mutations flow through the CEODigital MCP adapter, which holds its own
+    human-in-the-loop approval; this proxy never bypasses it."""
+    if not isinstance(payload, dict):
+        payload = {}
+    status = payload.get("status")
+    fulfillment = payload.get("fulfillmentStatus")
+    reason = payload.get("cancellationReason")
+    if not status and not fulfillment:
+        return JSONResponse(
+            status_code=422, content={"ok": False, "error": "status_required"}
+        )
+
+    args: Dict[str, Any] = {"id": order_id}
+    if status:
+        args["status"] = status
+    if fulfillment:
+        args["fulfillmentStatus"] = fulfillment
+    if reason is not None:
+        args["cancellationReason"] = str(reason)[:500]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "orders.update_status", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital orders update_status failed: %s", order_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/commerce/payments")
+def list_payments(
+    status: Optional[str] = None,
+    orderId: Optional[str] = None,
+    customerEmail: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's payments (read-only, MCP ``payments.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = status
+        if orderId:
+            args["orderId"] = str(orderId)[:64]
+        if customerEmail is not None:
+            args["customerEmail"] = str(customerEmail)[:200]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "payments.list", args)
+        rows = _rows_from_services(payload, "payments", "items")
+        return JSONResponse(content={"ok": True, "payments": [_normalize_payment(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital payments list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/commerce/payments/{payment_id}")
+def get_payment(payment_id: str, token: Optional[str] = None) -> JSONResponse:
+    """Return a single payment by id (MCP ``payments.get``). Optional ``token``
+    is forwarded for provider-context lookups."""
+    try:
+        args: Dict[str, Any] = {"id": payment_id}
+        if token is not None:
+            args["token"] = str(token)[:256]
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "payments.get", args)
+        payment = _single_row(payload, "payment", "payments")
+        if payment is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "payment": _normalize_payment(payment)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital payments get failed: %s", payment_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/commerce/payment-links")
+def create_payment_link(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a payment link (MCP ``payments.links.create``, needsApproval).
+    Body maps 1:1 to the MCP input: ``{orderId?, customerEmail?,
+    customerName?, customerPhone?, amountCents?, currency?, expiresInDays?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+
+    args: Dict[str, Any] = {}
+    if payload.get("orderId") is not None:
+        args["orderId"] = payload["orderId"]
+    if payload.get("customerEmail") is not None:
+        args["customerEmail"] = str(payload["customerEmail"])[:200]
+    if payload.get("customerName") is not None:
+        args["customerName"] = str(payload["customerName"])[:200]
+    if payload.get("customerPhone") is not None:
+        args["customerPhone"] = str(payload["customerPhone"])[:50]
+    if payload.get("amountCents") is not None:
+        args["amountCents"] = int(payload["amountCents"])
+    if payload.get("currency") is not None:
+        args["currency"] = str(payload["currency"])[:3]
+    if payload.get("expiresInDays") is not None:
+        args["expiresInDays"] = int(payload["expiresInDays"])
+
+    if not args:
+        return JSONResponse(
+            status_code=422, content={"ok": False, "error": "fields_required"}
+        )
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "payments.links.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital payment links create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/commerce/payment-links/{link_id}/cancel")
+def cancel_payment_link(link_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Cancel a payment link (MCP ``payments.links.cancel``, needsApproval).
+    Body: ``{reason?}`` (≤500)."""
+    args: Dict[str, Any] = {"id": link_id}
+    if isinstance(payload, dict) and payload.get("reason") is not None:
+        args["reason"] = str(payload["reason"])[:500]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "payments.links.cancel", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital payment links cancel failed: %s", link_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# Governance (W7) — proxy over the governance.* MCP tools. Reads are lists;
+# writes (needApproval there): governance.dsr.create/route, consents.record.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/governance/dsr")
+def list_dsr_requests(
+    status: Optional[str] = None,
+    requestType: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List data-subject requests (read-only, MCP ``governance.dsr.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = status
+        if requestType:
+            args["requestType"] = requestType
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "governance.dsr.list", args)
+        rows = _rows_from_services(payload, "requests", "dsr_requests", "dsrRequests", "items")
+        return JSONResponse(content={"ok": True, "requests": [_normalize_dsr(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance dsr list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/governance/dsr")
+def create_dsr_request(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a data-subject request (MCP ``governance.dsr.create``,
+    needsApproval). Body: ``{userId, requestType}`` — ``requestType`` is
+    required and one of ``export``|``deletion``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    user_id = payload.get("userId")
+    request_type = payload.get("requestType")
+    if not request_type or request_type not in ("export", "deletion"):
+        return JSONResponse(
+            status_code=422, content={"ok": False, "error": "invalid_request_type"}
+        )
+    if not user_id or not str(user_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "user_id_required"})
+
+    args: Dict[str, Any] = {"userId": str(user_id), "requestType": str(request_type)}
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "governance.dsr.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance dsr create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/governance/dsr/{request_id}/route")
+def route_dsr_request(request_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Route / claim a DSR request (MCP ``governance.dsr.route``,
+    needsApproval). Body: ``{processedBy?}``."""
+    args: Dict[str, Any] = {"id": request_id}
+    if isinstance(payload, dict) and payload.get("processedBy") is not None:
+        args["processedBy"] = str(payload["processedBy"])[:64]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "governance.dsr.route", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance dsr route failed: %s", request_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/governance/consents")
+def list_consents(
+    userId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List recorded consents (read-only, MCP ``governance.consents.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if userId:
+            args["userId"] = str(userId)[:64]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "governance.consents.list", args)
+        rows = _rows_from_services(payload, "consents", "items")
+        return JSONResponse(content={"ok": True, "consents": [_normalize_consent(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance consents list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/governance/consents")
+def record_consent(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Record a consent (MCP ``governance.consents.record``, needsApproval).
+    Body: ``{userId, termsVersion?, privacyVersion?, termsDocumentId?,
+    privacyDocumentId?, ipAddress?, userAgent?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    user_id = payload.get("userId")
+    if not user_id or not str(user_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "user_id_required"})
+
+    args: Dict[str, Any] = {"userId": str(user_id)}
+    for key, maxlen in (
+        ("termsVersion", 32),
+        ("privacyVersion", 32),
+        ("ipAddress", 45),
+        ("userAgent", 500),
+    ):
+        if payload.get(key) is not None:
+            args[key] = str(payload[key])[:maxlen]
+    for key in ("termsDocumentId", "privacyDocumentId"):
+        if payload.get(key) is not None:
+            args[key] = str(payload[key])[:64]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "governance.consents.record", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance consents record failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/governance/processing-records")
+def list_processing_records(
+    isActive: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List processing records (read-only, MCP
+    ``governance.processing_records.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if isActive is not None:
+            args["isActive"] = bool(isActive)
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "governance.processing_records.list", args)
+        rows = _rows_from_services(payload, "records", "processing_records", "processingRecords", "items")
+        return JSONResponse(content={"ok": True, "records": [_normalize_processing_record(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance processing records list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/governance/retention")
+def list_retention_policies(
+    entity: Optional[str] = None,
+    isActive: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List retention policies (read-only, MCP ``governance.retention.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if entity is not None:
+            args["entity"] = str(entity)[:64]
+        if isActive is not None:
+            args["isActive"] = bool(isActive)
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "governance.retention.list", args)
+        rows = _rows_from_services(payload, "policies", "retention_policies", "retentionPolicies", "items")
+        return JSONResponse(content={"ok": True, "policies": [_normalize_retention_policy(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital governance retention list failed")
+        return _maybe_error(ERR_UNREACHABLE)

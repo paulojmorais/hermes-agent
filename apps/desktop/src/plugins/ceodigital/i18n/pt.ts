@@ -913,6 +913,188 @@ export const pt: CeodigitalMessages = {
       general: 'A ação falhou. Tenta novamente.'
     }
   },
+  commerce: {
+    openCommand: 'CEODigital: Abrir Comércio & Pagamentos',
+    orders: {
+      title: 'Encomendas',
+      empty: 'Ainda não há encomendas para o teu tenant.',
+      allStatuses: 'Todos os estados',
+      allPaymentStatuses: 'Todos os estados de pagamento',
+      allFulfillmentStatuses: 'Todos os estados de cumprimento',
+      searchPlaceholder: 'Pesquisar encomendas…',
+      statuses: {
+        pending: 'Pendente',
+        confirmed: 'Confirmada',
+        processing: 'Em processamento',
+        shipped: 'Enviada',
+        delivered: 'Entregue',
+        cancelled: 'Cancelada'
+      },
+      fulfillments: { unfulfilled: 'Por cumprir', partial: 'Parcial', fulfilled: 'Cumprida' },
+      back: 'Voltar às encomendas',
+      detail: 'Detalhe da encomenda',
+      changeStatus: 'Alterar estado',
+      statusLabel: 'Estado',
+      fulfillmentLabel: 'Cumprimento',
+      updateStatus: 'Atualizar',
+      cancellationReason: 'Motivo do cancelamento',
+      cancellationReasonPlaceholder: 'Porque está a encomenda a ser cancelada?',
+      updating: 'A atualizar…',
+      headers: {
+        id: 'ID',
+        status: 'Estado',
+        payment: 'Pagamento',
+        fulfillment: 'Cumprimento',
+        customer: 'Cliente',
+        total: 'Total'
+      },
+      detailHeaders: {
+        id: 'ID',
+        status: 'Estado',
+        payment: 'Pagamento',
+        fulfillment: 'Cumprimento',
+        customer: 'Cliente',
+        total: 'Total',
+        created: 'Criada'
+      },
+      errors: {
+        list: 'Não foi possível carregar as encomendas.',
+        fetchOrder: 'Não foi possível carregar esta encomenda.',
+        updateStatus: 'Não foi possível atualizar o estado da encomenda.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    },
+    payments: {
+      title: 'Pagamentos',
+      empty: 'Ainda não há pagamentos para o teu tenant.',
+      allStatuses: 'Todos os estados',
+      statuses: { pending: 'Pendente', paid: 'Pago', failed: 'Falhado', refunded: 'Reembolsado' },
+      headers: {
+        id: 'ID',
+        status: 'Estado',
+        order: 'Encomenda',
+        customer: 'Cliente',
+        amount: 'Valor',
+        created: 'Criado'
+      },
+      linksTitle: 'Ligações de pagamento',
+      linksEmpty: 'Ainda não há ligações de pagamento.',
+      newLink: 'Nova ligação de pagamento',
+      cancelLink: 'Cancelar',
+      cancelling: 'A cancelar…',
+      createForm: {
+        email: 'Email do cliente',
+        emailPlaceholder: 'cliente@exemplo.pt',
+        name: 'Nome do cliente',
+        namePlaceholder: 'Nome do cliente',
+        phone: 'Telefone do cliente',
+        phonePlaceholder: '+351 912 345 678',
+        amountCents: 'Valor (cêntimos)',
+        amountCentsPlaceholder: '1490',
+        currency: 'Moeda',
+        currencyPlaceholder: 'EUR',
+        expiresInDays: 'Expira em (dias)',
+        orderId: 'ID da encomenda',
+        orderIdPlaceholder: 'ID da encomenda (opcional)',
+        create: 'Criar ligação',
+        cancel: 'Cancelar'
+      },
+      url: 'URL',
+      cancelReason: 'Motivo do cancelamento',
+      cancelReasonPlaceholder: 'Motivo (opcional)',
+      errors: {
+        list: 'Não foi possível carregar os pagamentos.',
+        fetchPayment: 'Não foi possível carregar este pagamento.',
+        createLink: 'Não foi possível criar a ligação de pagamento.',
+        cancelLink: 'Não foi possível cancelar a ligação de pagamento.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    }
+  },
+  governance: {
+    openCommand: 'CEODigital: Abrir Governação',
+    tabs: { dsr: 'Pedidos DSR', consents: 'Consentimentos', processing: 'Processamento', retention: 'Retenção' },
+    dsr: {
+      title: 'Pedidos de titular de dados',
+      empty: 'Ainda não há pedidos de titular de dados.',
+      allStatuses: 'Todos os estados',
+      allTypes: 'Todos os tipos',
+      requestTypes: { export: 'Exportação', deletion: 'Eliminação' },
+      statuses: { pending: 'Pendente', processing: 'Em processamento', completed: 'Concluído', failed: 'Falhado' },
+      newRequest: 'Novo pedido',
+      route: 'Encaminhar',
+      routing: 'A encaminhar…',
+      createForm: {
+        userId: 'ID do utilizador',
+        userIdPlaceholder: 'utilizador@tenant ou uuid',
+        requestType: 'Tipo de pedido',
+        create: 'Criar pedido',
+        cancel: 'Cancelar'
+      },
+      processedBy: 'Processado por',
+      processedByPlaceholder: 'id do utilizador',
+      headers: {
+        id: 'ID',
+        type: 'Tipo',
+        status: 'Estado',
+        user: 'Utilizador',
+        processedBy: 'Processado por',
+        created: 'Criado'
+      },
+      errors: {
+        list: 'Não foi possível carregar os pedidos de titular de dados.',
+        create: 'Não foi possível criar o pedido.',
+        route: 'Não foi possível encaminhar o pedido.',
+        invalidRequestType: 'Escolhe um tipo de pedido válido.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    },
+    consents: {
+      title: 'Consentimentos',
+      empty: 'Ainda não há consentimentos registados.',
+      record: 'Registar consentimento',
+      recordForm: {
+        userId: 'ID do utilizador',
+        userIdPlaceholder: 'utilizador@tenant ou uuid',
+        termsVersion: 'Versão dos termos',
+        privacyVersion: 'Versão da privacidade',
+        termsDocumentId: 'ID do documento de termos',
+        privacyDocumentId: 'ID do documento de privacidade',
+        ipAddress: 'Endereço IP',
+        userAgent: 'User agent',
+        record: 'Registar',
+        cancel: 'Cancelar'
+      },
+      headers: { id: 'ID', user: 'Utilizador', terms: 'Termos', privacy: 'Privacidade', ip: 'IP', created: 'Criado' },
+      errors: {
+        list: 'Não foi possível carregar os consentimentos.',
+        record: 'Não foi possível registar o consentimento.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    },
+    processing: {
+      title: 'Registos de processamento',
+      empty: 'Não foram encontrados registos de processamento.',
+      allActivity: 'Todos',
+      activeOnly: 'Apenas ativos',
+      headers: { id: 'ID', entity: 'Entidade', status: 'Estado', active: 'Ativo', started: 'Iniciado' },
+      errors: {
+        list: 'Não foi possível carregar os registos de processamento.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    },
+    retention: {
+      title: 'Políticas de retenção',
+      empty: 'Não foram encontradas políticas de retenção.',
+      allActivity: 'Todas',
+      activeOnly: 'Apenas ativas',
+      headers: { id: 'ID', entity: 'Entidade', days: 'Dias', active: 'Ativa' },
+      errors: {
+        list: 'Não foi possível carregar as políticas de retenção.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    }
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
     general: 'A ação falhou. Tenta novamente.',

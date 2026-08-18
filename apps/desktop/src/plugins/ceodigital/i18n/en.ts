@@ -913,6 +913,188 @@ export const en: CeodigitalMessages = {
       general: 'The action failed. Try again.'
     }
   },
+  commerce: {
+    openCommand: 'CEODigital: Open Commerce & Payments',
+    orders: {
+      title: 'Orders',
+      empty: 'No orders found for your tenant yet.',
+      allStatuses: 'All statuses',
+      allPaymentStatuses: 'All payment statuses',
+      allFulfillmentStatuses: 'All fulfillment statuses',
+      searchPlaceholder: 'Search orders…',
+      statuses: {
+        pending: 'Pending',
+        confirmed: 'Confirmed',
+        processing: 'Processing',
+        shipped: 'Shipped',
+        delivered: 'Delivered',
+        cancelled: 'Cancelled'
+      },
+      fulfillments: { unfulfilled: 'Unfulfilled', partial: 'Partial', fulfilled: 'Fulfilled' },
+      back: 'Back to orders',
+      detail: 'Order detail',
+      changeStatus: 'Change status',
+      statusLabel: 'Status',
+      fulfillmentLabel: 'Fulfillment',
+      updateStatus: 'Update',
+      cancellationReason: 'Cancellation reason',
+      cancellationReasonPlaceholder: 'Why is the order being cancelled?',
+      updating: 'Updating…',
+      headers: {
+        id: 'ID',
+        status: 'Status',
+        payment: 'Payment',
+        fulfillment: 'Fulfillment',
+        customer: 'Customer',
+        total: 'Total'
+      },
+      detailHeaders: {
+        id: 'ID',
+        status: 'Status',
+        payment: 'Payment',
+        fulfillment: 'Fulfillment',
+        customer: 'Customer',
+        total: 'Total',
+        created: 'Created'
+      },
+      errors: {
+        list: 'Could not load the orders.',
+        fetchOrder: 'Could not load this order.',
+        updateStatus: 'Could not update the order status.',
+        general: 'The action failed. Try again.'
+      }
+    },
+    payments: {
+      title: 'Payments',
+      empty: 'No payments found for your tenant yet.',
+      allStatuses: 'All statuses',
+      statuses: { pending: 'Pending', paid: 'Paid', failed: 'Failed', refunded: 'Refunded' },
+      headers: {
+        id: 'ID',
+        status: 'Status',
+        order: 'Order',
+        customer: 'Customer',
+        amount: 'Amount',
+        created: 'Created'
+      },
+      linksTitle: 'Payment links',
+      linksEmpty: 'No payment links created yet.',
+      newLink: 'New payment link',
+      cancelLink: 'Cancel',
+      cancelling: 'Cancelling…',
+      createForm: {
+        email: 'Customer email',
+        emailPlaceholder: 'customer@example.com',
+        name: 'Customer name',
+        namePlaceholder: 'Customer name',
+        phone: 'Customer phone',
+        phonePlaceholder: '+351 912 345 678',
+        amountCents: 'Amount (cents)',
+        amountCentsPlaceholder: '1490',
+        currency: 'Currency',
+        currencyPlaceholder: 'EUR',
+        expiresInDays: 'Expires in (days)',
+        orderId: 'Order id',
+        orderIdPlaceholder: 'Optional order id',
+        create: 'Create link',
+        cancel: 'Cancel'
+      },
+      url: 'URL',
+      cancelReason: 'Cancellation reason',
+      cancelReasonPlaceholder: 'Optional reason',
+      errors: {
+        list: 'Could not load the payments.',
+        fetchPayment: 'Could not load this payment.',
+        createLink: 'Could not create the payment link.',
+        cancelLink: 'Could not cancel the payment link.',
+        general: 'The action failed. Try again.'
+      }
+    }
+  },
+  governance: {
+    openCommand: 'CEODigital: Open Governance',
+    tabs: { dsr: 'DSR requests', consents: 'Consents', processing: 'Processing', retention: 'Retention' },
+    dsr: {
+      title: 'Data subject requests',
+      empty: 'No data subject requests found.',
+      allStatuses: 'All statuses',
+      allTypes: 'All types',
+      requestTypes: { export: 'Export', deletion: 'Deletion' },
+      statuses: { pending: 'Pending', processing: 'Processing', completed: 'Completed', failed: 'Failed' },
+      newRequest: 'New request',
+      route: 'Route',
+      routing: 'Routing…',
+      createForm: {
+        userId: 'User id',
+        userIdPlaceholder: 'user@tenant or uuid',
+        requestType: 'Request type',
+        create: 'Create request',
+        cancel: 'Cancel'
+      },
+      processedBy: 'Processed by',
+      processedByPlaceholder: 'user id',
+      headers: {
+        id: 'ID',
+        type: 'Type',
+        status: 'Status',
+        user: 'User',
+        processedBy: 'Processed by',
+        created: 'Created'
+      },
+      errors: {
+        list: 'Could not load the data subject requests.',
+        create: 'Could not create the request.',
+        route: 'Could not route the request.',
+        invalidRequestType: 'Choose a valid request type.',
+        general: 'The action failed. Try again.'
+      }
+    },
+    consents: {
+      title: 'Consents',
+      empty: 'No consents recorded yet.',
+      record: 'Record consent',
+      recordForm: {
+        userId: 'User id',
+        userIdPlaceholder: 'user@tenant or uuid',
+        termsVersion: 'Terms version',
+        privacyVersion: 'Privacy version',
+        termsDocumentId: 'Terms document id',
+        privacyDocumentId: 'Privacy document id',
+        ipAddress: 'IP address',
+        userAgent: 'User agent',
+        record: 'Record',
+        cancel: 'Cancel'
+      },
+      headers: { id: 'ID', user: 'User', terms: 'Terms', privacy: 'Privacy', ip: 'IP', created: 'Created' },
+      errors: {
+        list: 'Could not load the consents.',
+        record: 'Could not record the consent.',
+        general: 'The action failed. Try again.'
+      }
+    },
+    processing: {
+      title: 'Processing records',
+      empty: 'No processing records found.',
+      allActivity: 'All',
+      activeOnly: 'Active only',
+      headers: { id: 'ID', entity: 'Entity', status: 'Status', active: 'Active', started: 'Started' },
+      errors: {
+        list: 'Could not load the processing records.',
+        general: 'The action failed. Try again.'
+      }
+    },
+    retention: {
+      title: 'Retention policies',
+      empty: 'No retention policies found.',
+      allActivity: 'All',
+      activeOnly: 'Active only',
+      headers: { id: 'ID', entity: 'Entity', days: 'Days', active: 'Active' },
+      errors: {
+        list: 'Could not load the retention policies.',
+        general: 'The action failed. Try again.'
+      }
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
     general: 'The action failed. Try again.',

@@ -1647,3 +1647,271 @@ export interface W6bActionResponse {
 }
 
 export type W6bActionEnvelope = W6bActionResponse | CrmError
+
+// ── Commerce & payments (W7) — status unions ────────────────────────────────
+
+export const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'] as const
+export type OrderStatus = (typeof ORDER_STATUSES)[number]
+
+export const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'] as const
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
+
+export const FULFILLMENT_STATUSES = ['unfulfilled', 'partial', 'fulfilled'] as const
+export type FulfillmentStatus = (typeof FULFILLMENT_STATUSES)[number]
+
+export const DSR_REQUEST_TYPES = ['export', 'deletion'] as const
+export type DsrRequestType = (typeof DSR_REQUEST_TYPES)[number]
+
+export const DSR_STATUSES = ['pending', 'processing', 'completed', 'failed'] as const
+export type DsrStatus = (typeof DSR_STATUSES)[number]
+
+// ── Commerce & payments (W7) — rows ─────────────────────────────────────────
+
+/** GET /commerce/orders — an order row (proxy over MCP orders.list). */
+export interface OrderRow {
+  id: string
+  status?: null | OrderStatus | string
+  payment_status?: null | PaymentStatus | string
+  fulfillment_status?: null | FulfillmentStatus | string
+  customer_id?: null | string
+  customer_email?: null | string
+  total_cents?: null | number | string
+  currency?: null | string
+  created_at?: null | string
+  updated_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /commerce/payments — a payment row (proxy over MCP payments.list). */
+export interface PaymentRow {
+  id: string
+  status?: null | PaymentStatus | string
+  order_id?: null | string
+  customer_email?: null | string
+  amount_cents?: null | number | string
+  currency?: null | string
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** POST /commerce/payment-links — a payment-link row (MCP payments.links.create). */
+export interface PaymentLinkRow {
+  id: string
+  url?: null | string
+  status?: null | string
+  amount_cents?: null | number | string
+  currency?: null | string
+  customer_email?: null | string
+  customer_name?: null | string
+  customer_phone?: null | string
+  expires_at?: null | string
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /governance/dsr — a data-subject request row (MCP governance.dsr.list). */
+export interface DsrRequestRow {
+  id: string
+  status?: null | DsrStatus | string
+  request_type?: null | DsrRequestType | string
+  user_id?: null | string
+  processed_by?: null | string
+  created_at?: null | string
+  processed_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /governance/consents — a consent row (MCP governance.consents.list). */
+export interface ConsentRow {
+  id: string
+  user_id?: null | string
+  terms_version?: null | string
+  privacy_version?: null | string
+  ip_address?: null | string
+  user_agent?: null | string
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /governance/processing-records — a processing record (MCP
+ *  governance.processing_records.list). */
+export interface ProcessingRecordRow {
+  id: string
+  entity_type?: null | string
+  entity_id?: null | string
+  status?: null | string
+  is_active?: null | boolean
+  started_at?: null | string
+  completed_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /governance/retention — a retention policy (MCP governance.retention.list). */
+export interface RetentionPolicyRow {
+  id: string
+  entity?: null | string
+  retention_days?: null | number | string
+  is_active?: null | boolean
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+// ── Commerce & governance — list params ──────────────────────────────────────
+
+/** GET /commerce/orders — list query params (map 1:1 to MCP). */
+export interface OrdersListParams {
+  status?: OrderStatus | string
+  paymentStatus?: PaymentStatus | string
+  fulfillmentStatus?: FulfillmentStatus | string
+  customerId?: string
+  search?: string
+  limit?: number
+}
+
+/** GET /commerce/payments — list query params (map 1:1 to MCP). */
+export interface PaymentsListParams {
+  status?: PaymentStatus | string
+  orderId?: string
+  customerEmail?: string
+  limit?: number
+}
+
+/** GET /governance/dsr — list query params (map 1:1 to MCP). */
+export interface DsrListParams {
+  status?: DsrStatus | string
+  requestType?: DsrRequestType | string
+  limit?: number
+}
+
+/** GET /governance/consents — list query params (map 1:1 to MCP). */
+export interface ConsentsListParams {
+  userId?: string
+  limit?: number
+}
+
+/** GET /governance/processing-records — list query params (map 1:1 to MCP). */
+export interface ProcessingRecordsListParams {
+  isActive?: boolean
+  limit?: number
+}
+
+/** GET /governance/retention — list query params (map 1:1 to MCP). */
+export interface RetentionListParams {
+  entity?: string
+  isActive?: boolean
+  limit?: number
+}
+
+// ── Commerce & governance — mutation inputs ──────────────────────────────────
+
+/** POST /commerce/orders/{id}/status — update body. */
+export interface UpdateOrderStatusInput {
+  status?: OrderStatus | string
+  fulfillmentStatus?: FulfillmentStatus | string
+  cancellationReason?: string
+}
+
+/** POST /commerce/payment-links — create body. */
+export interface CreatePaymentLinkInput {
+  orderId?: string
+  customerEmail?: string
+  customerName?: string
+  customerPhone?: string
+  amountCents?: number
+  currency?: string
+  expiresInDays?: number
+}
+
+/** POST /commerce/payment-links/{id}/cancel — cancel body. */
+export interface CancelPaymentLinkInput {
+  reason?: string
+}
+
+/** POST /governance/dsr — create body. */
+export interface CreateDsrRequestInput {
+  userId: string
+  requestType: DsrRequestType
+}
+
+/** POST /governance/dsr/{id}/route — route body. */
+export interface RouteDsrRequestInput {
+  processedBy?: string
+}
+
+/** POST /governance/consents — record body. */
+export interface RecordConsentInput {
+  userId: string
+  termsVersion?: string
+  privacyVersion?: string
+  termsDocumentId?: string
+  privacyDocumentId?: string
+  ipAddress?: string
+  userAgent?: string
+}
+
+// ── Commerce & governance — envelopes ────────────────────────────────────────
+
+/** GET /commerce/orders — success envelope. */
+export interface OrdersResponse {
+  ok: true
+  orders: OrderRow[]
+}
+
+/** GET /commerce/orders/{id} — success envelope. */
+export interface OrderResponse {
+  ok: true
+  order: OrderRow
+}
+
+/** GET /commerce/payments — success envelope. */
+export interface PaymentsResponse {
+  ok: true
+  payments: PaymentRow[]
+}
+
+/** GET /commerce/payments/{id} — success envelope. */
+export interface PaymentResponse {
+  ok: true
+  payment: PaymentRow
+}
+
+/** GET /governance/dsr — success envelope. */
+export interface DsrRequestsResponse {
+  ok: true
+  requests: DsrRequestRow[]
+}
+
+/** GET /governance/consents — success envelope. */
+export interface ConsentsResponse {
+  ok: true
+  consents: ConsentRow[]
+}
+
+/** GET /governance/processing-records — success envelope. */
+export interface ProcessingRecordsResponse {
+  ok: true
+  records: ProcessingRecordRow[]
+}
+
+/** GET /governance/retention — success envelope. */
+export interface RetentionResponse {
+  ok: true
+  policies: RetentionPolicyRow[]
+}
+
+export type OrdersEnvelope = OrdersResponse | CrmError
+export type OrderEnvelope = OrderResponse | CrmError
+export type PaymentsEnvelope = PaymentsResponse | CrmError
+export type PaymentEnvelope = PaymentResponse | CrmError
+export type DsrRequestsEnvelope = DsrRequestsResponse | CrmError
+export type ConsentsEnvelope = ConsentsResponse | CrmError
+export type ProcessingRecordsEnvelope = ProcessingRecordsResponse | CrmError
+export type RetentionEnvelope = RetentionResponse | CrmError
+
+/** POST /commerce|governance/** — mutation success envelope (raw MCP result). */
+export interface W7ActionResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+export type W7ActionEnvelope = W7ActionResponse | CrmError

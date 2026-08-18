@@ -33,16 +33,21 @@ import type {
   BindingsListParams,
   CatalogEnvelope,
   CatalogItemEnvelope,
+  CancelPaymentLinkInput,
   CatalogListParams,
   CategoriesEnvelope,
   ChecklistToggleBody,
   ChecklistToggleEnvelope,
   CollectionsEnvelope,
+  ConsentsEnvelope,
+  ConsentsListParams,
   ConversationEnvelope,
   ConversationsEnvelope,
   ConversationsListParams,
   CreateCollectionInput,
   CreateConversationInput,
+  CreateDsrRequestInput,
+  CreatePaymentLinkInput,
   CreateProposalEnvelope,
   CreateProposalInput,
   CreateThreadInput,
@@ -55,6 +60,9 @@ import type {
   DepartmentRow,
   DepartmentMemberRow,
   DocumentsActionEnvelope,
+  DsrListParams,
+  DsrRequestRow,
+  DsrRequestsEnvelope,
   FileEnvelope,
   FilesEnvelope,
   FilesListParams,
@@ -82,8 +90,16 @@ import type {
   NotificationsListParams,
   OfferingsEnvelope,
   OfferingsListParams,
+  OrderEnvelope,
+  OrderRow,
+  OrdersEnvelope,
+  OrdersListParams,
   OrganizationEnvelope,
   OrganizationsEnvelope,
+  PaymentEnvelope,
+  PaymentRow,
+  PaymentsEnvelope,
+  PaymentsListParams,
   PersonsEnvelope,
   PersonEnvelope,
   PhaseStatus,
@@ -93,6 +109,9 @@ import type {
   PlaybookRunsListParams,
   PlaybooksEnvelope,
   PlaybooksListParams,
+  ProcessingRecordRow,
+  ProcessingRecordsEnvelope,
+  ProcessingRecordsListParams,
   ProjectStatus,
   ProposalActionEnvelope,
   ProposalEnvelope,
@@ -101,6 +120,11 @@ import type {
   ProposalsListParams,
   ProposalTrancheValues,
   ReindexInput,
+  RecordConsentInput,
+  RetentionEnvelope,
+  RetentionListParams,
+  RetentionPolicyRow,
+  RouteDsrRequestInput,
   RunPlaybookInput,
   RunWorkItemEnvelope,
   RunWorkflowInput,
@@ -120,11 +144,13 @@ import type {
   TimelineEventsEnvelope,
   TimelineEventsParams,
   UnreadCountEnvelope,
+  UpdateOrderStatusInput,
   UpdateProposalInput,
   UploadAttachmentInput,
   UploadFileInput,
   W6aActionEnvelope,
   W6bActionEnvelope,
+  W7ActionEnvelope,
   WebhooksEnvelope,
   WebhooksListParams,
   WorkItemInput,
@@ -1046,3 +1072,114 @@ export const connectIntegration = (input: ConnectIntegrationInput) =>
 /** POST /integrations/{id}/disconnect — disconnect an integration (MCP integrations.disconnect). */
 export const disconnectIntegration = (id: string) =>
   call<W6bActionEnvelope>(`/integrations/${encodeURIComponent(id)}/disconnect`, { method: 'POST', body: {} })
+
+// ── Commerce & payments / governance (W7) ───────────────────────────────────
+
+export const ORDERS_KEY = ['ceodigital', 'commerce', 'orders'] as const
+export const orderKey = (id: string) => ['ceodigital', 'commerce', 'orders', id] as const
+export const PAYMENTS_KEY = ['ceodigital', 'commerce', 'payments'] as const
+export const paymentKey = (id: string) => ['ceodigital', 'commerce', 'payments', id] as const
+
+export const DSR_KEY = ['ceodigital', 'governance', 'dsr'] as const
+export const CONSENTS_KEY = ['ceodigital', 'governance', 'consents'] as const
+export const PROCESSING_RECORDS_KEY = ['ceodigital', 'governance', 'processing-records'] as const
+export const RETENTION_KEY = ['ceodigital', 'governance', 'retention'] as const
+
+/** GET /commerce/orders — the tenant's orders (MCP orders.list). */
+export const fetchOrders = (params?: OrdersListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.paymentStatus) qs.set('paymentStatus', params.paymentStatus)
+  if (params?.fulfillmentStatus) qs.set('fulfillmentStatus', params.fulfillmentStatus)
+  if (params?.customerId) qs.set('customerId', params.customerId)
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<OrdersEnvelope>(`/commerce/orders${suffix}`)
+}
+
+/** GET /commerce/orders/{id} — one order (MCP orders.get). */
+export const fetchOrder = (id: string) => call<OrderEnvelope>(`/commerce/orders/${encodeURIComponent(id)}`)
+
+/** POST /commerce/orders/{id}/status — update status/fulfillment (MCP orders.update_status). */
+export const updateOrderStatus = (id: string, body: UpdateOrderStatusInput) =>
+  call<W7ActionEnvelope>(`/commerce/orders/${encodeURIComponent(id)}/status`, { method: 'POST', body })
+
+/** GET /commerce/payments — the tenant's payments (MCP payments.list). */
+export const fetchPayments = (params?: PaymentsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.orderId) qs.set('orderId', params.orderId)
+  if (params?.customerEmail) qs.set('customerEmail', params.customerEmail)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PaymentsEnvelope>(`/commerce/payments${suffix}`)
+}
+
+/** GET /commerce/payments/{id} — one payment (MCP payments.get). Optional token. */
+export const fetchPayment = (id: string, token?: string) => {
+  const suffix = token ? `?token=${encodeURIComponent(token)}` : ''
+  return call<PaymentEnvelope>(`/commerce/payments/${encodeURIComponent(id)}${suffix}`)
+}
+
+/** POST /commerce/payment-links — create a payment link (MCP payments.links.create). */
+export const createPaymentLink = (input: CreatePaymentLinkInput) =>
+  call<W7ActionEnvelope>('/commerce/payment-links', { method: 'POST', body: input })
+
+/** POST /commerce/payment-links/{id}/cancel — cancel a payment link (MCP payments.links.cancel). */
+export const cancelPaymentLink = (id: string, reason?: string) =>
+  call<W7ActionEnvelope>(`/commerce/payment-links/${encodeURIComponent(id)}/cancel`, {
+    method: 'POST',
+    body: reason ? { reason } : {}
+  })
+
+/** GET /governance/dsr — data-subject requests (MCP governance.dsr.list). */
+export const fetchDsrRequests = (params?: DsrListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.requestType) qs.set('requestType', params.requestType)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<DsrRequestsEnvelope>(`/governance/dsr${suffix}`)
+}
+
+/** POST /governance/dsr — create a DSR (MCP governance.dsr.create). */
+export const createDsrRequest = (input: CreateDsrRequestInput) =>
+  call<W7ActionEnvelope>('/governance/dsr', { method: 'POST', body: input })
+
+/** POST /governance/dsr/{id}/route — route a DSR (MCP governance.dsr.route). */
+export const routeDsrRequest = (id: string, body: RouteDsrRequestInput) =>
+  call<W7ActionEnvelope>(`/governance/dsr/${encodeURIComponent(id)}/route`, { method: 'POST', body })
+
+/** GET /governance/consents — recorded consents (MCP governance.consents.list). */
+export const fetchConsents = (params?: ConsentsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.userId) qs.set('userId', params.userId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ConsentsEnvelope>(`/governance/consents${suffix}`)
+}
+
+/** POST /governance/consents — record a consent (MCP governance.consents.record). */
+export const recordConsent = (input: RecordConsentInput) =>
+  call<W7ActionEnvelope>('/governance/consents', { method: 'POST', body: input })
+
+/** GET /governance/processing-records — processing records (MCP
+ *  governance.processing_records.list). */
+export const fetchProcessingRecords = (params?: ProcessingRecordsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.isActive !== undefined) qs.set('isActive', String(params.isActive))
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ProcessingRecordsEnvelope>(`/governance/processing-records${suffix}`)
+}
+
+/** GET /governance/retention — retention policies (MCP governance.retention.list). */
+export const fetchRetentionPolicies = (params?: RetentionListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.entity) qs.set('entity', params.entity)
+  if (params?.isActive !== undefined) qs.set('isActive', String(params.isActive))
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<RetentionEnvelope>(`/governance/retention${suffix}`)
+}

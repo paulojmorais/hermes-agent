@@ -13,8 +13,13 @@ import { useMemo } from 'react'
 
 import type {
   DepartmentRole,
+  DsrRequestType,
+  DsrStatus,
+  FulfillmentStatus,
   IntegrationScope,
   IntegrationStatus,
+  OrderStatus,
+  PaymentStatus,
   PhaseStatus,
   ProjectStatus,
   WorkItemStatus,
@@ -821,6 +826,204 @@ export interface CeodigitalMessages {
       disconnect: string
       fetchIntegration: string
       general: string
+    }
+  }
+  commerce: {
+    openCommand: string
+    orders: {
+      title: string
+      empty: string
+      allStatuses: string
+      allPaymentStatuses: string
+      allFulfillmentStatuses: string
+      searchPlaceholder: string
+      statuses: Partial<Record<OrderStatus, string>>
+      fulfillments: Partial<Record<FulfillmentStatus, string>>
+      back: string
+      detail: string
+      changeStatus: string
+      statusLabel: string
+      fulfillmentLabel: string
+      updateStatus: string
+      cancellationReason: string
+      cancellationReasonPlaceholder: string
+      updating: string
+      headers: {
+        id: string
+        status: string
+        payment: string
+        fulfillment: string
+        customer: string
+        total: string
+      }
+      detailHeaders: {
+        id: string
+        status: string
+        payment: string
+        fulfillment: string
+        customer: string
+        total: string
+        created: string
+      }
+      errors: {
+        list: string
+        fetchOrder: string
+        updateStatus: string
+        general: string
+      }
+    }
+    payments: {
+      title: string
+      empty: string
+      allStatuses: string
+      statuses: Partial<Record<PaymentStatus, string>>
+      headers: {
+        id: string
+        status: string
+        order: string
+        customer: string
+        amount: string
+        created: string
+      }
+      linksTitle: string
+      linksEmpty: string
+      newLink: string
+      cancelLink: string
+      cancelling: string
+      createForm: {
+        email: string
+        emailPlaceholder: string
+        name: string
+        namePlaceholder: string
+        phone: string
+        phonePlaceholder: string
+        amountCents: string
+        amountCentsPlaceholder: string
+        currency: string
+        currencyPlaceholder: string
+        expiresInDays: string
+        orderId: string
+        orderIdPlaceholder: string
+        create: string
+        cancel: string
+      }
+      url: string
+      cancelReason: string
+      cancelReasonPlaceholder: string
+      errors: {
+        list: string
+        fetchPayment: string
+        createLink: string
+        cancelLink: string
+        general: string
+      }
+    }
+  }
+  governance: {
+    openCommand: string
+    tabs: {
+      dsr: string
+      consents: string
+      processing: string
+      retention: string
+    }
+    dsr: {
+      title: string
+      empty: string
+      allStatuses: string
+      allTypes: string
+      requestTypes: Partial<Record<DsrRequestType, string>>
+      statuses: Partial<Record<DsrStatus, string>>
+      newRequest: string
+      route: string
+      routing: string
+      createForm: {
+        userId: string
+        userIdPlaceholder: string
+        requestType: string
+        create: string
+        cancel: string
+      }
+      processedBy: string
+      processedByPlaceholder: string
+      headers: {
+        id: string
+        type: string
+        status: string
+        user: string
+        processedBy: string
+        created: string
+      }
+      errors: {
+        list: string
+        create: string
+        route: string
+        invalidRequestType: string
+        general: string
+      }
+    }
+    consents: {
+      title: string
+      empty: string
+      record: string
+      recordForm: {
+        userId: string
+        userIdPlaceholder: string
+        termsVersion: string
+        privacyVersion: string
+        termsDocumentId: string
+        privacyDocumentId: string
+        ipAddress: string
+        userAgent: string
+        record: string
+        cancel: string
+      }
+      headers: {
+        id: string
+        user: string
+        terms: string
+        privacy: string
+        ip: string
+        created: string
+      }
+      errors: {
+        list: string
+        record: string
+        general: string
+      }
+    }
+    processing: {
+      title: string
+      empty: string
+      allActivity: string
+      activeOnly: string
+      headers: {
+        id: string
+        entity: string
+        status: string
+        active: string
+        started: string
+      }
+      errors: {
+        list: string
+        general: string
+      }
+    }
+    retention: {
+      title: string
+      empty: string
+      allActivity: string
+      activeOnly: string
+      headers: {
+        id: string
+        entity: string
+        days: string
+        active: string
+      }
+      errors: {
+        list: string
+        general: string
+      }
     }
   }
   errors: {
