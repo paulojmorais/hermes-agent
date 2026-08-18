@@ -104,30 +104,30 @@ Rota do plugin → tool MCP → cobertura:
 exceto a superfície de Control Plane (W9, token CP, opcional). O único restante é a **W8**
 (módulos do produto que ainda não expõem tools MCP no CEODigital).
 
-### 3.1 Módulos do produto CEODigital que AINDA NÃO têm surface MCP (falta criar do lado ceodigital)
+### 3.1 Módulos do produto que ganharam surface MCP (W8 — tools criadas)
 
-A gestão "de todo o ceodigital" no desktop exige que estes módulos exponham tools MCP.
-Verificado em 2026-08-18 (não têm `tools/registry`):
+Todos os módulos listados abaixo (verificados a 2026-08-18 sem `tools/registry`) foram
+implementados no **repo ceodigital** — commit `04a52fcc5` — e wired em `buildMcpToolRegistry`:
 
-| Módulo (repo) | Localização | Estado MCP | Acção necessária |
-|---|---|---|---|
-| **Calendar** | `src/modules/business/calendar/` | sem tools | criar registry de tools (events, availability, booking) |
-| **Attendance** | `src/modules/business/attendance/` | sem tools | criar registry (shifts, clock, requests) |
-| **Pricing** | `src/modules/business/pricing/` | sem tools | criar registry (price lists, tiers) |
-| **Labels** | `src/modules/business/labels/` | sem tools | criar registry (labels entity tagging) |
-| **SocialFlow** | `src/modules/business/socialflow/` | sem tools | criar registry (posts, schedules, analytics; injeta nodes NativeFlow) |
-| **InformaDB** | `src/modules/business/informadb/` | sem tools | criar registry (enrichment, queries) |
-| **Chat (gestão)** | `src/modules/business/chat/` | sem tools diretos | conversations já existem em automation; completar gestão de mensagens/workspace |
-| **Chat widgets** | `src/modules/business/chat-widgets/` | sem tools | criar registry (config widgets) |
-| **LLM Studio** | `src/modules/foundation/llm-studio/` | sem tools | criar registry (tenants, fine-tune jobs, datasets) |
-| **Skills (produto)** | `src/modules/foundation/skills/` | skills-as-MCP cobre execução; falta gestão/catálogo | registry de gestão (list/install/config) |
-| **Dashboards (produto)** | `src/modules/foundation/dashboards/` | sem tools | registry (widgets, datasources) |
-| **Workbench** | `src/modules/foundation/workbench/` | sem tools | registry (templates, runs) |
-| **Categories (foundation)** | `src/modules/foundation/categories/` | sem tools | registry |
+| Módulo (repo) | Tools | Estado |
+|---|---|---|
+| Calendar (`business/calendar`) | 1 | ✅ MCP feito |
+| Attendance (`business/attendance`) | 4 | ✅ MCP feito |
+| Pricing (`business/pricing`) | 8 | ✅ MCP feito |
+| Labels (`business/labels`) | 7 | ✅ MCP feito |
+| SocialFlow (`business/socialflow`) | 2 | ✅ MCP feito |
+| InformaDB (`business/informadb`) | 5 | ✅ MCP feito |
+| Chat widgets (`business/chat-widgets`) | 8 | ✅ MCP feito |
+| LLM Studio (`foundation/llm-studio`) | 7 | ✅ MCP feito |
+| Skills (gestão, `foundation/skills`) | 3 | ✅ MCP feito |
+| Dashboards (`foundation/dashboards`) | 6 | ✅ MCP feito |
+| Workbench (`foundation/workbench`) | 3 | ✅ MCP feito |
+| Categories (`foundation/categories`) | 4 | ✅ MCP feito |
+| Chat (gestão) | — | via `automation` conversations (cobrido na W4) |
 
-> Para cada um destes: **criar no repo ceodigital** um `tools/registry.ts` no padrão dos existentes
-> (ToolRegistry por capability, `needsApproval` nas mutating, fail-open) e registá-lo no
-> `buildMcpToolRegistry`. Depois o plugin desktop só adiciona a página/normalizer.
+> **Pendência agora no ceodigital-agent:** a **UI** do plugin desktop para estes módulos
+> (rotas + normalizers + páginas) ainda não foi feita — é o trabalho restante da W8
+> (a superfície MCP existe, falta a superfície desktop).
 
 ---
 
@@ -177,7 +177,12 @@ Prioridade por valor/gestão (o que o CEO/gestor quer gerir daqui). Cada wave = 
 **ceodigital (repo alvo):** criar `tools/registry.ts` em cada módulo e registar no `buildMcpToolRegistry`.
 **ceodigital-agent:** depois, página/normalizer por módulo.
 - **Sequenciar por roadmap de produto**; este é o maior bloco mas cada registry é independente.
-- Esforço: Alto (multi-módulo, faseado).
+- Esforço: Alto (multi-módulo, faseado). **✅ Tools criadas no ceodigital** — commit `04a52fcc5`
+  (12 módulos: labels 7, dashboards 6, pricing 8, attendance 4, llm-studio 7, socialflow 2,
+  informadb 5, chat-widgets 8, calendar 1, categories 4, skills 3, workbench 3 = **58 tools**),
+  todas wired em `buildMcpToolRegistry` (linhas ~1283-1591).
+- ⬜ **Pendente (ceodigital-agent):** as páginas/normalizers do plugin desktop para estes módulos
+  (NÃO feitas nesta sessão; a superfície descoberta agora existe, falta a UI).
 
 ### W9 — (opcional) Platform admin no desktop
 **ceodigital-agent:** painel de gestão platform (tenants, plans, subs, fleet) — **só se o token tiver caps CP** (`buildPlatformMcpToolRegistry`).
