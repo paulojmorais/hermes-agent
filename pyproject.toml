@@ -2,7 +2,7 @@
 
 [project]
 name = "hermes-agent"
-version = "0.20.2"
+version = "0.20.4"
 description = "CEODigital Agent — the self-improving AI agent, created by CEODigital"
 readme = "README.md"
 # Upper bound is load-bearing, not cosmetic. uv resolves the project's
