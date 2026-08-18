@@ -1095,6 +1095,302 @@ export const pt: CeodigitalMessages = {
       }
     }
   },
+  labels: {
+    title: 'Etiquetas',
+    openCommand: 'CEODigital: Abrir Etiquetas',
+    empty: 'Ainda não foram encontradas etiquetas para o teu tenant.',
+    searchPlaceholder: 'Procurar etiquetas…',
+    new: 'Nova etiqueta',
+    assignments: 'Atribuições',
+    assignmentsEmpty: 'Ainda não há atribuições para esta etiqueta.',
+    assign: 'Atribuir',
+    assigning: 'A atribuir…',
+    unassign: 'Remover atribuição',
+    unassigning: 'A remover…',
+    subjectTypePlaceholder: 'tipo de sujeito (ex. deal)',
+    subjectIdPlaceholder: 'id do sujeito',
+    createForm: {
+      code: 'Código',
+      codePlaceholder: 'código curto (máx. 120)',
+      name: 'Nome',
+      namePlaceholder: 'Nome da etiqueta',
+      color: 'Cor',
+      colorPlaceholder: 'ex. #e11d48',
+      description: 'Descrição',
+      descriptionPlaceholder: 'O que esta etiqueta significa',
+      create: 'Criar etiqueta',
+      cancel: 'Cancelar'
+    },
+    updateForm: {
+      name: 'Nome',
+      color: 'Cor',
+      description: 'Descrição',
+      update: 'Atualizar etiqueta',
+      cancel: 'Cancelar'
+    },
+    headers: { id: 'ID', code: 'Código', name: 'Nome', color: 'Cor' },
+    errors: {
+      list: 'Não foi possível carregar as etiquetas.',
+      create: 'Não foi possível criar a etiqueta.',
+      update: 'Não foi possível atualizar a etiqueta.',
+      assign: 'Não foi possível atribuir a etiqueta.',
+      unassign: 'Não foi possível remover a atribuição.',
+      fetchAssignments: 'Não foi possível carregar as atribuições.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  dashboards: {
+    title: 'Painéis',
+    openCommand: 'CEODigital: Abrir Painéis',
+    empty: 'Ainda não foram encontrados painéis para o teu tenant.',
+    new: 'Novo painel',
+    back: 'Voltar',
+    detail: 'Detalhe do painel',
+    widgets: 'Widgets',
+    widgetsEmpty: 'Este painel ainda não tem widgets.',
+    addWidget: 'Adicionar widget',
+    addingWidget: 'A adicionar…',
+    removeWidget: 'Remover',
+    removingWidget: 'A remover…',
+    createForm: {
+      title: 'Título',
+      titlePlaceholder: 'Título do painel (padrão: “Painel”)',
+      icon: 'Ícone',
+      iconPlaceholder: 'nome do codicon',
+      position: 'Posição',
+      create: 'Criar painel',
+      cancel: 'Cancelar'
+    },
+    widgetForm: {
+      specTitle: 'Título do widget',
+      specTitlePlaceholder: 'título dentro do spec',
+      specKind: 'Tipo de widget',
+      specKindPlaceholder: 'ex. chart, list',
+      size: 'Tamanho',
+      positionIndex: 'Índice de posição',
+      add: 'Adicionar widget',
+      cancel: 'Cancelar'
+    },
+    sizes: { small: 'Pequeno', medium: 'Médio', large: 'Grande' },
+    headers: { id: 'ID', title: 'Título', icon: 'Ícone', position: 'Posição' },
+    widgetHeaders: { id: 'ID', title: 'Título', size: 'Tamanho' },
+    errors: {
+      list: 'Não foi possível carregar os painéis.',
+      fetchDashboard: 'Não foi possível carregar o painel.',
+      create: 'Não foi possível criar o painel.',
+      fetchWidgets: 'Não foi possível carregar os widgets.',
+      addWidget: 'Não foi possível adicionar o widget.',
+      removeWidget: 'Não foi possível remover o widget.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  pricing: {
+    title: 'Preçário',
+    openCommand: 'CEODigital: Abrir Preçário',
+    empty: 'Ainda não foram encontrados perfis de preços para o teu tenant.',
+    back: 'Voltar',
+    detail: 'Detalhe do perfil',
+    all: 'Todos',
+    activeOnly: 'Apenas ativos',
+    searchPlaceholder: 'Procurar perfis…',
+    new: 'Novo perfil',
+    rules: 'Regras de preços',
+    rulesEmpty: 'Não foram encontradas regras de preços para este perfil.',
+    exemptions: 'Isenções',
+    exemptionsEmpty: 'Não foram encontradas isenções.',
+    fees: 'Taxas',
+    feesEmpty: 'Não foram encontradas taxas de preços.',
+    addExemption: 'Adicionar isenção',
+    addingExemption: 'A adicionar…',
+    createForm: {
+      code: 'Código',
+      codePlaceholder: 'código curto (máx. 120)',
+      name: 'Nome',
+      namePlaceholder: 'Nome do perfil',
+      defaultRate: 'Taxa padrão (%)',
+      defaultRatePlaceholder: '0–100',
+      description: 'Descrição',
+      descriptionPlaceholder: 'A que se aplica este perfil',
+      exemptionReason: 'Motivo de isenção',
+      exemptionReasonPlaceholder: 'máx. 30 caracteres',
+      isDefault: 'Perfil padrão',
+      create: 'Criar perfil',
+      cancel: 'Cancelar'
+    },
+    updateForm: {
+      name: 'Nome',
+      defaultRate: 'Taxa padrão (%)',
+      description: 'Descrição',
+      isActive: 'Ativo',
+      update: 'Atualizar perfil',
+      cancel: 'Cancelar'
+    },
+    exemptionForm: {
+      sourceType: 'Tipo de origem',
+      sourceId: 'Id de origem',
+      sourceIdPlaceholder: 'uuid de pessoa ou cliente',
+      vatNumber: 'Número de IVA',
+      exemptionType: 'Tipo de isenção',
+      reason: 'Motivo',
+      reasonPlaceholder: 'porque se aplica esta isenção',
+      validFrom: 'Válida desde',
+      validUntil: 'Válida até',
+      add: 'Adicionar isenção',
+      cancel: 'Cancelar'
+    },
+    sourceTypes: { person: 'Pessoa', customer: 'Cliente' },
+    exemptionTypes: {
+      reverse_charge: 'Reverse charge',
+      exempt_org: 'Organização isenta',
+      intra_eu: 'Intracomunitário',
+      export: 'Exportação'
+    },
+    headers: {
+      id: 'ID',
+      code: 'Código',
+      name: 'Nome',
+      defaultRate: 'Taxa padrão',
+      active: 'Ativo',
+      default: 'Padrão'
+    },
+    ruleHeaders: { id: 'ID', kind: 'Tipo', rate: 'Taxa' },
+    exemptionHeaders: {
+      id: 'ID',
+      source: 'Origem',
+      vat: 'IVA',
+      type: 'Tipo',
+      reason: 'Motivo'
+    },
+    feeHeaders: { id: 'ID', name: 'Nome', code: 'Código', rate: 'Taxa', active: 'Ativo' },
+    errors: {
+      list: 'Não foi possível carregar os perfis de preços.',
+      fetchProfile: 'Não foi possível carregar o perfil.',
+      create: 'Não foi possível criar o perfil.',
+      update: 'Não foi possível atualizar o perfil.',
+      fetchRules: 'Não foi possível carregar as regras de preços.',
+      fetchExemptions: 'Não foi possível carregar as isenções.',
+      addExemption: 'Não foi possível adicionar a isenção.',
+      fetchFees: 'Não foi possível carregar as taxas.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  attendance: {
+    title: 'Presenças',
+    openCommand: 'CEODigital: Abrir Presenças',
+    empty: 'Ainda não foram encontrados itens de presença para o teu tenant.',
+    back: 'Voltar',
+    detail: 'Detalhe do item',
+    allKinds: 'Todos os tipos',
+    allStatuses: 'Todos os estados',
+    allPriorities: 'Todas as prioridades',
+    kindPlaceholder: 'filtro de tipo',
+    assigneeIdPlaceholder: 'uuid do responsável',
+    assign: 'Atribuir',
+    assigning: 'A atribuir…',
+    updateStatus: 'Atualizar estado',
+    updatingStatus: 'A atualizar…',
+    statuses: { open: 'Aberto', pending: 'Pendente', assigned: 'Atribuído', closed: 'Fechado' },
+    priorities: { low: 'Baixa', normal: 'Normal', high: 'Alta', urgent: 'Urgente' },
+    detailHeaders: {
+      id: 'ID',
+      title: 'Título',
+      kind: 'Tipo',
+      status: 'Estado',
+      priority: 'Prioridade',
+      assignee: 'Responsável',
+      created: 'Criado'
+    },
+    headers: {
+      id: 'ID',
+      title: 'Título',
+      kind: 'Tipo',
+      status: 'Estado',
+      priority: 'Prioridade',
+      assignee: 'Responsável'
+    },
+    errors: {
+      list: 'Não foi possível carregar os itens de presença.',
+      fetchItem: 'Não foi possível carregar o item.',
+      assign: 'Não foi possível atribuir o item.',
+      updateStatus: 'Não foi possível atualizar o estado.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
+  llmStudio: {
+    title: 'LLM Studio',
+    openCommand: 'CEODigital: Abrir LLM Studio',
+    tabs: { datasets: 'Datasets', jobs: 'Trabalhos', adapters: 'Adaptadores', preferences: 'Preferências' },
+    datasets: {
+      title: 'Datasets',
+      empty: 'Não foram encontrados datasets.',
+      allStatuses: 'Todos os estados',
+      allSourceTypes: 'Todos os tipos de origem',
+      statusPlaceholder: 'filtro de estado',
+      sourceTypePlaceholder: 'filtro de tipo de origem',
+      headers: { id: 'ID', name: 'Nome', status: 'Estado', source: 'Origem', created: 'Criado' },
+      errors: { list: 'Não foi possível carregar os datasets.', general: 'A ação falhou. Tenta novamente.' }
+    },
+    jobs: {
+      title: 'Trabalhos',
+      empty: 'Não foram encontrados trabalhos LLM.',
+      allStatuses: 'Todos os estados',
+      statusPlaceholder: 'filtro de estado',
+      headers: { id: 'ID', name: 'Nome', status: 'Estado', dataset: 'Dataset', created: 'Criado' },
+      errors: { list: 'Não foi possível carregar os trabalhos.', general: 'A ação falhou. Tenta novamente.' }
+    },
+    adapters: {
+      title: 'Adaptadores',
+      empty: 'Não foram encontrados adaptadores.',
+      allStatuses: 'Todos os estados',
+      allScopes: 'Todos os âmbitos',
+      statusPlaceholder: 'filtro de estado',
+      scopePlaceholder: 'filtro de âmbito',
+      toggle: 'Alternar',
+      toggling: 'A alternar…',
+      headers: { id: 'ID', name: 'Nome', status: 'Estado', scope: 'Âmbito', active: 'Ativo' },
+      errors: { list: 'Não foi possível carregar os adaptadores.', toggle: 'Não foi possível alternar o adaptador.', general: 'A ação falhou. Tenta novamente.' }
+    },
+    preferences: {
+      title: 'Preferências',
+      empty: 'Não foram encontradas preferências.',
+      activeAdapterId: 'Adaptador ativo',
+      activeAdapterIdPlaceholder: 'uuid do adaptador (vazio = nenhum)',
+      inferenceBackend: 'Backend de inferência',
+      fallbackToGeneric: 'Usar genérico como fallback',
+      save: 'Guardar preferências',
+      saving: 'A guardar…',
+      backends: { together: 'Together', huggingface: 'Hugging Face', connector: 'Conector' },
+      errors: { fetch: 'Não foi possível carregar as preferências.', save: 'Não foi possível guardar as preferências.', general: 'A ação falhou. Tenta novamente.' }
+    }
+  },
+  workbench: {
+    title: 'Workbench',
+    openCommand: 'CEODigital: Abrir Workbench',
+    empty: 'Ainda não há pins no teu workbench.',
+    newPin: 'Novo pin',
+    notePlaceholder: 'Adicionar uma nota…',
+    setNote: 'Guardar nota',
+    settingNote: 'A guardar…',
+    clearNote: 'Limpar',
+    toggleForm: {
+      subjectType: 'Tipo de sujeito',
+      subjectTypePlaceholder: 'ex. deal, project',
+      subjectId: 'Id do sujeito',
+      subjectIdPlaceholder: 'uuid',
+      title: 'Título',
+      titlePlaceholder: 'título do pin',
+      toggle: 'Alternar pin',
+      toggling: 'A alternar…',
+      cancel: 'Cancelar'
+    },
+    headers: { id: 'ID', subject: 'Sujeito', title: 'Título', note: 'Nota' },
+    errors: {
+      list: 'Não foi possível carregar os pins.',
+      toggle: 'Não foi possível alternar o pin.',
+      setNote: 'Não foi possível guardar a nota.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
     general: 'A ação falhou. Tenta novamente.',

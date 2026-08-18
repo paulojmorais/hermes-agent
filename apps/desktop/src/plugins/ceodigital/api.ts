@@ -13,6 +13,10 @@ import { type PluginRestOptions } from '@hermes/plugin-sdk'
 
 import type {
   ActivitiesEnvelope,
+  AddDepartmentMemberInput,
+  AddExemptionInput,
+  AddWidgetInput,
+  AddWorkspaceMemberInput,
   AgentAskEnvelope,
   AgentFlowsEnvelope,
   AgentPendingEnvelope,
@@ -20,10 +24,14 @@ import type {
   AgentRunsEnvelope,
   AgentSchedulesEnvelope,
   AgentsEnvelope,
-  AddDepartmentMemberInput,
-  AddWorkspaceMemberInput,
+  AssignAttendanceItemInput,
+  AssignLabelInput,
   AssignBody,
   AssignWorkItemEnvelope,
+  AttendanceItemEnvelope,
+  AttendanceItemRow,
+  AttendanceItemsEnvelope,
+  AttendanceItemsParams,
   AutomationActionEnvelope,
   ConnectIntegrationInput,
   CreateDepartmentInput,
@@ -46,12 +54,22 @@ import type {
   ConversationsListParams,
   CreateCollectionInput,
   CreateConversationInput,
+  CreateDashboardInput,
   CreateDsrRequestInput,
+  CreateLabelInput,
   CreatePaymentLinkInput,
+  CreatePricingProfileInput,
   CreateProposalEnvelope,
   CreateProposalInput,
   CreateThreadInput,
   CreateWorkItemEnvelope,
+  DashboardEnvelope,
+  DashboardRow,
+  DashboardsEnvelope,
+  DashboardsListParams,
+  DatasetRow,
+  DatasetsEnvelope,
+  DatasetsListParams,
   DealsEnvelope,
   DepartmentEnvelope,
   DepartmentsEnvelope,
@@ -63,6 +81,8 @@ import type {
   DsrListParams,
   DsrRequestRow,
   DsrRequestsEnvelope,
+  ExemptionRow,
+  FeeRow,
   FileEnvelope,
   FilesEnvelope,
   FilesListParams,
@@ -73,12 +93,28 @@ import type {
   ImplProjectEnvelope,
   ImplProjectsEnvelope,
   ImplProjectsListParams,
+  InferenceBackend,
   IntegrationEnvelope,
   IntegrationsEnvelope,
   IntegrationsListParams,
   IntegrationRow,
   InviteMemberInput,
+  LabelAssignmentsEnvelope,
+  LabelAssignmentsParams,
+  LabelEnvelope,
+  LabelRow,
+  LabelsEnvelope,
+  LabelsListParams,
   LeadsEnvelope,
+  LlmAdapterRow,
+  LlmAdaptersEnvelope,
+  LlmAdaptersListParams,
+  LlmJobEnvelope,
+  LlmJobRow,
+  LlmJobsEnvelope,
+  LlmJobsListParams,
+  LlmPreferencesEnvelope,
+  LlmPreferencesRow,
   MessagesEnvelope,
   MessagesListParams,
   MemberEnvelope,
@@ -103,12 +139,25 @@ import type {
   PersonsEnvelope,
   PersonEnvelope,
   PhaseStatus,
+  PinRow,
+  PinsEnvelope,
   PipelinesEnvelope,
   PlaybookEnvelope,
   PlaybookRunsEnvelope,
   PlaybookRunsListParams,
   PlaybooksEnvelope,
   PlaybooksListParams,
+  PricingExemptionsEnvelope,
+  PricingExemptionsParams,
+  PricingFeesEnvelope,
+  PricingFeesParams,
+  PricingProfileEnvelope,
+  PricingProfileRow,
+  PricingProfilesEnvelope,
+  PricingProfilesListParams,
+  PricingRuleRow,
+  PricingRulesEnvelope,
+  PricingRulesParams,
   ProcessingRecordRow,
   ProcessingRecordsEnvelope,
   ProcessingRecordsListParams,
@@ -133,6 +182,7 @@ import type {
   SearchEnvelope,
   SearchParams,
   ServiceCategoriesParams,
+  SetPinNoteInput,
   StagesEnvelope,
   SubmitBody,
   SubmitWorkItemEnvelope,
@@ -143,16 +193,26 @@ import type {
   TimelineEventEnvelope,
   TimelineEventsEnvelope,
   TimelineEventsParams,
+  ToggleAdapterInput,
+  TogglePinInput,
   UnreadCountEnvelope,
+  UpdateAttendanceStatusInput,
+  UpdateLabelInput,
+  UpdateLlmPreferencesInput,
   UpdateOrderStatusInput,
+  UpdatePricingProfileInput,
   UpdateProposalInput,
   UploadAttachmentInput,
   UploadFileInput,
   W6aActionEnvelope,
   W6bActionEnvelope,
   W7ActionEnvelope,
+  W8ActionEnvelope,
   WebhooksEnvelope,
   WebhooksListParams,
+  WidgetRow,
+  WidgetsEnvelope,
+  WorkbenchPinsParams,
   WorkItemInput,
   WorkItemResponse,
   WorkItemsEnvelope,
@@ -1183,3 +1243,270 @@ export const fetchRetentionPolicies = (params?: RetentionListParams) => {
   const suffix = qs.size ? `?${qs.toString()}` : ''
   return call<RetentionEnvelope>(`/governance/retention${suffix}`)
 }
+
+// ── W8-UI-a — Labels (labels.*) ───────────────────────────────────────────────
+
+export const LABELS_KEY = ['ceodigital', 'labels'] as const
+export const labelKey = (id: string) => ['ceodigital', 'labels', id] as const
+export const LABEL_ASSIGNMENTS_KEY = ['ceodigital', 'labels', 'assignments'] as const
+
+/** GET /labels — the tenant's labels (MCP labels.list). */
+export const fetchLabels = (params?: LabelsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<LabelsEnvelope>(`/labels${suffix}`)
+}
+
+/** GET /labels/{id_or_code} — one label by id or code (MCP labels.get). */
+export const fetchLabel = (idOrCode: string) =>
+  call<LabelEnvelope>(`/labels/${encodeURIComponent(idOrCode)}`)
+
+/** GET /labels/assignments — label assignments (MCP labels.assignments.list). */
+export const fetchLabelAssignments = (params?: LabelAssignmentsParams) => {
+  const qs = new URLSearchParams()
+  if (params?.labelId) qs.set('labelId', params.labelId)
+  if (params?.subjectType) qs.set('subjectType', params.subjectType)
+  if (params?.subjectId) qs.set('subjectId', params.subjectId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<LabelAssignmentsEnvelope>(`/labels/assignments${suffix}`)
+}
+
+/** POST /labels — create a label (MCP labels.create). */
+export const createLabel = (input: CreateLabelInput) =>
+  call<W8ActionEnvelope>('/labels', { method: 'POST', body: input })
+
+/** POST /labels/{id}/update — update a label (MCP labels.update). */
+export const updateLabel = (id: string, input: UpdateLabelInput) =>
+  call<W8ActionEnvelope>(`/labels/${encodeURIComponent(id)}/update`, { method: 'POST', body: input })
+
+/** POST /labels/{id}/assign — assign a label (MCP labels.assign). */
+export const assignLabel = (id: string, input: AssignLabelInput) =>
+  call<W8ActionEnvelope>(`/labels/${encodeURIComponent(id)}/assign`, { method: 'POST', body: input })
+
+/** POST /labels/{id}/unassign — unassign a label (MCP labels.unassign). */
+export const unassignLabel = (id: string) =>
+  call<W8ActionEnvelope>(`/labels/${encodeURIComponent(id)}/unassign`, { method: 'POST', body: {} })
+
+// ── W8-UI-a — Dashboards (dashboards.*) ──────────────────────────────────────
+
+export const DASHBOARDS_KEY = ['ceodigital', 'dashboards'] as const
+export const dashboardKey = (id: string) => ['ceodigital', 'dashboards', id] as const
+export const dashboardWidgetsKey = (id: string) => ['ceodigital', 'dashboards', id, 'widgets'] as const
+
+/** GET /dashboards — the tenant's dashboards (MCP dashboards.list). */
+export const fetchDashboards = (params?: DashboardsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<DashboardsEnvelope>(`/dashboards${suffix}`)
+}
+
+/** GET /dashboards/{id} — one dashboard (MCP dashboards.get). */
+export const fetchDashboard = (id: string) => call<DashboardEnvelope>(`/dashboards/${encodeURIComponent(id)}`)
+
+/** GET /dashboards/{id}/widgets — a dashboard's widgets (MCP dashboards.widgets.list). */
+export const fetchDashboardWidgets = (id: string, params?: { limit?: number }) => {
+  const qs = new URLSearchParams()
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<WidgetsEnvelope>(`/dashboards/${encodeURIComponent(id)}/widgets${suffix}`)
+}
+
+/** POST /dashboards — create a dashboard (MCP dashboards.create). */
+export const createDashboard = (input: CreateDashboardInput) =>
+  call<W8ActionEnvelope>('/dashboards', { method: 'POST', body: input })
+
+/** POST /dashboards/{id}/widgets — add a widget (MCP dashboards.widgets.add). */
+export const addDashboardWidget = (id: string, input: AddWidgetInput) =>
+  call<W8ActionEnvelope>(`/dashboards/${encodeURIComponent(id)}/widgets`, { method: 'POST', body: input })
+
+/** POST /dashboards/widgets/{widgetId}/remove — remove a widget
+ *  (MCP dashboards.widgets.remove). */
+export const removeDashboardWidget = (widgetId: string) =>
+  call<W8ActionEnvelope>(`/dashboards/widgets/${encodeURIComponent(widgetId)}/remove`, {
+    method: 'POST',
+    body: {}
+  })
+
+// ── W8-UI-a — Pricing (pricing.*) ────────────────────────────────────────────
+
+export const PRICING_PROFILES_KEY = ['ceodigital', 'pricing', 'profiles'] as const
+export const pricingProfileKey = (id: string) => ['ceodigital', 'pricing', 'profiles', id] as const
+export const PRICING_RULES_KEY = ['ceodigital', 'pricing', 'rules'] as const
+export const PRICING_EXEMPTIONS_KEY = ['ceodigital', 'pricing', 'exemptions'] as const
+export const PRICING_FEES_KEY = ['ceodigital', 'pricing', 'fees'] as const
+
+/** GET /pricing/profiles — the tenant's pricing profiles (MCP pricing.profiles.list). */
+export const fetchPricingProfiles = (params?: PricingProfilesListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.active !== undefined) qs.set('active', String(params.active))
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PricingProfilesEnvelope>(`/pricing/profiles${suffix}`)
+}
+
+/** GET /pricing/profiles/{id_or_code} — one profile by id or code
+ *  (MCP pricing.profiles.get). */
+export const fetchPricingProfile = (idOrCode: string) =>
+  call<PricingProfileEnvelope>(`/pricing/profiles/${encodeURIComponent(idOrCode)}`)
+
+/** GET /pricing/rules — pricing rules (MCP pricing.rules.list). */
+export const fetchPricingRules = (params?: PricingRulesParams) => {
+  const qs = new URLSearchParams()
+  if (params?.profileId) qs.set('profileId', params.profileId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PricingRulesEnvelope>(`/pricing/rules${suffix}`)
+}
+
+/** GET /pricing/exemptions — pricing exemptions (MCP pricing.exemptions.list). */
+export const fetchPricingExemptions = (params?: PricingExemptionsParams) => {
+  const qs = new URLSearchParams()
+  if (params?.sourceType) qs.set('sourceType', params.sourceType)
+  if (params?.sourceId) qs.set('sourceId', params.sourceId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PricingExemptionsEnvelope>(`/pricing/exemptions${suffix}`)
+}
+
+/** GET /pricing/fees — pricing fees (MCP pricing.fees.list). */
+export const fetchPricingFees = (params?: PricingFeesParams) => {
+  const qs = new URLSearchParams()
+  if (params?.active !== undefined) qs.set('active', String(params.active))
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PricingFeesEnvelope>(`/pricing/fees${suffix}`)
+}
+
+/** POST /pricing/profiles — create a pricing profile (MCP pricing.profiles.create). */
+export const createPricingProfile = (input: CreatePricingProfileInput) =>
+  call<W8ActionEnvelope>('/pricing/profiles', { method: 'POST', body: input })
+
+/** POST /pricing/profiles/{id}/update — update a pricing profile
+ *  (MCP pricing.profiles.update). */
+export const updatePricingProfile = (id: string, input: UpdatePricingProfileInput) =>
+  call<W8ActionEnvelope>(`/pricing/profiles/${encodeURIComponent(id)}/update`, {
+    method: 'POST',
+    body: input
+  })
+
+/** POST /pricing/exemptions — add a pricing exemption (MCP pricing.exemptions.add). */
+export const addPricingExemption = (input: AddExemptionInput) =>
+  call<W8ActionEnvelope>('/pricing/exemptions', { method: 'POST', body: input })
+
+// ── W8-UI-a — Attendance (attendance.*) ──────────────────────────────────────
+
+export const ATTENDANCE_ITEMS_KEY = ['ceodigital', 'attendance', 'items'] as const
+export const attendanceItemKey = (id: string) => ['ceodigital', 'attendance', 'items', id] as const
+
+/** GET /attendance/items — the tenant's attendance items (MCP attendance.items.list). */
+export const fetchAttendanceItems = (params?: AttendanceItemsParams) => {
+  const qs = new URLSearchParams()
+  if (params?.kind) qs.set('kind', params.kind)
+  if (params?.status) qs.set('status', params.status)
+  if (params?.priority) qs.set('priority', params.priority)
+  if (params?.assigneeId) qs.set('assigneeId', params.assigneeId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<AttendanceItemsEnvelope>(`/attendance/items${suffix}`)
+}
+
+/** GET /attendance/items/{id} — one attendance item (MCP attendance.items.get). */
+export const fetchAttendanceItem = (id: string) =>
+  call<AttendanceItemEnvelope>(`/attendance/items/${encodeURIComponent(id)}`)
+
+/** POST /attendance/items/{id}/assign — assign an item (MCP attendance.items.assign). */
+export const assignAttendanceItem = (id: string, input: AssignAttendanceItemInput) =>
+  call<W8ActionEnvelope>(`/attendance/items/${encodeURIComponent(id)}/assign`, {
+    method: 'POST',
+    body: input
+  })
+
+/** POST /attendance/items/{id}/status — update an item's status
+ *  (MCP attendance.items.update_status). */
+export const updateAttendanceStatus = (id: string, input: UpdateAttendanceStatusInput) =>
+  call<W8ActionEnvelope>(`/attendance/items/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: input
+  })
+
+// ── W8-UI-a — LLM Studio (llm_studio.*) ──────────────────────────────────────
+
+export const DATASETS_KEY = ['ceodigital', 'llmstudio', 'datasets'] as const
+export const LLM_JOBS_KEY = ['ceodigital', 'llmstudio', 'jobs'] as const
+export const llmJobKey = (id: string) => ['ceodigital', 'llmstudio', 'jobs', id] as const
+export const LLM_ADAPTERS_KEY = ['ceodigital', 'llmstudio', 'adapters'] as const
+export const LLM_PREFERENCES_KEY = ['ceodigital', 'llmstudio', 'preferences'] as const
+
+/** GET /llmstudio/datasets — LLM Studio datasets (MCP llm_studio.datasets.list). */
+export const fetchDatasets = (params?: DatasetsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.sourceType) qs.set('sourceType', params.sourceType)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<DatasetsEnvelope>(`/llmstudio/datasets${suffix}`)
+}
+
+/** GET /llmstudio/jobs — LLM Studio jobs (MCP llm_studio.jobs.list). */
+export const fetchLlmJobs = (params?: LlmJobsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.datasetId) qs.set('datasetId', params.datasetId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<LlmJobsEnvelope>(`/llmstudio/jobs${suffix}`)
+}
+
+/** GET /llmstudio/jobs/{id} — one LLM Studio job (MCP llm_studio.jobs.get). */
+export const fetchLlmJob = (id: string) => call<LlmJobEnvelope>(`/llmstudio/jobs/${encodeURIComponent(id)}`)
+
+/** GET /llmstudio/adapters — LLM Studio adapters (MCP llm_studio.adapters.list). */
+export const fetchLlmAdapters = (params?: LlmAdaptersListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.scope) qs.set('scope', params.scope)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<LlmAdaptersEnvelope>(`/llmstudio/adapters${suffix}`)
+}
+
+/** GET /llmstudio/preferences — LLM Studio preferences (MCP llm_studio.preferences.get). */
+export const fetchLlmPreferences = () => call<LlmPreferencesEnvelope>('/llmstudio/preferences')
+
+/** POST /llmstudio/adapters/{id}/toggle — toggle an adapter (MCP llm_studio.adapters.toggle). */
+export const toggleLlmAdapter = (id: string, input: ToggleAdapterInput) =>
+  call<W8ActionEnvelope>(`/llmstudio/adapters/${encodeURIComponent(id)}/toggle`, {
+    method: 'POST',
+    body: input
+  })
+
+/** POST /llmstudio/preferences — update preferences (MCP llm_studio.preferences.update). */
+export const updateLlmPreferences = (input: UpdateLlmPreferencesInput) =>
+  call<W8ActionEnvelope>('/llmstudio/preferences', { method: 'POST', body: input })
+
+// ── W8-UI-a — Workbench (workbench.pins.*) ───────────────────────────────────
+
+export const PINS_KEY = ['ceodigital', 'workbench', 'pins'] as const
+
+/** GET /workbench/pins — the tenant's workbench pins (MCP workbench.pins.list). */
+export const fetchWorkbenchPins = (params?: WorkbenchPinsParams) => {
+  const qs = new URLSearchParams()
+  if (params?.subjectType) qs.set('subjectType', params.subjectType)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PinsEnvelope>(`/workbench/pins${suffix}`)
+}
+
+/** POST /workbench/pins/toggle — toggle a pin (MCP workbench.pins.toggle). */
+export const toggleWorkbenchPin = (input: TogglePinInput) =>
+  call<W8ActionEnvelope>('/workbench/pins/toggle', { method: 'POST', body: input })
+
+/** POST /workbench/pins/{id}/note — set a pin's note (MCP workbench.pins.set_note). */
+export const setPinNote = (id: string, input: SetPinNoteInput) =>
+  call<W8ActionEnvelope>(`/workbench/pins/${encodeURIComponent(id)}/note`, { method: 'POST', body: input })

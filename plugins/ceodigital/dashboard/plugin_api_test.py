@@ -4154,3 +4154,245 @@ def test_w7_not_configured(plugin, client, monkeypatch):
         resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
         assert resp.status_code == 503
         assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+# ────────────────────────────────────────────────────────────────────────────
+# W8-UI-a — Labels + Dashboards + Pricing + Attendance + LLM Studio + Workbench
+# ────────────────────────────────────────────────────────────────────────────
+
+def test_labels_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"labels": [{"id": "lab-1", "name": "Urgent"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/labels?search=urg&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["labels"][0]["id"] == "lab-1"
+    assert captured["tool"] == "labels.list"
+    assert captured["args"] == {"search": "urg", "limit": 5}
+
+
+def test_label_get_by_code(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"label": {"id": "lab-1", "code": "urgent"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/labels/urgent")
+
+    assert resp.status_code == 200
+    assert resp.json()["label"]["id"] == "lab-1"
+    assert captured["tool"] == "labels.get"
+    assert captured["args"]["code"] == "urgent"
+
+
+def test_label_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True, "label": {"id": "lab-1"}}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/labels", json={"code": "urgent", "name": "Urgent", "color": "#f00"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "labels.create"
+    assert captured["args"] == {"code": "urgent", "name": "Urgent", "color": "#f00"}
+
+
+def test_label_assign_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/labels/lab-1/assign", json={"subjectType": "work_items", "subjectId": "wi-9"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "labels.assign"
+    assert captured["args"] == {"labelId": "lab-1", "subjectType": "work_items", "subjectId": "wi-9"}
+
+
+def test_dashboards_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"dashboards": [{"id": "d-1", "title": "Ops"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/dashboards")
+
+    assert resp.status_code == 200
+    assert resp.json()["dashboards"][0]["id"] == "d-1"
+    assert captured["tool"] == "dashboards.list"
+
+
+def test_dashboard_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True, "dashboard": {"id": "d-1"}}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/dashboards", json={"title": "Ops", "icon": "chart"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "dashboards.create"
+    assert captured["args"] == {"title": "Ops", "icon": "chart"}
+
+
+def test_pricing_profiles_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"profiles": [{"id": "pr-1", "name": "Standard"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/pricing/profiles?active=true")
+
+    assert resp.status_code == 200
+    assert resp.json()["profiles"][0]["id"] == "pr-1"
+    assert captured["tool"] == "pricing.profiles.list"
+    assert captured["args"] == {"active": True}
+
+
+def test_pricing_profile_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/pricing/profiles", json={"code": "std", "name": "Standard", "defaultRate": 10})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "pricing.profiles.create"
+    assert captured["args"] == {"code": "std", "name": "Standard", "defaultRate": 10}
+
+
+def test_pricing_exemption_add_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/pricing/exemptions",
+        json={"sourceType": "person", "sourceId": "c-1", "exemptionType": "export"},
+    )
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "pricing.exemptions.add"
+    assert captured["args"] == {"sourceType": "person", "sourceId": "c-1", "exemptionType": "export"}
+
+
+def test_attendance_items_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"items": [{"id": "at-1", "status": "open"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/attendance/items?status=open")
+
+    assert resp.status_code == 200
+    assert resp.json()["items"][0]["id"] == "at-1"
+    assert captured["tool"] == "attendance.items.list"
+    assert captured["args"] == {"status": "open"}
+
+
+def test_attendance_assign_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/attendance/items/at-1/assign", json={"assigneeId": "u-1"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "attendance.items.assign"
+    assert captured["args"] == {"id": "at-1", "assigneeId": "u-1"}
+
+
+def test_llmstudio_datasets_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"datasets": [{"id": "ds-1"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/llmstudio/datasets")
+
+    assert resp.status_code == 200
+    assert resp.json()["datasets"][0]["id"] == "ds-1"
+    assert captured["tool"] == "llm_studio.datasets.list"
+
+
+def test_llmstudio_adapters_toggle(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/llmstudio/adapters/ad-1/toggle", json={"active": True})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "llm_studio.adapters.toggle"
+    assert captured["args"] == {"id": "ad-1", "active": True}
+
+
+def test_llmstudio_preferences_update(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True, "preferences": {}}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/llmstudio/preferences", json={"inferenceBackend": "together"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "llm_studio.preferences.update"
+    assert captured["args"] == {"inferenceBackend": "together"}
+
+
+def test_workbench_pins_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"pins": [{"id": "pin-1"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/workbench/pins")
+
+    assert resp.status_code == 200
+    assert resp.json()["pins"][0]["id"] == "pin-1"
+    assert captured["tool"] == "workbench.pins.list"
+
+
+def test_workbench_pin_toggle(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"ok": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/workbench/pins/toggle", json={"subjectType": "project", "subjectId": "p-1", "title": "P1"})
+
+    assert resp.status_code == 200
+    assert captured["tool"] == "workbench.pins.toggle"
+    assert captured["args"] == {"subjectType": "project", "subjectId": "p-1", "title": "P1"}
+
+
+def test_w8_ui_a_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/labels", None),
+        ("GET", "/labels/lab-1", None),
+        ("POST", "/labels", {"code": "c", "name": "n"}),
+        ("POST", "/labels/lab-1/assign", {"subjectType": "t", "subjectId": "s"}),
+        ("GET", "/dashboards", None),
+        ("GET", "/dashboards/d-1", None),
+        ("POST", "/dashboards", {"title": "Ops"}),
+        ("POST", "/dashboards/d-1/widgets", {"spec": {}}),
+        ("GET", "/pricing/profiles", None),
+        ("POST", "/pricing/profiles", {"code": "c", "name": "n"}),
+        ("GET", "/pricing/rules", None),
+        ("GET", "/pricing/exemptions", None),
+        ("GET", "/pricing/fees", None),
+        ("POST", "/pricing/exemptions", {"sourceType": "person", "sourceId": "s", "exemptionType": "export"}),
+        ("GET", "/attendance/items", None),
+        ("GET", "/attendance/items/at-1", None),
+        ("POST", "/attendance/items/at-1/assign", {"assigneeId": "u-1"}),
+        ("POST", "/attendance/items/at-1/status", {"status": "closed"}),
+        ("GET", "/llmstudio/datasets", None),
+        ("GET", "/llmstudio/jobs", None),
+        ("GET", "/llmstudio/jobs/j-1", None),
+        ("GET", "/llmstudio/adapters", None),
+        ("GET", "/llmstudio/preferences", None),
+        ("POST", "/llmstudio/adapters/ad-1/toggle", {"active": True}),
+        ("POST", "/llmstudio/preferences", {"inferenceBackend": "together"}),
+        ("GET", "/workbench/pins", None),
+        ("POST", "/workbench/pins/toggle", {"subjectType": "t", "subjectId": "s"}),
+        ("POST", "/workbench/pins/pin-1/note", {"note": "n"}),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}

@@ -1095,6 +1095,302 @@ export const en: CeodigitalMessages = {
       }
     }
   },
+  labels: {
+    title: 'Labels',
+    openCommand: 'CEODigital: Open Labels',
+    empty: 'No labels found for your tenant yet.',
+    searchPlaceholder: 'Search labels…',
+    new: 'New label',
+    assignments: 'Assignments',
+    assignmentsEmpty: 'No assignments for this label yet.',
+    assign: 'Assign',
+    assigning: 'Assigning…',
+    unassign: 'Unassign',
+    unassigning: 'Unassigning…',
+    subjectTypePlaceholder: 'subject type (e.g. deal)',
+    subjectIdPlaceholder: 'subject id',
+    createForm: {
+      code: 'Code',
+      codePlaceholder: 'short code (max 120)',
+      name: 'Name',
+      namePlaceholder: 'Label name',
+      color: 'Color',
+      colorPlaceholder: 'e.g. #e11d48',
+      description: 'Description',
+      descriptionPlaceholder: 'What this label means',
+      create: 'Create label',
+      cancel: 'Cancel'
+    },
+    updateForm: {
+      name: 'Name',
+      color: 'Color',
+      description: 'Description',
+      update: 'Update label',
+      cancel: 'Cancel'
+    },
+    headers: { id: 'ID', code: 'Code', name: 'Name', color: 'Color' },
+    errors: {
+      list: 'Could not load the labels.',
+      create: 'Could not create the label.',
+      update: 'Could not update the label.',
+      assign: 'Could not assign the label.',
+      unassign: 'Could not unassign the label.',
+      fetchAssignments: 'Could not load the assignments.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  dashboards: {
+    title: 'Dashboards',
+    openCommand: 'CEODigital: Open Dashboards',
+    empty: 'No dashboards found for your tenant yet.',
+    new: 'New dashboard',
+    back: 'Back',
+    detail: 'Dashboard detail',
+    widgets: 'Widgets',
+    widgetsEmpty: 'No widgets on this dashboard yet.',
+    addWidget: 'Add widget',
+    addingWidget: 'Adding…',
+    removeWidget: 'Remove',
+    removingWidget: 'Removing…',
+    createForm: {
+      title: 'Title',
+      titlePlaceholder: 'Dashboard title (defaults to “Dashboard”)',
+      icon: 'Icon',
+      iconPlaceholder: 'codicon name',
+      position: 'Position',
+      create: 'Create dashboard',
+      cancel: 'Cancel'
+    },
+    widgetForm: {
+      specTitle: 'Widget title',
+      specTitlePlaceholder: 'title inside the spec',
+      specKind: 'Widget kind',
+      specKindPlaceholder: 'e.g. chart, list',
+      size: 'Size',
+      positionIndex: 'Position index',
+      add: 'Add widget',
+      cancel: 'Cancel'
+    },
+    sizes: { small: 'Small', medium: 'Medium', large: 'Large' },
+    headers: { id: 'ID', title: 'Title', icon: 'Icon', position: 'Position' },
+    widgetHeaders: { id: 'ID', title: 'Title', size: 'Size' },
+    errors: {
+      list: 'Could not load the dashboards.',
+      fetchDashboard: 'Could not load the dashboard.',
+      create: 'Could not create the dashboard.',
+      fetchWidgets: 'Could not load the widgets.',
+      addWidget: 'Could not add the widget.',
+      removeWidget: 'Could not remove the widget.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  pricing: {
+    title: 'Pricing',
+    openCommand: 'CEODigital: Open Pricing',
+    empty: 'No pricing profiles found for your tenant yet.',
+    back: 'Back',
+    detail: 'Profile detail',
+    all: 'All',
+    activeOnly: 'Active only',
+    searchPlaceholder: 'Search profiles…',
+    new: 'New profile',
+    rules: 'Pricing rules',
+    rulesEmpty: 'No pricing rules found for this profile.',
+    exemptions: 'Exemptions',
+    exemptionsEmpty: 'No exemptions found.',
+    fees: 'Fees',
+    feesEmpty: 'No pricing fees found.',
+    addExemption: 'Add exemption',
+    addingExemption: 'Adding…',
+    createForm: {
+      code: 'Code',
+      codePlaceholder: 'short code (max 120)',
+      name: 'Name',
+      namePlaceholder: 'Profile name',
+      defaultRate: 'Default rate (%)',
+      defaultRatePlaceholder: '0–100',
+      description: 'Description',
+      descriptionPlaceholder: 'What this profile applies to',
+      exemptionReason: 'Exemption reason',
+      exemptionReasonPlaceholder: 'max 30 chars',
+      isDefault: 'Default profile',
+      create: 'Create profile',
+      cancel: 'Cancel'
+    },
+    updateForm: {
+      name: 'Name',
+      defaultRate: 'Default rate (%)',
+      description: 'Description',
+      isActive: 'Active',
+      update: 'Update profile',
+      cancel: 'Cancel'
+    },
+    exemptionForm: {
+      sourceType: 'Source type',
+      sourceId: 'Source id',
+      sourceIdPlaceholder: 'person or customer uuid',
+      vatNumber: 'VAT number',
+      exemptionType: 'Exemption type',
+      reason: 'Reason',
+      reasonPlaceholder: 'why this exemption applies',
+      validFrom: 'Valid from',
+      validUntil: 'Valid until',
+      add: 'Add exemption',
+      cancel: 'Cancel'
+    },
+    sourceTypes: { person: 'Person', customer: 'Customer' },
+    exemptionTypes: {
+      reverse_charge: 'Reverse charge',
+      exempt_org: 'Exempt org',
+      intra_eu: 'Intra-EU',
+      export: 'Export'
+    },
+    headers: {
+      id: 'ID',
+      code: 'Code',
+      name: 'Name',
+      defaultRate: 'Default rate',
+      active: 'Active',
+      default: 'Default'
+    },
+    ruleHeaders: { id: 'ID', kind: 'Kind', rate: 'Rate' },
+    exemptionHeaders: {
+      id: 'ID',
+      source: 'Source',
+      vat: 'VAT',
+      type: 'Type',
+      reason: 'Reason'
+    },
+    feeHeaders: { id: 'ID', name: 'Name', code: 'Code', rate: 'Rate', active: 'Active' },
+    errors: {
+      list: 'Could not load the pricing profiles.',
+      fetchProfile: 'Could not load the profile.',
+      create: 'Could not create the profile.',
+      update: 'Could not update the profile.',
+      fetchRules: 'Could not load the pricing rules.',
+      fetchExemptions: 'Could not load the exemptions.',
+      addExemption: 'Could not add the exemption.',
+      fetchFees: 'Could not load the fees.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  attendance: {
+    title: 'Attendance',
+    openCommand: 'CEODigital: Open Attendance',
+    empty: 'No attendance items found for your tenant yet.',
+    back: 'Back',
+    detail: 'Item detail',
+    allKinds: 'All kinds',
+    allStatuses: 'All statuses',
+    allPriorities: 'All priorities',
+    kindPlaceholder: 'kind filter',
+    assigneeIdPlaceholder: 'assignee uuid',
+    assign: 'Assign',
+    assigning: 'Assigning…',
+    updateStatus: 'Update status',
+    updatingStatus: 'Updating…',
+    statuses: { open: 'Open', pending: 'Pending', assigned: 'Assigned', closed: 'Closed' },
+    priorities: { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' },
+    detailHeaders: {
+      id: 'ID',
+      title: 'Title',
+      kind: 'Kind',
+      status: 'Status',
+      priority: 'Priority',
+      assignee: 'Assignee',
+      created: 'Created'
+    },
+    headers: {
+      id: 'ID',
+      title: 'Title',
+      kind: 'Kind',
+      status: 'Status',
+      priority: 'Priority',
+      assignee: 'Assignee'
+    },
+    errors: {
+      list: 'Could not load the attendance items.',
+      fetchItem: 'Could not load the item.',
+      assign: 'Could not assign the item.',
+      updateStatus: 'Could not update the status.',
+      general: 'The action failed. Try again.'
+    }
+  },
+  llmStudio: {
+    title: 'LLM Studio',
+    openCommand: 'CEODigital: Open LLM Studio',
+    tabs: { datasets: 'Datasets', jobs: 'Jobs', adapters: 'Adapters', preferences: 'Preferences' },
+    datasets: {
+      title: 'Datasets',
+      empty: 'No datasets found.',
+      allStatuses: 'All statuses',
+      allSourceTypes: 'All source types',
+      statusPlaceholder: 'status filter',
+      sourceTypePlaceholder: 'source type filter',
+      headers: { id: 'ID', name: 'Name', status: 'Status', source: 'Source', created: 'Created' },
+      errors: { list: 'Could not load the datasets.', general: 'The action failed. Try again.' }
+    },
+    jobs: {
+      title: 'Jobs',
+      empty: 'No LLM jobs found.',
+      allStatuses: 'All statuses',
+      statusPlaceholder: 'status filter',
+      headers: { id: 'ID', name: 'Name', status: 'Status', dataset: 'Dataset', created: 'Created' },
+      errors: { list: 'Could not load the jobs.', general: 'The action failed. Try again.' }
+    },
+    adapters: {
+      title: 'Adapters',
+      empty: 'No adapters found.',
+      allStatuses: 'All statuses',
+      allScopes: 'All scopes',
+      statusPlaceholder: 'status filter',
+      scopePlaceholder: 'scope filter',
+      toggle: 'Toggle',
+      toggling: 'Toggling…',
+      headers: { id: 'ID', name: 'Name', status: 'Status', scope: 'Scope', active: 'Active' },
+      errors: { list: 'Could not load the adapters.', toggle: 'Could not toggle the adapter.', general: 'The action failed. Try again.' }
+    },
+    preferences: {
+      title: 'Preferences',
+      empty: 'No preferences found.',
+      activeAdapterId: 'Active adapter',
+      activeAdapterIdPlaceholder: 'adapter uuid (leave empty for none)',
+      inferenceBackend: 'Inference backend',
+      fallbackToGeneric: 'Fall back to generic',
+      save: 'Save preferences',
+      saving: 'Saving…',
+      backends: { together: 'Together', huggingface: 'Hugging Face', connector: 'Connector' },
+      errors: { fetch: 'Could not load the preferences.', save: 'Could not save the preferences.', general: 'The action failed. Try again.' }
+    }
+  },
+  workbench: {
+    title: 'Workbench',
+    openCommand: 'CEODigital: Open Workbench',
+    empty: 'No pins found on your workbench yet.',
+    newPin: 'New pin',
+    notePlaceholder: 'Add a note…',
+    setNote: 'Save note',
+    settingNote: 'Saving…',
+    clearNote: 'Clear',
+    toggleForm: {
+      subjectType: 'Subject type',
+      subjectTypePlaceholder: 'e.g. deal, project',
+      subjectId: 'Subject id',
+      subjectIdPlaceholder: 'uuid',
+      title: 'Title',
+      titlePlaceholder: 'pin title',
+      toggle: 'Toggle pin',
+      toggling: 'Toggling…',
+      cancel: 'Cancel'
+    },
+    headers: { id: 'ID', subject: 'Subject', title: 'Title', note: 'Note' },
+    errors: {
+      list: 'Could not load the pins.',
+      toggle: 'Could not toggle the pin.',
+      setNote: 'Could not save the note.',
+      general: 'The action failed. Try again.'
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
     general: 'The action failed. Try again.',

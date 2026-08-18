@@ -1915,3 +1915,507 @@ export interface W7ActionResponse {
 }
 
 export type W7ActionEnvelope = W7ActionResponse | CrmError
+
+// ── W8-UI-a — Labels / Dashboards / Pricing / Attendance / LLM Studio / Workbench ──
+
+/** Attendance item statuses (MCP `attendance.items.*`). */
+export const ATTENDANCE_STATUSES = ['open', 'pending', 'assigned', 'closed'] as const
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number]
+
+/** Attendance item priorities. */
+export const ATTENDANCE_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const
+export type AttendancePriority = (typeof ATTENDANCE_PRIORITIES)[number]
+
+/** Dashboard widget sizes (MCP `dashboards.widgets.add`). */
+export const WIDGET_SIZES = ['small', 'medium', 'large'] as const
+export type WidgetSize = (typeof WIDGET_SIZES)[number]
+
+/** Pricing exemption source types (MCP `pricing.exemptions.add`). */
+export const EXEMPTION_SOURCE_TYPES = ['person', 'customer'] as const
+export type ExemptionSourceType = (typeof EXEMPTION_SOURCE_TYPES)[number]
+
+/** Pricing exemption types. */
+export const EXEMPTION_TYPES = ['reverse_charge', 'exempt_org', 'intra_eu', 'export'] as const
+export type ExemptionType = (typeof EXEMPTION_TYPES)[number]
+
+/** LLM Studio inference backends (MCP `llm_studio.preferences.update`). */
+export const INFERENCE_BACKENDS = ['together', 'huggingface', 'connector'] as const
+export type InferenceBackend = (typeof INFERENCE_BACKENDS)[number]
+
+// ── W8-UI-a — rows ────────────────────────────────────────────────────────────
+
+/** GET /labels — a label row (proxy over MCP labels.list). */
+export interface LabelRow {
+  id: string
+  code?: null | string
+  name?: null | string
+  color?: null | string
+  description?: null | string
+  [key: string]: unknown
+}
+
+/** GET /labels/assignments — a label-assignment row (MCP labels.assignments.list). */
+export interface LabelAssignmentRow {
+  id: string
+  label_id?: null | string
+  subject_type?: null | string
+  subject_id?: null | string
+  [key: string]: unknown
+}
+
+/** GET /dashboards — a dashboard row (proxy over MCP dashboards.list). */
+export interface DashboardRow {
+  id: string
+  title?: null | string
+  icon?: null | string
+  position?: null | number
+  [key: string]: unknown
+}
+
+/** GET /dashboards/{id}/widgets — a widget row (MCP dashboards.widgets.list). */
+export interface WidgetRow {
+  id: string
+  dashboard_id?: null | string
+  spec?: null | Record<string, unknown>
+  size?: null | WidgetSize | string
+  position_index?: null | number
+  [key: string]: unknown
+}
+
+/** GET /pricing/profiles — a pricing-profile row (proxy over MCP pricing.profiles.list). */
+export interface PricingProfileRow {
+  id: string
+  code?: null | string
+  name?: null | string
+  default_rate?: null | number
+  description?: null | string
+  exemption_reason?: null | string
+  is_default?: null | boolean
+  is_active?: null | boolean
+  [key: string]: unknown
+}
+
+/** GET /pricing/rules — a pricing-rule row (MCP pricing.rules.list). */
+export interface PricingRuleRow {
+  id: string
+  profile_id?: null | string
+  kind?: null | string
+  rate?: null | number | string
+  description?: null | string
+  [key: string]: unknown
+}
+
+/** GET /pricing/exemptions — a pricing-exemption row (MCP pricing.exemptions.list). */
+export interface ExemptionRow {
+  id: string
+  source_type?: null | ExemptionSourceType | string
+  source_id?: null | string
+  vat_number?: null | string
+  exemption_type?: null | ExemptionType | string
+  reason?: null | string
+  valid_from?: null | string
+  valid_until?: null | string
+  [key: string]: unknown
+}
+
+/** GET /pricing/fees — a pricing-fee row (MCP pricing.fees.list). */
+export interface FeeRow {
+  id: string
+  name?: null | string
+  code?: null | string
+  rate?: null | number | string
+  active?: null | boolean
+  description?: null | string
+  [key: string]: unknown
+}
+
+/** GET /attendance/items — an attendance item (proxy over MCP attendance.items.list). */
+export interface AttendanceItemRow {
+  id: string
+  title?: null | string
+  kind?: null | string
+  status?: null | AttendanceStatus | string
+  priority?: null | AttendancePriority | string
+  assignee_id?: null | string
+  metadata?: null | Record<string, unknown>
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /llmstudio/datasets — a dataset row (MCP llm_studio.datasets.list). */
+export interface DatasetRow {
+  id: string
+  name?: null | string
+  status?: null | string
+  source_type?: null | string
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /llmstudio/jobs — an LLM Studio job row (MCP llm_studio.jobs.list). */
+export interface LlmJobRow {
+  id: string
+  name?: null | string
+  status?: null | string
+  dataset_id?: null | string
+  created_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /llmstudio/adapters — an LLM adapter row (MCP llm_studio.adapters.list). */
+export interface LlmAdapterRow {
+  id: string
+  name?: null | string
+  status?: null | string
+  scope?: null | string
+  active?: null | boolean
+  [key: string]: unknown
+}
+
+/** GET /llmstudio/preferences — LLM Studio preferences (MCP llm_studio.preferences.get). */
+export interface LlmPreferencesRow {
+  active_adapter_id?: null | string
+  inference_backend?: null | InferenceBackend | string
+  fallback_to_generic?: null | boolean
+  [key: string]: unknown
+}
+
+/** GET /workbench/pins — a workbench pin (MCP workbench.pins.list). */
+export interface PinRow {
+  id: string
+  subject_type?: null | string
+  subject_id?: null | string
+  title?: null | string
+  note?: null | string
+  [key: string]: unknown
+}
+
+// ── W8-UI-a — list params (map 1:1 to the MCP inputs) ─────────────────────────
+
+/** GET /labels — list query params. */
+export interface LabelsListParams {
+  search?: string
+  limit?: number
+}
+
+/** GET /labels/assignments — list query params. */
+export interface LabelAssignmentsParams {
+  labelId?: string
+  subjectType?: string
+  subjectId?: string
+  limit?: number
+}
+
+/** GET /dashboards — list query params. */
+export interface DashboardsListParams {
+  limit?: number
+}
+
+/** GET /pricing/profiles — list query params. */
+export interface PricingProfilesListParams {
+  active?: boolean
+  search?: string
+  limit?: number
+}
+
+/** GET /pricing/rules — list query params. */
+export interface PricingRulesParams {
+  profileId?: string
+  limit?: number
+}
+
+/** GET /pricing/exemptions — list query params. */
+export interface PricingExemptionsParams {
+  sourceType?: ExemptionSourceType | string
+  sourceId?: string
+  limit?: number
+}
+
+/** GET /pricing/fees — list query params. */
+export interface PricingFeesParams {
+  active?: boolean
+  search?: string
+  limit?: number
+}
+
+/** GET /attendance/items — list query params. */
+export interface AttendanceItemsParams {
+  kind?: string
+  status?: AttendanceStatus | string
+  priority?: AttendancePriority | string
+  assigneeId?: string
+  limit?: number
+}
+
+/** GET /llmstudio/datasets — list query params. */
+export interface DatasetsListParams {
+  status?: string
+  sourceType?: string
+  limit?: number
+}
+
+/** GET /llmstudio/jobs — list query params. */
+export interface LlmJobsListParams {
+  status?: string
+  datasetId?: string
+  limit?: number
+}
+
+/** GET /llmstudio/adapters — list query params. */
+export interface LlmAdaptersListParams {
+  status?: string
+  scope?: string
+  limit?: number
+}
+
+/** GET /workbench/pins — list query params. */
+export interface WorkbenchPinsParams {
+  subjectType?: string
+  limit?: number
+}
+
+// ── W8-UI-a — mutation inputs ─────────────────────────────────────────────────
+
+/** POST /labels — create body. */
+export interface CreateLabelInput {
+  code: string
+  name: string
+  color?: string
+  description?: string
+}
+
+/** POST /labels/{id}/update — update body. */
+export interface UpdateLabelInput {
+  name?: string
+  color?: string | null
+  description?: string | null
+}
+
+/** POST /labels/{id}/assign — assign body. */
+export interface AssignLabelInput {
+  subjectType: string
+  subjectId: string
+}
+
+/** POST /dashboards — create body. */
+export interface CreateDashboardInput {
+  title?: string
+  icon?: string
+  position?: number
+}
+
+/** POST /dashboards/{id}/widgets — add-widget body. */
+export interface AddWidgetInput {
+  spec: Record<string, unknown>
+  size?: WidgetSize | string
+  positionIndex?: number
+}
+
+/** POST /pricing/profiles — create body. */
+export interface CreatePricingProfileInput {
+  code: string
+  name: string
+  defaultRate?: number
+  description?: string
+  exemptionReason?: string
+  isDefault?: boolean
+}
+
+/** POST /pricing/profiles/{id}/update — update body. */
+export interface UpdatePricingProfileInput {
+  name?: string
+  defaultRate?: number
+  description?: string | null
+  isActive?: boolean
+}
+
+/** POST /pricing/exemptions — add body. */
+export interface AddExemptionInput {
+  sourceType: ExemptionSourceType
+  sourceId: string
+  vatNumber?: string
+  exemptionType: ExemptionType
+  reason?: string
+  validFrom?: string
+  validUntil?: string | null
+}
+
+/** POST /attendance/items/{id}/assign — assign body. */
+export interface AssignAttendanceItemInput {
+  assigneeId: string
+}
+
+/** POST /attendance/items/{id}/status — status body. */
+export interface UpdateAttendanceStatusInput {
+  status: AttendanceStatus | string
+  metadata?: Record<string, unknown>
+}
+
+/** POST /llmstudio/adapters/{id}/toggle — toggle body. */
+export interface ToggleAdapterInput {
+  active: boolean
+}
+
+/** POST /llmstudio/preferences — preferences body. */
+export interface UpdateLlmPreferencesInput {
+  activeAdapterId?: string | null
+  inferenceBackend?: InferenceBackend | string
+  fallbackToGeneric?: boolean
+}
+
+/** POST /workbench/pins/toggle — toggle body. */
+export interface TogglePinInput {
+  subjectType: string
+  subjectId: string
+  title?: string | null
+}
+
+/** POST /workbench/pins/{id}/note — set-note body. */
+export interface SetPinNoteInput {
+  note: string | null
+}
+
+// ── W8-UI-a — envelopes ───────────────────────────────────────────────────────
+
+/** GET /labels — success envelope. */
+export interface LabelsResponse {
+  ok: true
+  labels: LabelRow[]
+}
+
+/** GET /labels/{id_or_code} — success envelope. */
+export interface LabelResponse {
+  ok: true
+  label: LabelRow
+}
+
+/** GET /labels/assignments — success envelope. */
+export interface LabelAssignmentsResponse {
+  ok: true
+  assignments: LabelAssignmentRow[]
+}
+
+/** GET /dashboards — success envelope. */
+export interface DashboardsResponse {
+  ok: true
+  dashboards: DashboardRow[]
+}
+
+/** GET /dashboards/{id} — success envelope. */
+export interface DashboardResponse {
+  ok: true
+  dashboard: DashboardRow
+}
+
+/** GET /dashboards/{id}/widgets — success envelope. */
+export interface WidgetsResponse {
+  ok: true
+  widgets: WidgetRow[]
+}
+
+/** GET /pricing/profiles — success envelope. */
+export interface PricingProfilesResponse {
+  ok: true
+  profiles: PricingProfileRow[]
+}
+
+/** GET /pricing/profiles/{id_or_code} — success envelope. */
+export interface PricingProfileResponse {
+  ok: true
+  profile: PricingProfileRow
+}
+
+/** GET /pricing/rules — success envelope. */
+export interface PricingRulesResponse {
+  ok: true
+  rules: PricingRuleRow[]
+}
+
+/** GET /pricing/exemptions — success envelope. */
+export interface PricingExemptionsResponse {
+  ok: true
+  exemptions: ExemptionRow[]
+}
+
+/** GET /pricing/fees — success envelope. */
+export interface PricingFeesResponse {
+  ok: true
+  fees: FeeRow[]
+}
+
+/** GET /attendance/items — success envelope. */
+export interface AttendanceItemsResponse {
+  ok: true
+  items: AttendanceItemRow[]
+}
+
+/** GET /attendance/items/{id} — success envelope. */
+export interface AttendanceItemResponse {
+  ok: true
+  item: AttendanceItemRow
+}
+
+/** GET /llmstudio/datasets — success envelope. */
+export interface DatasetsResponse {
+  ok: true
+  datasets: DatasetRow[]
+}
+
+/** GET /llmstudio/jobs — success envelope. */
+export interface LlmJobsResponse {
+  ok: true
+  jobs: LlmJobRow[]
+}
+
+/** GET /llmstudio/jobs/{id} — success envelope. */
+export interface LlmJobResponse {
+  ok: true
+  job: LlmJobRow
+}
+
+/** GET /llmstudio/adapters — success envelope. */
+export interface LlmAdaptersResponse {
+  ok: true
+  adapters: LlmAdapterRow[]
+}
+
+/** GET /llmstudio/preferences — success envelope. */
+export interface LlmPreferencesResponse {
+  ok: true
+  preferences: LlmPreferencesRow
+}
+
+/** GET /workbench/pins — success envelope. */
+export interface PinsResponse {
+  ok: true
+  pins: PinRow[]
+}
+
+export type LabelsEnvelope = LabelsResponse | CrmError
+export type LabelEnvelope = LabelResponse | CrmError
+export type LabelAssignmentsEnvelope = LabelAssignmentsResponse | CrmError
+export type DashboardsEnvelope = DashboardsResponse | CrmError
+export type DashboardEnvelope = DashboardResponse | CrmError
+export type WidgetsEnvelope = WidgetsResponse | CrmError
+export type PricingProfilesEnvelope = PricingProfilesResponse | CrmError
+export type PricingProfileEnvelope = PricingProfileResponse | CrmError
+export type PricingRulesEnvelope = PricingRulesResponse | CrmError
+export type PricingExemptionsEnvelope = PricingExemptionsResponse | CrmError
+export type PricingFeesEnvelope = PricingFeesResponse | CrmError
+export type AttendanceItemsEnvelope = AttendanceItemsResponse | CrmError
+export type AttendanceItemEnvelope = AttendanceItemResponse | CrmError
+export type DatasetsEnvelope = DatasetsResponse | CrmError
+export type LlmJobsEnvelope = LlmJobsResponse | CrmError
+export type LlmJobEnvelope = LlmJobResponse | CrmError
+export type LlmAdaptersEnvelope = LlmAdaptersResponse | CrmError
+export type LlmPreferencesEnvelope = LlmPreferencesResponse | CrmError
+export type PinsEnvelope = PinsResponse | CrmError
+
+/** POST /labels|dashboards|pricing|attendance|llmstudio|workbench/** —
+ * mutation success envelope (raw MCP result). */
+export interface W8ActionResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+export type W8ActionEnvelope = W8ActionResponse | CrmError

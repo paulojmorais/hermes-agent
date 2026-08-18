@@ -1095,6 +1095,302 @@ export const fr: CeodigitalMessages = {
       }
     }
   },
+  labels: {
+    title: 'Étiquettes',
+    openCommand: 'CEODigital : Ouvrir les étiquettes',
+    empty: 'Aucune étiquette trouvée pour votre tenant.',
+    searchPlaceholder: 'Rechercher des étiquettes…',
+    new: 'Nouvelle étiquette',
+    assignments: 'Affectations',
+    assignmentsEmpty: 'Aucune affectation pour cette étiquette.',
+    assign: 'Affecter',
+    assigning: 'Affectation…',
+    unassign: 'Retirer',
+    unassigning: 'Retrait…',
+    subjectTypePlaceholder: 'type de sujet (ex. deal)',
+    subjectIdPlaceholder: 'id du sujet',
+    createForm: {
+      code: 'Code',
+      codePlaceholder: 'code court (max 120)',
+      name: 'Nom',
+      namePlaceholder: "Nom de l'étiquette",
+      color: 'Couleur',
+      colorPlaceholder: 'ex. #e11d48',
+      description: 'Description',
+      descriptionPlaceholder: "Ce que signifie cette étiquette",
+      create: 'Créer l’étiquette',
+      cancel: 'Annuler'
+    },
+    updateForm: {
+      name: 'Nom',
+      color: 'Couleur',
+      description: 'Description',
+      update: 'Mettre à jour',
+      cancel: 'Annuler'
+    },
+    headers: { id: 'ID', code: 'Code', name: 'Nom', color: 'Couleur' },
+    errors: {
+      list: 'Impossible de charger les étiquettes.',
+      create: 'Impossible de créer l’étiquette.',
+      update: 'Impossible de mettre à jour l’étiquette.',
+      assign: 'Impossible d’affecter l’étiquette.',
+      unassign: 'Impossible de retirer l’affectation.',
+      fetchAssignments: 'Impossible de charger les affectations.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  dashboards: {
+    title: 'Tableaux de bord',
+    openCommand: 'CEODigital : Ouvrir les tableaux de bord',
+    empty: 'Aucun tableau de bord trouvé pour votre tenant.',
+    new: 'Nouveau tableau de bord',
+    back: 'Retour',
+    detail: 'Détail du tableau de bord',
+    widgets: 'Widgets',
+    widgetsEmpty: 'Aucun widget sur ce tableau de bord.',
+    addWidget: 'Ajouter un widget',
+    addingWidget: 'Ajout…',
+    removeWidget: 'Retirer',
+    removingWidget: 'Retrait…',
+    createForm: {
+      title: 'Titre',
+      titlePlaceholder: 'Titre (défaut : « Tableau de bord »)',
+      icon: 'Icône',
+      iconPlaceholder: 'nom du codicon',
+      position: 'Position',
+      create: 'Créer le tableau de bord',
+      cancel: 'Annuler'
+    },
+    widgetForm: {
+      specTitle: 'Titre du widget',
+      specTitlePlaceholder: 'titre dans le spec',
+      specKind: 'Type de widget',
+      specKindPlaceholder: 'ex. chart, list',
+      size: 'Taille',
+      positionIndex: 'Index de position',
+      add: 'Ajouter le widget',
+      cancel: 'Annuler'
+    },
+    sizes: { small: 'Petit', medium: 'Moyen', large: 'Grand' },
+    headers: { id: 'ID', title: 'Titre', icon: 'Icône', position: 'Position' },
+    widgetHeaders: { id: 'ID', title: 'Titre', size: 'Taille' },
+    errors: {
+      list: 'Impossible de charger les tableaux de bord.',
+      fetchDashboard: 'Impossible de charger le tableau de bord.',
+      create: 'Impossible de créer le tableau de bord.',
+      fetchWidgets: 'Impossible de charger les widgets.',
+      addWidget: 'Impossible d’ajouter le widget.',
+      removeWidget: 'Impossible de retirer le widget.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  pricing: {
+    title: 'Tarification',
+    openCommand: 'CEODigital : Ouvrir la tarification',
+    empty: 'Aucun profil tarifaire trouvé pour votre tenant.',
+    back: 'Retour',
+    detail: 'Détail du profil',
+    all: 'Tous',
+    activeOnly: 'Actifs uniquement',
+    searchPlaceholder: 'Rechercher des profils…',
+    new: 'Nouveau profil',
+    rules: 'Règles tarifaires',
+    rulesEmpty: 'Aucune règle tarifaire pour ce profil.',
+    exemptions: 'Exonérations',
+    exemptionsEmpty: 'Aucune exonération trouvée.',
+    fees: 'Frais',
+    feesEmpty: 'Aucun frais tarifaire trouvé.',
+    addExemption: 'Ajouter une exonération',
+    addingExemption: 'Ajout…',
+    createForm: {
+      code: 'Code',
+      codePlaceholder: 'code court (max 120)',
+      name: 'Nom',
+      namePlaceholder: 'Nom du profil',
+      defaultRate: 'Taux par défaut (%)',
+      defaultRatePlaceholder: '0–100',
+      description: 'Description',
+      descriptionPlaceholder: 'À quoi s’applique ce profil',
+      exemptionReason: 'Motif d’exonération',
+      exemptionReasonPlaceholder: 'max 30 caractères',
+      isDefault: 'Profil par défaut',
+      create: 'Créer le profil',
+      cancel: 'Annuler'
+    },
+    updateForm: {
+      name: 'Nom',
+      defaultRate: 'Taux par défaut (%)',
+      description: 'Description',
+      isActive: 'Actif',
+      update: 'Mettre à jour',
+      cancel: 'Annuler'
+    },
+    exemptionForm: {
+      sourceType: 'Type de source',
+      sourceId: 'Id de source',
+      sourceIdPlaceholder: 'uuid personne ou client',
+      vatNumber: 'Numéro de TVA',
+      exemptionType: 'Type d’exonération',
+      reason: 'Motif',
+      reasonPlaceholder: 'pourquoi cette exonération s’applique',
+      validFrom: 'Valable depuis',
+      validUntil: 'Valable jusqu’au',
+      add: 'Ajouter l’exonération',
+      cancel: 'Annuler'
+    },
+    sourceTypes: { person: 'Personne', customer: 'Client' },
+    exemptionTypes: {
+      reverse_charge: 'Autoliquidation',
+      exempt_org: 'Organisation exonérée',
+      intra_eu: 'Intra-UE',
+      export: 'Exportation'
+    },
+    headers: {
+      id: 'ID',
+      code: 'Code',
+      name: 'Nom',
+      defaultRate: 'Taux par défaut',
+      active: 'Actif',
+      default: 'Défaut'
+    },
+    ruleHeaders: { id: 'ID', kind: 'Type', rate: 'Taux' },
+    exemptionHeaders: {
+      id: 'ID',
+      source: 'Source',
+      vat: 'TVA',
+      type: 'Type',
+      reason: 'Motif'
+    },
+    feeHeaders: { id: 'ID', name: 'Nom', code: 'Code', rate: 'Taux', active: 'Actif' },
+    errors: {
+      list: 'Impossible de charger les profils tarifaires.',
+      fetchProfile: 'Impossible de charger le profil.',
+      create: 'Impossible de créer le profil.',
+      update: 'Impossible de mettre à jour le profil.',
+      fetchRules: 'Impossible de charger les règles tarifaires.',
+      fetchExemptions: 'Impossible de charger les exonérations.',
+      addExemption: 'Impossible d’ajouter l’exonération.',
+      fetchFees: 'Impossible de charger les frais.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  attendance: {
+    title: 'Présences',
+    openCommand: 'CEODigital : Ouvrir les présences',
+    empty: 'Aucun élément de présence trouvé pour votre tenant.',
+    back: 'Retour',
+    detail: 'Détail de l’élément',
+    allKinds: 'Tous les types',
+    allStatuses: 'Tous les statuts',
+    allPriorities: 'Toutes les priorités',
+    kindPlaceholder: 'filtre de type',
+    assigneeIdPlaceholder: 'uuid du responsable',
+    assign: 'Affecter',
+    assigning: 'Affectation…',
+    updateStatus: 'Mettre à jour le statut',
+    updatingStatus: 'Mise à jour…',
+    statuses: { open: 'Ouvert', pending: 'En attente', assigned: 'Affecté', closed: 'Clos' },
+    priorities: { low: 'Basse', normal: 'Normale', high: 'Haute', urgent: 'Urgente' },
+    detailHeaders: {
+      id: 'ID',
+      title: 'Titre',
+      kind: 'Type',
+      status: 'Statut',
+      priority: 'Priorité',
+      assignee: 'Responsable',
+      created: 'Créé'
+    },
+    headers: {
+      id: 'ID',
+      title: 'Titre',
+      kind: 'Type',
+      status: 'Statut',
+      priority: 'Priorité',
+      assignee: 'Responsable'
+    },
+    errors: {
+      list: 'Impossible de charger les éléments de présence.',
+      fetchItem: 'Impossible de charger l’élément.',
+      assign: 'Impossible d’affecter l’élément.',
+      updateStatus: 'Impossible de mettre à jour le statut.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
+  llmStudio: {
+    title: 'LLM Studio',
+    openCommand: 'CEODigital : Ouvrir LLM Studio',
+    tabs: { datasets: 'Datasets', jobs: 'Tâches', adapters: 'Adaptateurs', preferences: 'Préférences' },
+    datasets: {
+      title: 'Datasets',
+      empty: 'Aucun dataset trouvé.',
+      allStatuses: 'Tous les statuts',
+      allSourceTypes: 'Tous les types de source',
+      statusPlaceholder: 'filtre de statut',
+      sourceTypePlaceholder: 'filtre de type de source',
+      headers: { id: 'ID', name: 'Nom', status: 'Statut', source: 'Source', created: 'Créé' },
+      errors: { list: 'Impossible de charger les datasets.', general: 'L’action a échoué. Réessayez.' }
+    },
+    jobs: {
+      title: 'Tâches',
+      empty: 'Aucune tâche LLM trouvée.',
+      allStatuses: 'Tous les statuts',
+      statusPlaceholder: 'filtre de statut',
+      headers: { id: 'ID', name: 'Nom', status: 'Statut', dataset: 'Dataset', created: 'Créé' },
+      errors: { list: 'Impossible de charger les tâches.', general: 'L’action a échoué. Réessayez.' }
+    },
+    adapters: {
+      title: 'Adaptateurs',
+      empty: 'Aucun adaptateur trouvé.',
+      allStatuses: 'Tous les statuts',
+      allScopes: 'Tous les périmètres',
+      statusPlaceholder: 'filtre de statut',
+      scopePlaceholder: 'filtre de périmètre',
+      toggle: 'Basculer',
+      toggling: 'Bascule…',
+      headers: { id: 'ID', name: 'Nom', status: 'Statut', scope: 'Périmètre', active: 'Actif' },
+      errors: { list: 'Impossible de charger les adaptateurs.', toggle: 'Impossible de basculer l’adaptateur.', general: 'L’action a échoué. Réessayez.' }
+    },
+    preferences: {
+      title: 'Préférences',
+      empty: 'Aucune préférence trouvée.',
+      activeAdapterId: 'Adaptateur actif',
+      activeAdapterIdPlaceholder: 'uuid de l’adaptateur (vide = aucun)',
+      inferenceBackend: 'Backend d’inférence',
+      fallbackToGeneric: 'Replier sur le générique',
+      save: 'Enregistrer les préférences',
+      saving: 'Enregistrement…',
+      backends: { together: 'Together', huggingface: 'Hugging Face', connector: 'Connecteur' },
+      errors: { fetch: 'Impossible de charger les préférences.', save: 'Impossible d’enregistrer les préférences.', general: 'L’action a échoué. Réessayez.' }
+    }
+  },
+  workbench: {
+    title: 'Workbench',
+    openCommand: 'CEODigital : Ouvrir le workbench',
+    empty: 'Aucun pin sur votre workbench.',
+    newPin: 'Nouveau pin',
+    notePlaceholder: 'Ajouter une note…',
+    setNote: 'Enregistrer la note',
+    settingNote: 'Enregistrement…',
+    clearNote: 'Effacer',
+    toggleForm: {
+      subjectType: 'Type de sujet',
+      subjectTypePlaceholder: 'ex. deal, project',
+      subjectId: 'Id du sujet',
+      subjectIdPlaceholder: 'uuid',
+      title: 'Titre',
+      titlePlaceholder: 'titre du pin',
+      toggle: 'Basculer le pin',
+      toggling: 'Bascule…',
+      cancel: 'Annuler'
+    },
+    headers: { id: 'ID', subject: 'Sujet', title: 'Titre', note: 'Note' },
+    errors: {
+      list: 'Impossible de charger les pins.',
+      toggle: 'Impossible de basculer le pin.',
+      setNote: 'Impossible d’enregistrer la note.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
   errors: {
     fetch: 'Impossible de charger les projets CEODigital.',
     general: "L'action a échoué. Réessayez.",

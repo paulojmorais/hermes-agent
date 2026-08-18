@@ -12,16 +12,22 @@ import { type PluginLocaleBundles, type PluginMessages, type PluginTranslate, us
 import { useMemo } from 'react'
 
 import type {
+  AttendancePriority,
+  AttendanceStatus,
   DepartmentRole,
   DsrRequestType,
   DsrStatus,
+  ExemptionSourceType,
+  ExemptionType,
   FulfillmentStatus,
+  InferenceBackend,
   IntegrationScope,
   IntegrationStatus,
   OrderStatus,
   PaymentStatus,
   PhaseStatus,
   ProjectStatus,
+  WidgetSize,
   WorkItemStatus,
   WorkspaceRole
 } from '../types'
@@ -1024,6 +1030,297 @@ export interface CeodigitalMessages {
         list: string
         general: string
       }
+    }
+  }
+  labels: {
+    title: string
+    openCommand: string
+    empty: string
+    searchPlaceholder: string
+    new: string
+    assignments: string
+    assignmentsEmpty: string
+    assign: string
+    assigning: string
+    unassign: string
+    unassigning: string
+    subjectTypePlaceholder: string
+    subjectIdPlaceholder: string
+    createForm: {
+      code: string
+      codePlaceholder: string
+      name: string
+      namePlaceholder: string
+      color: string
+      colorPlaceholder: string
+      description: string
+      descriptionPlaceholder: string
+      create: string
+      cancel: string
+    }
+    updateForm: {
+      name: string
+      color: string
+      description: string
+      update: string
+      cancel: string
+    }
+    headers: { id: string; code: string; name: string; color: string }
+    errors: {
+      list: string
+      create: string
+      update: string
+      assign: string
+      unassign: string
+      fetchAssignments: string
+      general: string
+    }
+  }
+  dashboards: {
+    title: string
+    openCommand: string
+    empty: string
+    new: string
+    back: string
+    detail: string
+    widgets: string
+    widgetsEmpty: string
+    addWidget: string
+    addingWidget: string
+    removeWidget: string
+    removingWidget: string
+    createForm: {
+      title: string
+      titlePlaceholder: string
+      icon: string
+      iconPlaceholder: string
+      position: string
+      create: string
+      cancel: string
+    }
+    widgetForm: {
+      specTitle: string
+      specTitlePlaceholder: string
+      specKind: string
+      specKindPlaceholder: string
+      size: string
+      positionIndex: string
+      add: string
+      cancel: string
+    }
+    sizes: Partial<Record<WidgetSize, string>>
+    headers: { id: string; title: string; icon: string; position: string }
+    widgetHeaders: { id: string; title: string; size: string }
+    errors: {
+      list: string
+      fetchDashboard: string
+      create: string
+      fetchWidgets: string
+      addWidget: string
+      removeWidget: string
+      general: string
+    }
+  }
+  pricing: {
+    title: string
+    openCommand: string
+    empty: string
+    back: string
+    detail: string
+    all: string
+    activeOnly: string
+    searchPlaceholder: string
+    new: string
+    rules: string
+    rulesEmpty: string
+    exemptions: string
+    exemptionsEmpty: string
+    fees: string
+    feesEmpty: string
+    addExemption: string
+    addingExemption: string
+    createForm: {
+      code: string
+      codePlaceholder: string
+      name: string
+      namePlaceholder: string
+      defaultRate: string
+      defaultRatePlaceholder: string
+      description: string
+      descriptionPlaceholder: string
+      exemptionReason: string
+      exemptionReasonPlaceholder: string
+      isDefault: string
+      create: string
+      cancel: string
+    }
+    updateForm: {
+      name: string
+      defaultRate: string
+      description: string
+      isActive: string
+      update: string
+      cancel: string
+    }
+    exemptionForm: {
+      sourceType: string
+      sourceId: string
+      sourceIdPlaceholder: string
+      vatNumber: string
+      exemptionType: string
+      reason: string
+      reasonPlaceholder: string
+      validFrom: string
+      validUntil: string
+      add: string
+      cancel: string
+    }
+    sourceTypes: Partial<Record<ExemptionSourceType, string>>
+    exemptionTypes: Partial<Record<ExemptionType, string>>
+    headers: {
+      id: string
+      code: string
+      name: string
+      defaultRate: string
+      active: string
+      default: string
+    }
+    ruleHeaders: { id: string; kind: string; rate: string }
+    exemptionHeaders: {
+      id: string
+      source: string
+      vat: string
+      type: string
+      reason: string
+    }
+    feeHeaders: { id: string; name: string; code: string; rate: string; active: string }
+    errors: {
+      list: string
+      fetchProfile: string
+      create: string
+      update: string
+      fetchRules: string
+      fetchExemptions: string
+      addExemption: string
+      fetchFees: string
+      general: string
+    }
+  }
+  attendance: {
+    title: string
+    openCommand: string
+    empty: string
+    back: string
+    detail: string
+    allKinds: string
+    allStatuses: string
+    allPriorities: string
+    kindPlaceholder: string
+    assigneeIdPlaceholder: string
+    assign: string
+    assigning: string
+    updateStatus: string
+    updatingStatus: string
+    statuses: Partial<Record<AttendanceStatus, string>>
+    priorities: Partial<Record<AttendancePriority, string>>
+    detailHeaders: {
+      id: string
+      title: string
+      kind: string
+      status: string
+      priority: string
+      assignee: string
+      created: string
+    }
+    headers: {
+      id: string
+      title: string
+      kind: string
+      status: string
+      priority: string
+      assignee: string
+    }
+    errors: {
+      list: string
+      fetchItem: string
+      assign: string
+      updateStatus: string
+      general: string
+    }
+  }
+  llmStudio: {
+    title: string
+    openCommand: string
+    tabs: { datasets: string; jobs: string; adapters: string; preferences: string }
+    datasets: {
+      title: string
+      empty: string
+      allStatuses: string
+      allSourceTypes: string
+      statusPlaceholder: string
+      sourceTypePlaceholder: string
+      headers: { id: string; name: string; status: string; source: string; created: string }
+      errors: { list: string; general: string }
+    }
+    jobs: {
+      title: string
+      empty: string
+      allStatuses: string
+      statusPlaceholder: string
+      headers: { id: string; name: string; status: string; dataset: string; created: string }
+      errors: { list: string; general: string }
+    }
+    adapters: {
+      title: string
+      empty: string
+      allStatuses: string
+      allScopes: string
+      statusPlaceholder: string
+      scopePlaceholder: string
+      toggle: string
+      toggling: string
+      headers: { id: string; name: string; status: string; scope: string; active: string }
+      errors: { list: string; toggle: string; general: string }
+    }
+    preferences: {
+      title: string
+      empty: string
+      activeAdapterId: string
+      activeAdapterIdPlaceholder: string
+      inferenceBackend: string
+      fallbackToGeneric: string
+      save: string
+      saving: string
+      backends: Partial<Record<InferenceBackend, string>>
+      errors: { fetch: string; save: string; general: string }
+    }
+  }
+  workbench: {
+    title: string
+    openCommand: string
+    empty: string
+    newPin: string
+    notePlaceholder: string
+    setNote: string
+    settingNote: string
+    clearNote: string
+    toggleForm: {
+      subjectType: string
+      subjectTypePlaceholder: string
+      subjectId: string
+      subjectIdPlaceholder: string
+      title: string
+      titlePlaceholder: string
+      toggle: string
+      toggling: string
+      cancel: string
+    }
+    headers: { id: string; subject: string; title: string; note: string }
+    errors: {
+      list: string
+      toggle: string
+      setNote: string
+      general: string
     }
   }
   errors: {

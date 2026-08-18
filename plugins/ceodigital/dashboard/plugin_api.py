@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import uuid
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -4124,4 +4125,1114 @@ def list_retention_policies(
         return _maybe_error(exc.code)
     except Exception:
         log.exception("ceodigital governance retention list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W8-UI-a — Labels (labels.*). Writes pass through the MCP adapter's HITL.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_label(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital label row onto the ``LabelRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "code": row.get("code") or "",
+        "name": row.get("name") or "",
+        "color": row.get("color"),
+        "description": row.get("description"),
+    }
+
+
+def _normalize_label_assignment(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital label-assignment row onto ``LabelAssignmentRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "label_id": str(row.get("labelId") or row.get("label_id") or ""),
+        "subject_type": row.get("subjectType") or row.get("subject_type") or "",
+        "subject_id": str(row.get("subjectId") or row.get("subject_id") or ""),
+    }
+
+
+def _id_or_code(value: str) -> Dict[str, Any]:
+    """``labels.get`` / ``pricing.profiles.get`` take ``id`` OR ``code`` — pick
+    by value shape (a UUID is an id, anything else is a code)."""
+    try:
+        uuid.UUID(value)
+        return {"id": value}
+    except ValueError:
+        return {"code": value}
+
+
+def _single_or_bare(payload: Any, *keys: str) -> Optional[Dict[str, Any]]:
+    """Pick the single object out of a detail payload, tolerating a bare
+    object (no wrapper key) when the MCP tool returns the row directly."""
+    if isinstance(payload, dict):
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, dict):
+                return value
+        if "id" in payload or "_id" in payload:
+            return payload
+        rows = _rows_from_services(payload, *keys)
+        if rows:
+            return rows[0]
+    return None
+
+
+@router.get("/labels")
+def list_labels(search: Optional[str] = None, limit: Optional[int] = None) -> JSONResponse:
+    """List the tenant's labels (read-only, MCP ``labels.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if search is not None:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "labels.list", args)
+        rows = _rows_from_services(payload, "labels")
+        return JSONResponse(content={"ok": True, "labels": [_normalize_label(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/labels/assignments")
+def list_label_assignments(
+    labelId: Optional[str] = None,
+    subjectType: Optional[str] = None,
+    subjectId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List label assignments (read-only, MCP ``labels.assignments.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if labelId:
+            args["labelId"] = labelId
+        if subjectType:
+            args["subjectType"] = str(subjectType)[:80]
+        if subjectId:
+            args["subjectId"] = subjectId
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "labels.assignments.list", args)
+        rows = _rows_from_services(payload, "assignments")
+        return JSONResponse(content={"ok": True, "assignments": [_normalize_label_assignment(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels assignments list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/labels/{label_id_or_code}")
+def get_label(label_id_or_code: str) -> JSONResponse:
+    """Return a single label by id or code (MCP ``labels.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "labels.get", _id_or_code(label_id_or_code))
+        label = _single_or_bare(payload, "label", "labels")
+        if label is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "label": _normalize_label(label)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels get failed: %s", label_id_or_code)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/labels")
+def create_label(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a label (MCP ``labels.create``, needsApproval).
+    Body: ``{code, name, color?, description?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    code = payload.get("code")
+    name = payload.get("name")
+    if not code or not str(code).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "code_required"})
+    if not name or not str(name).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "name_required"})
+
+    args: Dict[str, Any] = {"code": str(code)[:120], "name": str(name)[:200]}
+    if payload.get("color") is not None:
+        args["color"] = str(payload["color"])[:30]
+    if payload.get("description") is not None:
+        args["description"] = str(payload["description"])[:500]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "labels.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/labels/{label_id}/update")
+def update_label(label_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update a label (MCP ``labels.update``, needsApproval).
+    Body: ``{name?, color?, description?}`` — nullable fields pass through."""
+    if not isinstance(payload, dict):
+        payload = {}
+    args: Dict[str, Any] = {"id": label_id}
+    for key in ("name", "color", "description"):
+        if payload.get(key) is not None:
+            args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "labels.update", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels update failed: %s", label_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/labels/{label_id}/assign")
+def assign_label(label_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Assign a label to a subject (MCP ``labels.assign``, needsApproval).
+    Body: ``{subjectType, subjectId}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    subject_type = payload.get("subjectType")
+    subject_id = payload.get("subjectId")
+    if not subject_type or not str(subject_type).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "subject_type_required"})
+    if not subject_id:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "subject_id_required"})
+
+    args: Dict[str, Any] = {
+        "labelId": label_id,
+        "subjectType": str(subject_type)[:80],
+        "subjectId": str(subject_id),
+    }
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "labels.assign", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels assign failed: %s", label_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/labels/{label_id}/unassign")
+def unassign_label(label_id: str) -> JSONResponse:
+    """Unassign a label assignment row (MCP ``labels.unassign``, needsApproval).
+    The path id is the assignment row id (the tool's ``id``)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "labels.unassign", {"id": label_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital labels unassign failed: %s", label_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W8-UI-a — Dashboards (dashboards.*). Writes pass through the MCP HITL.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_dashboard(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital dashboard row onto the ``DashboardRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "title": row.get("title") or row.get("name") or "",
+        "icon": row.get("icon"),
+        "position": row.get("position"),
+    }
+
+
+def _normalize_dashboard_widget(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital dashboard-widget row onto the ``WidgetRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "dashboard_id": str(row.get("dashboardId") or row.get("dashboard_id") or ""),
+        "spec": row.get("spec"),
+        "size": row.get("size"),
+        "position_index": (
+            row.get("positionIndex")
+            if row.get("positionIndex") is not None
+            else row.get("position_index")
+        ),
+    }
+
+
+@router.get("/dashboards")
+def list_dashboards(limit: Optional[int] = None) -> JSONResponse:
+    """List the tenant's dashboards (read-only, MCP ``dashboards.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "dashboards.list", args)
+        rows = _rows_from_services(payload, "dashboards")
+        return JSONResponse(content={"ok": True, "dashboards": [_normalize_dashboard(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital dashboards list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/dashboards")
+def create_dashboard(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a dashboard (MCP ``dashboards.create``, needsApproval).
+    Body: ``{title?, icon?, position?}`` — title defaults to ``Dashboard``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    title = payload.get("title")
+    if title is None or not str(title).strip():
+        title = "Dashboard"
+    args: Dict[str, Any] = {"title": str(title)[:200]}
+    if payload.get("icon") is not None:
+        args["icon"] = str(payload["icon"])[:50]
+    if payload.get("position") is not None:
+        args["position"] = int(payload["position"])
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "dashboards.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital dashboards create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/dashboards/widgets/{widget_id}/remove")
+def remove_dashboard_widget(widget_id: str) -> JSONResponse:
+    """Remove a dashboard widget (MCP ``dashboards.widgets.remove``,
+    needsApproval). The path id is the widget row id."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "dashboards.widgets.remove", {"id": widget_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital dashboards widget remove failed: %s", widget_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/dashboards/{dashboard_id}")
+def get_dashboard(dashboard_id: str) -> JSONResponse:
+    """Return a single dashboard by id (MCP ``dashboards.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "dashboards.get", {"id": dashboard_id})
+        dashboard = _single_or_bare(payload, "dashboard", "dashboards")
+        if dashboard is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "dashboard": _normalize_dashboard(dashboard)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital dashboards get failed: %s", dashboard_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/dashboards/{dashboard_id}/widgets")
+def list_dashboard_widgets(dashboard_id: str, limit: Optional[int] = None) -> JSONResponse:
+    """List a dashboard's widgets (read-only, MCP ``dashboards.widgets.list``)."""
+    try:
+        args: Dict[str, Any] = {"dashboardId": dashboard_id}
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "dashboards.widgets.list", args)
+        rows = _rows_from_services(payload, "widgets")
+        return JSONResponse(content={"ok": True, "widgets": [_normalize_dashboard_widget(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital dashboards widgets list failed: %s", dashboard_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/dashboards/{dashboard_id}/widgets")
+def add_dashboard_widget(dashboard_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a widget to a dashboard (MCP ``dashboards.widgets.add``,
+    needsApproval). Body: ``{spec, size?, positionIndex?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    spec = payload.get("spec")
+    if not isinstance(spec, dict):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "spec_required"})
+
+    args: Dict[str, Any] = {"dashboardId": dashboard_id, "spec": spec}
+    if payload.get("size") is not None:
+        size = str(payload["size"])
+        if size not in ("small", "medium", "large"):
+            return JSONResponse(status_code=422, content={"ok": False, "error": "invalid_size"})
+        args["size"] = size
+    if payload.get("positionIndex") is not None:
+        args["positionIndex"] = int(payload["positionIndex"])
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "dashboards.widgets.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital dashboards widgets add failed: %s", dashboard_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W8-UI-a — Pricing (pricing.*). Writes pass through the MCP HITL.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_pricing_profile(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital pricing-profile row onto ``PricingProfileRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "code": row.get("code") or "",
+        "name": row.get("name") or "",
+        "default_rate": (
+            row.get("defaultRate")
+            if row.get("defaultRate") is not None
+            else row.get("default_rate")
+        ),
+        "description": row.get("description"),
+        "exemption_reason": row.get("exemptionReason") or row.get("exemption_reason"),
+        "is_default": row.get("isDefault") if row.get("isDefault") is not None else row.get("is_default"),
+        "is_active": row.get("isActive") if row.get("isActive") is not None else row.get("is_active"),
+    }
+
+
+def _normalize_pricing_rule(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital pricing-rule row onto the ``PricingRuleRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "profile_id": str(row.get("profileId") or row.get("profile_id") or ""),
+        "kind": row.get("kind") or "",
+        "rate": row.get("rate"),
+        "description": row.get("description"),
+    }
+
+
+def _normalize_exemption(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital pricing-exemption row onto the ``ExemptionRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "source_type": row.get("sourceType") or row.get("source_type") or "",
+        "source_id": str(row.get("sourceId") or row.get("source_id") or ""),
+        "vat_number": row.get("vatNumber") or row.get("vat_number"),
+        "exemption_type": row.get("exemptionType") or row.get("exemption_type") or "",
+        "reason": row.get("reason"),
+        "valid_from": row.get("validFrom") or row.get("valid_from"),
+        "valid_until": row.get("validUntil") or row.get("valid_until"),
+    }
+
+
+def _normalize_fee(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital pricing-fee row onto the ``FeeRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "name": row.get("name") or "",
+        "code": row.get("code") or "",
+        "rate": row.get("rate"),
+        "active": row.get("active") if row.get("active") is not None else row.get("is_active"),
+        "description": row.get("description"),
+    }
+
+
+@router.get("/pricing/profiles")
+def list_pricing_profiles(
+    active: Optional[bool] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List pricing profiles (read-only, MCP ``pricing.profiles.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if active is not None:
+            args["active"] = bool(active)
+        if search is not None:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "pricing.profiles.list", args)
+        rows = _rows_from_services(payload, "profiles")
+        return JSONResponse(content={"ok": True, "profiles": [_normalize_pricing_profile(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing profiles list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/pricing/profiles/{id_or_code}")
+def get_pricing_profile(id_or_code: str) -> JSONResponse:
+    """Return a pricing profile by id or code (MCP ``pricing.profiles.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "pricing.profiles.get", _id_or_code(id_or_code))
+        profile = _single_or_bare(payload, "profile", "profiles")
+        if profile is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "profile": _normalize_pricing_profile(profile)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing profiles get failed: %s", id_or_code)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/pricing/rules")
+def list_pricing_rules(profileId: Optional[str] = None, limit: Optional[int] = None) -> JSONResponse:
+    """List pricing rules (read-only, MCP ``pricing.rules.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if profileId:
+            args["profileId"] = profileId
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "pricing.rules.list", args)
+        rows = _rows_from_services(payload, "rules")
+        return JSONResponse(content={"ok": True, "rules": [_normalize_pricing_rule(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing rules list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/pricing/exemptions")
+def list_pricing_exemptions(
+    sourceType: Optional[str] = None,
+    sourceId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List pricing exemptions (read-only, MCP ``pricing.exemptions.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if sourceType:
+            args["sourceType"] = str(sourceType)[:20]
+        if sourceId:
+            args["sourceId"] = sourceId
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "pricing.exemptions.list", args)
+        rows = _rows_from_services(payload, "exemptions")
+        return JSONResponse(content={"ok": True, "exemptions": [_normalize_exemption(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing exemptions list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/pricing/fees")
+def list_pricing_fees(
+    active: Optional[bool] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List pricing fees (read-only, MCP ``pricing.fees.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if active is not None:
+            args["active"] = bool(active)
+        if search is not None:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "pricing.fees.list", args)
+        rows = _rows_from_services(payload, "fees")
+        return JSONResponse(content={"ok": True, "fees": [_normalize_fee(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing fees list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/pricing/profiles")
+def create_pricing_profile(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a pricing profile (MCP ``pricing.profiles.create``, needsApproval).
+    Body: ``{code, name, defaultRate?, description?, exemptionReason?, isDefault?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    code = payload.get("code")
+    name = payload.get("name")
+    if not code or not str(code).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "code_required"})
+    if not name or not str(name).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "name_required"})
+
+    args: Dict[str, Any] = {"code": str(code)[:120], "name": str(name)[:200]}
+    if payload.get("defaultRate") is not None:
+        args["defaultRate"] = max(0, min(100, int(payload["defaultRate"])))
+    if payload.get("description") is not None:
+        args["description"] = str(payload["description"])[:500]
+    if payload.get("exemptionReason") is not None:
+        args["exemptionReason"] = str(payload["exemptionReason"])[:30]
+    if payload.get("isDefault") is not None:
+        args["isDefault"] = bool(payload["isDefault"])
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "pricing.profiles.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing profiles create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/pricing/profiles/{profile_id}/update")
+def update_pricing_profile(profile_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update a pricing profile (MCP ``pricing.profiles.update``, needsApproval).
+    Body: ``{name?, defaultRate?, description?, isActive?}`` — nullable fields
+    pass through unchanged."""
+    if not isinstance(payload, dict):
+        payload = {}
+    args: Dict[str, Any] = {"id": profile_id}
+    if payload.get("name") is not None:
+        args["name"] = str(payload["name"])[:200]
+    if payload.get("defaultRate") is not None:
+        args["defaultRate"] = max(0, min(100, int(payload["defaultRate"])))
+    if payload.get("description") is not None:
+        args["description"] = payload["description"]
+    if payload.get("isActive") is not None:
+        args["isActive"] = bool(payload["isActive"])
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "pricing.profiles.update", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing profiles update failed: %s", profile_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/pricing/exemptions")
+def add_pricing_exemption(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a pricing exemption (MCP ``pricing.exemptions.add``, needsApproval).
+    Body: ``{sourceType, sourceId, vatNumber?, exemptionType, reason?,
+    validFrom?, validUntil?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    source_type = payload.get("sourceType")
+    source_id = payload.get("sourceId")
+    exemption_type = payload.get("exemptionType")
+    if source_type not in ("person", "customer"):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "invalid_source_type"})
+    if not source_id:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "source_id_required"})
+    if exemption_type not in ("reverse_charge", "exempt_org", "intra_eu", "export"):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "invalid_exemption_type"})
+
+    args: Dict[str, Any] = {
+        "sourceType": str(source_type),
+        "sourceId": str(source_id),
+        "exemptionType": str(exemption_type),
+    }
+    if payload.get("vatNumber") is not None:
+        args["vatNumber"] = str(payload["vatNumber"])[:40]
+    if payload.get("reason") is not None:
+        args["reason"] = str(payload["reason"])[:500]
+    if payload.get("validFrom") is not None:
+        args["validFrom"] = payload["validFrom"]
+    if payload.get("validUntil") is not None:
+        args["validUntil"] = payload["validUntil"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "pricing.exemptions.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital pricing exemptions add failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W8-UI-a — Attendance (attendance.*). Writes pass through the MCP HITL.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_attendance_item(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital attendance-item row onto ``AttendanceItemRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "title": row.get("title") or row.get("name") or "",
+        "kind": row.get("kind") or "",
+        "status": row.get("status") or "",
+        "priority": row.get("priority") or "",
+        "assignee_id": str(row.get("assigneeId") or row.get("assignee_id") or "") or None,
+        "metadata": row.get("metadata") if isinstance(row.get("metadata"), dict) else None,
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+@router.get("/attendance/items")
+def list_attendance_items(
+    kind: Optional[str] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    assigneeId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List attendance items (read-only, MCP ``attendance.items.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if kind:
+            args["kind"] = str(kind)[:64]
+        if status:
+            args["status"] = str(status)[:20]
+        if priority:
+            args["priority"] = str(priority)[:10]
+        if assigneeId:
+            args["assigneeId"] = assigneeId
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "attendance.items.list", args)
+        rows = _rows_from_services(payload, "items")
+        return JSONResponse(content={"ok": True, "items": [_normalize_attendance_item(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital attendance items list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/attendance/items/{item_id}")
+def get_attendance_item(item_id: str) -> JSONResponse:
+    """Return a single attendance item by id (MCP ``attendance.items.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "attendance.items.get", {"id": item_id})
+        item = _single_or_bare(payload, "item", "items")
+        if item is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "item": _normalize_attendance_item(item)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital attendance items get failed: %s", item_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/attendance/items/{item_id}/assign")
+def assign_attendance_item(item_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Assign an attendance item (MCP ``attendance.items.assign``,
+    needsApproval). Body: ``{assigneeId}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    assignee_id = payload.get("assigneeId")
+    if not assignee_id:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "assignee_id_required"})
+
+    args: Dict[str, Any] = {"id": item_id, "assigneeId": str(assignee_id)}
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "attendance.items.assign", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital attendance items assign failed: %s", item_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/attendance/items/{item_id}/status")
+def update_attendance_status(item_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update an attendance item's status (MCP ``attendance.items.update_status``,
+    needsApproval). Body: ``{status, metadata?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    status = payload.get("status")
+    if not status or not str(status).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "status_required"})
+
+    args: Dict[str, Any] = {"id": item_id, "status": str(status)}
+    if payload.get("metadata") is not None:
+        args["metadata"] = payload["metadata"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "attendance.items.update_status", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital attendance items update_status failed: %s", item_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W8-UI-a — LLM Studio (llm_studio.*). Writes pass through the MCP HITL.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_dataset(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital dataset row onto the ``DatasetRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "name": row.get("name") or "",
+        "status": row.get("status") or "",
+        "source_type": row.get("sourceType") or row.get("source_type") or "",
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+def _normalize_llm_job(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital LLM job row onto the ``LlmJobRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "name": row.get("name") or "",
+        "status": row.get("status") or "",
+        "dataset_id": str(row.get("datasetId") or row.get("dataset_id") or "") or None,
+        "created_at": row.get("createdAt") or row.get("created_at"),
+    }
+
+
+def _normalize_llm_adapter(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital LLM adapter row onto the ``LlmAdapterRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "name": row.get("name") or "",
+        "status": row.get("status") or "",
+        "scope": row.get("scope") or "",
+        "active": row.get("active") if row.get("active") is not None else row.get("is_active"),
+    }
+
+
+def _llm_preferences_from(payload: Any) -> Optional[Dict[str, Any]]:
+    """Pull LLM Studio preferences, tolerating a wrapper key or a bare object."""
+    if isinstance(payload, dict):
+        for key in ("preferences", "config"):
+            value = payload.get(key)
+            if isinstance(value, dict):
+                return value
+        if any(k in payload for k in ("activeAdapterId", "inferenceBackend", "fallbackToGeneric")):
+            return payload
+    return None
+
+
+def _normalize_llm_preferences(row: Any) -> Dict[str, Any]:
+    """Map CEODigital LLM Studio preferences onto ``LlmPreferencesRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "active_adapter_id": (
+            row.get("activeAdapterId") or row.get("active_adapter_id") or None
+        ),
+        "inference_backend": row.get("inferenceBackend") or row.get("inference_backend") or "",
+        "fallback_to_generic": (
+            row.get("fallbackToGeneric")
+            if row.get("fallbackToGeneric") is not None
+            else row.get("fallback_to_generic")
+        ),
+    }
+
+
+@router.get("/llmstudio/datasets")
+def list_llm_datasets(
+    status: Optional[str] = None,
+    sourceType: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List LLM Studio datasets (read-only, MCP ``llm_studio.datasets.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = str(status)[:64]
+        if sourceType:
+            args["sourceType"] = str(sourceType)[:64]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "llm_studio.datasets.list", args)
+        rows = _rows_from_services(payload, "datasets")
+        return JSONResponse(content={"ok": True, "datasets": [_normalize_dataset(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio datasets list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/llmstudio/jobs")
+def list_llm_jobs(
+    status: Optional[str] = None,
+    datasetId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List LLM Studio jobs (read-only, MCP ``llm_studio.jobs.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = str(status)[:64]
+        if datasetId:
+            args["datasetId"] = datasetId
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "llm_studio.jobs.list", args)
+        rows = _rows_from_services(payload, "jobs")
+        return JSONResponse(content={"ok": True, "jobs": [_normalize_llm_job(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio jobs list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/llmstudio/jobs/{job_id}")
+def get_llm_job(job_id: str) -> JSONResponse:
+    """Return a single LLM Studio job by id (MCP ``llm_studio.jobs.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "llm_studio.jobs.get", {"id": job_id})
+        job = _single_or_bare(payload, "job", "jobs")
+        if job is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "job": _normalize_llm_job(job)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio jobs get failed: %s", job_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/llmstudio/adapters")
+def list_llm_adapters(
+    status: Optional[str] = None,
+    scope: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List LLM Studio adapters (read-only, MCP ``llm_studio.adapters.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = str(status)[:64]
+        if scope:
+            args["scope"] = str(scope)[:64]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "llm_studio.adapters.list", args)
+        rows = _rows_from_services(payload, "adapters")
+        return JSONResponse(content={"ok": True, "adapters": [_normalize_llm_adapter(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio adapters list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/llmstudio/preferences")
+def get_llm_preferences() -> JSONResponse:
+    """Return LLM Studio preferences (read-only, MCP
+    ``llm_studio.preferences.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "llm_studio.preferences.get", {})
+        prefs = _llm_preferences_from(payload)
+        if prefs is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "preferences": _normalize_llm_preferences(prefs)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio preferences get failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/llmstudio/adapters/{adapter_id}/toggle")
+def toggle_llm_adapter(adapter_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Toggle an LLM adapter's active flag (MCP ``llm_studio.adapters.toggle``,
+    needsApproval). Body: ``{active}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    active = payload.get("active")
+    if not isinstance(active, bool):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "active_required"})
+
+    args: Dict[str, Any] = {"id": adapter_id, "active": active}
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "llm_studio.adapters.toggle", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio adapters toggle failed: %s", adapter_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/llmstudio/preferences")
+def update_llm_preferences(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update LLM Studio preferences (MCP ``llm_studio.preferences.update``,
+    needsApproval). Body: ``{activeAdapterId?, inferenceBackend?,
+    fallbackToGeneric?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    args: Dict[str, Any] = {}
+    if payload.get("activeAdapterId") is not None:
+        args["activeAdapterId"] = str(payload["activeAdapterId"])
+    if payload.get("inferenceBackend") is not None:
+        backend = str(payload["inferenceBackend"])
+        if backend not in ("together", "huggingface", "connector"):
+            return JSONResponse(status_code=422, content={"ok": False, "error": "invalid_inference_backend"})
+        args["inferenceBackend"] = backend
+    if payload.get("fallbackToGeneric") is not None:
+        args["fallbackToGeneric"] = bool(payload["fallbackToGeneric"])
+    if not args:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "fields_required"})
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "llm_studio.preferences.update", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital llm studio preferences update failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W8-UI-a — Workbench (workbench.pins.*). Writes pass through the MCP HITL.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_pin(row: Any) -> Dict[str, Any]:
+    """Map a CEODigital workbench pin onto the ``PinRow`` contract."""
+    if not isinstance(row, dict):
+        row = {}
+    return {
+        "id": str(row.get("id") or row.get("_id") or ""),
+        "subject_type": row.get("subjectType") or row.get("subject_type") or "",
+        "subject_id": str(row.get("subjectId") or row.get("subject_id") or ""),
+        "title": row.get("title"),
+        "note": row.get("note"),
+    }
+
+
+@router.get("/workbench/pins")
+def list_workbench_pins(subjectType: Optional[str] = None, limit: Optional[int] = None) -> JSONResponse:
+    """List workbench pins (read-only, MCP ``workbench.pins.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if subjectType:
+            args["subjectType"] = str(subjectType)[:80]
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workbench.pins.list", args)
+        rows = _rows_from_services(payload, "pins")
+        return JSONResponse(content={"ok": True, "pins": [_normalize_pin(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workbench pins list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workbench/pins/toggle")
+def toggle_workbench_pin(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Toggle a workbench pin (MCP ``workbench.pins.toggle``, needsApproval).
+    Body: ``{subjectType, subjectId, title?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    subject_type = payload.get("subjectType")
+    subject_id = payload.get("subjectId")
+    if not subject_type or not str(subject_type).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "subject_type_required"})
+    if not subject_id:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "subject_id_required"})
+
+    args: Dict[str, Any] = {"subjectType": str(subject_type)[:80], "subjectId": str(subject_id)}
+    if payload.get("title") is not None:
+        args["title"] = str(payload["title"])[:300] or None
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workbench.pins.toggle", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workbench pins toggle failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workbench/pins/{pin_id}/note")
+def set_pin_note(pin_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Set a pin's note (MCP ``workbench.pins.set_note``, needsApproval).
+    Body: ``{note}`` — pass ``null`` to clear the note."""
+    if not isinstance(payload, dict):
+        payload = {}
+    if "note" not in payload:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "note_required"})
+    note = payload["note"]
+    args: Dict[str, Any] = {"id": pin_id, "note": str(note)[:2000] if note is not None else None}
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workbench.pins.set_note", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workbench pins note failed: %s", pin_id)
         return _maybe_error(ERR_UNREACHABLE)

@@ -24,16 +24,20 @@ import { bindApi } from './api'
 import { CEODIGITAL_LOCALES } from './i18n'
 import { ActivitiesPage } from './pages/Activities'
 import { AgentsPage } from './pages/Agents'
+import { AttendancePage } from './pages/Attendance'
 import { BindingsPage } from './pages/Bindings'
 import { CatalogPage } from './pages/Catalog'
 import { CollectionsPage } from './pages/Collections'
 import { ConversationsPage } from './pages/Conversations'
+import { DashboardsPage } from './pages/Dashboards'
 import { DealsPage } from './pages/Deals'
 import { DepartmentsPage } from './pages/Departments'
 import { DocumentsPage } from './pages/Documents'
 import { ImplementationsPage } from './pages/Implementations'
 import { IntegrationsPage } from './pages/Integrations'
+import { LabelsPage } from './pages/Labels'
 import { LeadsPage } from './pages/Leads'
+import { LlmStudioPage } from './pages/LlmStudio'
 import { MembersPage } from './pages/Members'
 import { MessagingPage } from './pages/Messaging'
 import { NotificationsPage } from './pages/Notifications'
@@ -44,9 +48,11 @@ import { GovernancePage } from './pages/Governance'
 import { PersonsPage } from './pages/Persons'
 import { PipelinesPage } from './pages/Pipelines'
 import { PlaybooksPage } from './pages/Playbooks'
+import { PricingPage } from './pages/Pricing'
 import { ProjectsPage } from './pages/Projects'
 import { ProposalsPage } from './pages/Proposals'
 import { TimelinePage } from './pages/Timeline'
+import { WorkbenchPage } from './pages/Workbench'
 import { WorkflowsPage } from './pages/Workflows'
 import { WorkitemsPage } from './pages/Workitems'
 import { WorkspacesPage } from './pages/Workspaces'
@@ -771,6 +777,162 @@ const plugin: HermesPlugin = {
           label: t('governance.title'),
           keywords: ['ceodigital', 'governance', 'dsr', 'consents', 'gdpr'],
           run: () => host.navigate('/ceodigital/governance')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'labels-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/labels' } satisfies RouteContribution,
+        render: () => <LabelsPage />
+      },
+      {
+        id: 'labels-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 67,
+        data: {
+          codicon: 'tag',
+          label: t('labels.title'),
+          path: '/ceodigital/labels'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-labels',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openLabels',
+          label: t('labels.title'),
+          keywords: ['ceodigital', 'labels', 'tags', 'categories'],
+          run: () => host.navigate('/ceodigital/labels')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'dashboards-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/dashboards' } satisfies RouteContribution,
+        render: () => <DashboardsPage />
+      },
+      {
+        id: 'dashboards-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 68,
+        data: {
+          codicon: 'graph',
+          label: t('dashboards.title'),
+          path: '/ceodigital/dashboards'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-dashboards',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openDashboards',
+          label: t('dashboards.title'),
+          keywords: ['ceodigital', 'dashboards', 'widgets', 'panels'],
+          run: () => host.navigate('/ceodigital/dashboards')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'pricing-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/pricing' } satisfies RouteContribution,
+        render: () => <PricingPage />
+      },
+      {
+        id: 'pricing-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 69,
+        data: {
+          codicon: 'percentage',
+          label: t('pricing.title'),
+          path: '/ceodigital/pricing'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-pricing',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openPricing',
+          label: t('pricing.title'),
+          keywords: ['ceodigital', 'pricing', 'profiles', 'rates', 'fees'],
+          run: () => host.navigate('/ceodigital/pricing')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'attendance-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/attendance' } satisfies RouteContribution,
+        render: () => <AttendancePage />
+      },
+      {
+        id: 'attendance-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 70,
+        data: {
+          codicon: 'calendar',
+          label: t('attendance.title'),
+          path: '/ceodigital/attendance'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-attendance',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openAttendance',
+          label: t('attendance.title'),
+          keywords: ['ceodigital', 'attendance', 'presence', 'shifts'],
+          run: () => host.navigate('/ceodigital/attendance')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'llmstudio-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/llmstudio' } satisfies RouteContribution,
+        render: () => <LlmStudioPage />
+      },
+      {
+        id: 'llmstudio-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 71,
+        data: {
+          codicon: 'sparkle',
+          label: t('llmStudio.title'),
+          path: '/ceodigital/llmstudio'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-llmstudio',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openLlmStudio',
+          label: t('llmStudio.title'),
+          keywords: ['ceodigital', 'llm', 'studio', 'datasets', 'adapters', 'fine-tuning'],
+          run: () => host.navigate('/ceodigital/llmstudio')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'workbench-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/workbench' } satisfies RouteContribution,
+        render: () => <WorkbenchPage />
+      },
+      {
+        id: 'workbench-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 72,
+        data: {
+          codicon: 'pin',
+          label: t('workbench.title'),
+          path: '/ceodigital/workbench'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-workbench',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openWorkbench',
+          label: t('workbench.title'),
+          keywords: ['ceodigital', 'workbench', 'pins', 'shortcuts'],
+          run: () => host.navigate('/ceodigital/workbench')
         } satisfies PaletteContribution
       }
     ])
