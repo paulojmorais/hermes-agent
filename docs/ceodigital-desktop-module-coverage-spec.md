@@ -5,6 +5,15 @@
 > **Autor:** Hermes (CEODigital Agent) · **Última atualização:** 2026-08-18 (W1–W5 entregues)
 > **Objetivo:** gerir **todo** o CEODigital a partir do desktop Hermes (plugin `ceodigital`), cobrindo todos os módulos que a plataforma já expõe via MCP e os que ainda não foram expostos.
 
+> **⚠️ ESTADO ARQUITETURAL — PAUSA (2026-08-18):** a direção do produto mudou. O CEODigital corre localmente
+> em Docker (`deploy/onprem/docker-compose.yml`, DR-10: TSS + Supabase + Ollama + relay) e **a UI de negócio
+> já vive no próprio TSS** (o produto cloud completo roda local). Por isso a superfície de gestão não deve
+> duplicar-se no fork Hermes: **o Hermes deve ser motor oculto / MCP client do TSS local**, não clone de UI.
+> **Trabalho da UI de negócio neste plugin ficou pausado** (W1–W7 commitadas e pusheadas; W8-UI-a commitada
+> **local, não pusheada** `317affd0c9`; W8-UI-b não iniciada). Decisão pendente: arquivar vs reutilizar a
+> *camada MCP* (rotas/normalizers em `plugin_api.py` servem o Connector/TSS como client — não a UI). A MCP
+> surface (tools por módulo) continua válida e documentada abaixo.
+
 ---
 
 ## 1. Contexto e propósito
