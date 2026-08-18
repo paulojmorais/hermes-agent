@@ -610,6 +610,187 @@ def list_workitems() -> JSONResponse:
         return _maybe_error(ERR_UNREACHABLE)
 
 
+# Literal work-items sub-routes (status / suggest) are declared BEFORE the
+# parametrized ``/workitems/{workitem_id}`` below so ``/workitems/status`` isn't
+# captured as a work-item id.
+
+
+@router.get("/workitems/status")
+def workitems_status(filter: Optional[str] = None) -> JSONResponse:
+    """List the caller's work items grouped by a status lens (read-only, MCP
+    ``workitems.status``). Optional ``filter`` (``mine`` | ``due_soon`` |
+    ``awaiting_approval``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if filter:
+            args["filter"] = filter
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workitems.status", args)
+        return JSONResponse(content={"ok": True, "workitems": _normalize_from_payload(payload)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: workitems status failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/workitems/suggest")
+def suggest_workitems(intent: Optional[str] = None, limit: Optional[int] = None) -> JSONResponse:
+    """Suggest matching SOPs/work items for an intent (read-only, MCP
+    ``workitems.suggest``)."""
+    if not intent or not str(intent).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "intent_required"})
+
+    try:
+        args: Dict[str, Any] = {"intent": str(intent)}
+        if limit:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workitems.suggest", args)
+        suggestions = payload.get("suggestions") if isinstance(payload, dict) else payload
+        if not isinstance(suggestions, list):
+            suggestions = []
+        return JSONResponse(content={"ok": True, "suggestions": suggestions})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: workitems suggest failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workitems")
+def create_workitem(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a work item (MCP ``workitems.create``, needsApproval). Body maps
+    1:1 to the MCP tool input; ``title`` and ``subject_type`` are required."""
+    if not isinstance(payload, dict):
+        payload = {}
+    title = payload.get("title")
+    subject_type = payload.get("subject_type")
+    if not title or not str(title).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "title_required"})
+    if not subject_type or not str(subject_type).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "subject_type_required"})
+
+    args: Dict[str, Any] = {"title": str(title), "subject_type": str(subject_type)}
+    for key in (
+        "description", "catalog_code", "subject_id", "due_at", "inputs",
+        "resource_kind", "flow_id", "auto_run",
+    ):
+        if payload.get(key) is not None:
+            args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workitems.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workitems create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workitems/{workitem_id}/run")
+def run_workitem(workitem_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Run a work item's flow (MCP ``workitems.run``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workitems.run", {"work_item_id": workitem_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workitems run failed: %s", workitem_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workitems/{workitem_id}/assign")
+def assign_workitem(workitem_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Assign/unassign users on a work item (MCP ``workitems.assign``,
+    needsApproval). Body: ``{add?: string[], remove?: string[], role?: string}``
+    with ``role`` defaulting to ``owner``."""
+    args: Dict[str, Any] = {"work_item_id": workitem_id, "role": "owner"}
+    if isinstance(payload, dict):
+        if payload.get("add") is not None:
+            args["add"] = payload["add"]
+        if payload.get("remove") is not None:
+            args["remove"] = payload["remove"]
+        if payload.get("role") is not None:
+            args["role"] = payload["role"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workitems.assign", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workitems assign failed: %s", workitem_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workitems/{workitem_id}/submit")
+def submit_workitem_output(workitem_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Submit a run's output for a work item (MCP ``workitems.submit_output``,
+    needsApproval). Body: ``{run_id, output, notes?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    run_id = payload.get("run_id")
+    output = payload.get("output")
+    if not run_id:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "run_id_required"})
+    if output is None:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "output_required"})
+
+    args: Dict[str, Any] = {
+        "work_item_id": workitem_id,
+        "run_id": str(run_id),
+        "output": output,
+    }
+    if payload.get("notes") is not None:
+        args["notes"] = payload["notes"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workitems.submit_output", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workitems submit failed: %s", workitem_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workitems/{workitem_id}/checklist")
+def toggle_checklist_item(workitem_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Toggle a checklist item's done flag (MCP ``workitems.checklist.toggle``,
+    needsApproval). Body: ``{checklist_item_id, done}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    checklist_item_id = payload.get("checklist_item_id")
+    done = payload.get("done")
+    if not checklist_item_id:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "checklist_item_id_required"})
+    if not isinstance(done, bool):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "done_required"})
+
+    args: Dict[str, Any] = {
+        "work_item_id": workitem_id,
+        "checklist_item_id": str(checklist_item_id),
+        "done": done,
+    }
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workitems.checklist.toggle", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workitems checklist toggle failed: %s", workitem_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
 @router.get("/workitems/{workitem_id}")
 def get_workitem(workitem_id: str) -> JSONResponse:
     """Return a single work item by id (MCP ``workitems_get``)."""

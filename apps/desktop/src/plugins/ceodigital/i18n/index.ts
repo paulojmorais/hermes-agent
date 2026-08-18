@@ -39,6 +39,72 @@ export interface CeodigitalMessages {
     }
     unassigned: string
   }
+  workitems: {
+    title: string
+    empty: string
+    openCommand: string
+    filters: {
+      all: string
+      mine: string
+      dueSoon: string
+      awaitingApproval: string
+    }
+    toolbar: {
+      new: string
+      suggest: string
+      suggestPlaceholder: string
+      suggestRun: string
+      suggestEmpty: string
+    }
+    form: {
+      title: string
+      subjectType: string
+      subjectTypePlaceholder: string
+      description: string
+      due: string
+      create: string
+      cancel: string
+    }
+    actions: {
+      run: string
+      assign: string
+      submitOutput: string
+      running: string
+      assigning: string
+      submitting: string
+    }
+    assign: {
+      title: string
+      add: string
+      remove: string
+      role: string
+      save: string
+      empty: string
+    }
+    submit: {
+      title: string
+      runId: string
+      output: string
+      notes: string
+      send: string
+    }
+    checklist: {
+      title: string
+      itemLabel: string
+      doneLabel: string
+      toggle: string
+      empty: string
+    }
+    errors: {
+      create: string
+      run: string
+      assign: string
+      submit: string
+      checklist: string
+      suggest: string
+      general: string
+    }
+  }
   crm: {
     leads: { title: string; empty: string }
     deals: { title: string; empty: string }

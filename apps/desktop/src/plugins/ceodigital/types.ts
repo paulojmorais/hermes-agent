@@ -350,3 +350,105 @@ export const WORKITEM_STATUSES = [
 ] as const
 
 export type WorkItemStatus = (typeof WORKITEM_STATUSES)[number]
+
+// ── Workitems operational (W2) — create/run/assign/submit/checklist/suggest ──
+
+/** GET /workitems/status — status lens filter values. */
+export type WorkItemStatusFilter = 'mine' | 'due_soon' | 'awaiting_approval'
+
+/** GET /workitems/status — success envelope (reuses the row shape). */
+export interface WorkItemsStatusResponse {
+  ok: true
+  workitems: WorkItemRow[]
+}
+
+/** GET /workitems/suggest — a matched SOP suggestion row. */
+export interface SuggestRow {
+  id?: string
+  title?: string
+  label?: string
+  catalog_code?: string
+  score?: number
+  [key: string]: unknown
+}
+
+/** GET /workitems/suggest — success envelope. */
+export interface SuggestResponse {
+  ok: true
+  suggestions: SuggestRow[]
+}
+
+/** POST /workitems — create input (maps 1:1 to MCP workitems.create). */
+export interface WorkItemInput {
+  title: string
+  subject_type: string
+  description?: string
+  catalog_code?: string
+  subject_id?: string
+  due_at?: string
+  inputs?: Record<string, unknown>
+  resource_kind?: string
+  flow_id?: string
+  auto_run?: boolean
+}
+
+/** POST /workitems — success envelope (MCP returns the created item). */
+export interface CreateWorkItemResponse {
+  ok: true
+  result: Partial<WorkItemRow> & Record<string, unknown>
+}
+
+/** POST /workitems/{id}/run — success envelope. */
+export interface RunWorkItemResponse {
+  ok: true
+  result: { run_id?: string; status?: string } & Record<string, unknown>
+}
+
+/** POST /workitems/{id}/assign — input body. */
+export interface AssignBody {
+  add?: string[]
+  remove?: string[]
+  role?: string
+}
+
+/** POST /workitems/{id}/assign — success envelope. */
+export interface AssignWorkItemResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+/** POST /workitems/{id}/submit — input body. */
+export interface SubmitBody {
+  run_id: string
+  output: Record<string, unknown>
+  notes?: string
+}
+
+/** POST /workitems/{id}/submit — success envelope. */
+export interface SubmitWorkItemResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+/** POST /workitems/{id}/checklist — input body. */
+export interface ChecklistToggleBody {
+  checklist_item_id: string
+  done: boolean
+}
+
+/** POST /workitems/{id}/checklist — success envelope. */
+export interface ChecklistToggleResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+/** Shared typed failure envelope for the operational (W2) actions. */
+export type WorkItemActionError = CrmError
+
+export type WorkItemsStatusEnvelope = WorkItemsStatusResponse | CrmError
+export type SuggestEnvelope = SuggestResponse | CrmError
+export type CreateWorkItemEnvelope = CreateWorkItemResponse | CrmError
+export type RunWorkItemEnvelope = RunWorkItemResponse | CrmError
+export type AssignWorkItemEnvelope = AssignWorkItemResponse | CrmError
+export type SubmitWorkItemEnvelope = SubmitWorkItemResponse | CrmError
+export type ChecklistToggleEnvelope = ChecklistToggleResponse | CrmError

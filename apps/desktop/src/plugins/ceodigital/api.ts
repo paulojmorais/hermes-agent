@@ -20,7 +20,12 @@ import type {
   AgentRunsEnvelope,
   AgentSchedulesEnvelope,
   AgentsEnvelope,
+  AssignBody,
+  AssignWorkItemEnvelope,
   CategoriesEnvelope,
+  ChecklistToggleBody,
+  ChecklistToggleEnvelope,
+  CreateWorkItemEnvelope,
   DealsEnvelope,
   LeadsEnvelope,
   OrganizationsEnvelope,
@@ -28,9 +33,16 @@ import type {
   PersonsEnvelope,
   PersonEnvelope,
   PipelinesEnvelope,
+  RunWorkItemEnvelope,
   StagesEnvelope,
+  SubmitBody,
+  SubmitWorkItemEnvelope,
+  SuggestEnvelope,
+  WorkItemInput,
   WorkItemResponse,
-  WorkItemsEnvelope
+  WorkItemsEnvelope,
+  WorkItemsStatusEnvelope,
+  WorkItemStatusFilter
 } from './types'
 
 type Rest = <T>(path: string, opts?: PluginRestOptions) => Promise<T>
@@ -69,6 +81,42 @@ export const fetchWorkItems = () => call<WorkItemsEnvelope>('/workitems')
 
 /** GET /workitems/{id} — one work item's detail. */
 export const fetchWorkItem = (id: string) => call<WorkItemResponse>(`/workitems/${encodeURIComponent(id)}`)
+
+// ── Workitems operational (W2) — status / suggest / create / run / assign /
+//    submit / checklist (proxy over the MCP workitems.* tools) ───────────────
+
+export const WORKITEMS_STATUS_KEY = ['ceodigital', 'workitems-status'] as const
+
+/** GET /workitems/status — a status-lens grouping (MCP workitems.status). */
+export const fetchWorkItemsStatus = (filter?: WorkItemStatusFilter) =>
+  call<WorkItemsStatusEnvelope>(filter ? `/workitems/status?filter=${encodeURIComponent(filter)}` : '/workitems/status')
+
+/** GET /workitems/suggest — matched SOPs for an intent (MCP workitems.suggest). */
+export const suggestWorkItem = (intent: string, limit?: number) => {
+  const qs = new URLSearchParams({ intent })
+  if (limit) qs.set('limit', String(limit))
+  return call<SuggestEnvelope>(`/workitems/suggest?${qs.toString()}`)
+}
+
+/** POST /workitems — create a work item (MCP workitems.create, needsApproval). */
+export const createWorkItem = (input: WorkItemInput) =>
+  call<CreateWorkItemEnvelope>('/workitems', { method: 'POST', body: input })
+
+/** POST /workitems/{id}/run — run a work item's flow (MCP workitems.run). */
+export const runWorkItem = (id: string) =>
+  call<RunWorkItemEnvelope>(`/workitems/${encodeURIComponent(id)}/run`, { method: 'POST', body: {} })
+
+/** POST /workitems/{id}/assign — assign/unassign users (MCP workitems.assign). */
+export const assignWorkItem = (id: string, body: AssignBody) =>
+  call<AssignWorkItemEnvelope>(`/workitems/${encodeURIComponent(id)}/assign`, { method: 'POST', body })
+
+/** POST /workitems/{id}/submit — submit a run's output (MCP workitems.submit_output). */
+export const submitWorkItemOutput = (id: string, body: SubmitBody) =>
+  call<SubmitWorkItemEnvelope>(`/workitems/${encodeURIComponent(id)}/submit`, { method: 'POST', body })
+
+/** POST /workitems/{id}/checklist — toggle a checklist item (MCP workitems.checklist.toggle). */
+export const toggleChecklistItem = (id: string, body: ChecklistToggleBody) =>
+  call<ChecklistToggleEnvelope>(`/workitems/${encodeURIComponent(id)}/checklist`, { method: 'POST', body })
 
 // ── CRM (W4) ────────────────────────────────────────────────────────────────
 

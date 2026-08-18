@@ -28,6 +28,72 @@ export const pt: CeodigitalMessages = {
     },
     unassigned: 'Sem responsável'
   },
+  workitems: {
+    title: 'Workitems CEODigital',
+    empty: 'Ainda não há workitems para o teu tenant.',
+    openCommand: 'CEODigital: Abrir Workitems',
+    filters: {
+      all: 'Todos',
+      mine: 'Meus',
+      dueSoon: 'Previstos em breve',
+      awaitingApproval: 'A aguardar aprovação'
+    },
+    toolbar: {
+      new: 'Novo Work Item',
+      suggest: 'Sugerir',
+      suggestPlaceholder: 'Descreve o que precisas…',
+      suggestRun: 'Encontrar SOPs correspondentes',
+      suggestEmpty: 'Nenhum SOP correspondeu a esta intenção.'
+    },
+    form: {
+      title: 'Título',
+      subjectType: 'Tipo de assunto',
+      subjectTypePlaceholder: 'project, deal, lead…',
+      description: 'Descrição',
+      due: 'Previsto para',
+      create: 'Criar work item',
+      cancel: 'Cancelar'
+    },
+    actions: {
+      run: 'Executar',
+      assign: 'Atribuir',
+      submitOutput: 'Submeter saída',
+      running: 'A executar…',
+      assigning: 'A atribuir…',
+      submitting: 'A submeter…'
+    },
+    assign: {
+      title: 'Atribuir',
+      add: 'Adicionar (ids de utilizadores)',
+      remove: 'Remover (ids de utilizadores)',
+      role: 'Função',
+      save: 'Guardar atribuição',
+      empty: 'Sem utilizadores para mostrar.'
+    },
+    submit: {
+      title: 'Submeter saída',
+      runId: 'Id do run',
+      output: 'Saída (JSON)',
+      notes: 'Notas',
+      send: 'Submeter'
+    },
+    checklist: {
+      title: 'Checklist',
+      itemLabel: 'Id do item da checklist',
+      doneLabel: 'Concluído',
+      toggle: 'Alternar',
+      empty: 'Nenhum item de checklist fornecido para este work item.'
+    },
+    errors: {
+      create: 'Não foi possível criar o work item.',
+      run: 'Não foi possível executar o work item.',
+      assign: 'Não foi possível atualizar a atribuição.',
+      submit: 'Não foi possível submeter a saída.',
+      checklist: 'Não foi possível alternar o item da checklist.',
+      suggest: 'Não foi possível obter as sugestões de SOP.',
+      general: 'A ação falhou. Tenta novamente.'
+    }
+  },
   crm: {
     leads: {
       title: 'Leads CEODigital',

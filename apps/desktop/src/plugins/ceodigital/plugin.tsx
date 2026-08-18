@@ -30,6 +30,7 @@ import { OrganizationsPage } from './pages/Organizations'
 import { PersonsPage } from './pages/Persons'
 import { PipelinesPage } from './pages/Pipelines'
 import { ProjectsPage } from './pages/Projects'
+import { WorkitemsPage } from './pages/Workitems'
 
 const plugin: HermesPlugin = {
   id: 'ceodigital',
@@ -45,6 +46,32 @@ const plugin: HermesPlugin = {
     const t = ctx.i18n.t
 
     ctx.registerMany([
+      {
+        id: 'workitems-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/workitems' } satisfies RouteContribution,
+        render: () => <WorkitemsPage />
+      },
+      {
+        id: 'workitems-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 39,
+        data: {
+          codicon: 'checklist',
+          label: t('workitems.title'),
+          path: '/ceodigital/workitems'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-workitems',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openWorkitems',
+          label: t('workitems.title'),
+          keywords: ['ceodigital', 'workitems', 'work', 'sop'],
+          run: () => host.navigate('/ceodigital/workitems')
+        } satisfies PaletteContribution
+      },
       {
         id: 'projects-page',
         area: ROUTES_AREA,

@@ -28,6 +28,72 @@ export const fr: CeodigitalMessages = {
     },
     unassigned: 'Non assigné'
   },
+  workitems: {
+    title: 'Workitems CEODigital',
+    empty: 'Aucun work item pour votre tenant pour le moment.',
+    openCommand: 'CEODigital : Ouvrir les workitems',
+    filters: {
+      all: 'Tous',
+      mine: 'Les miens',
+      dueSoon: 'À échéance proche',
+      awaitingApproval: 'En attente d’approbation'
+    },
+    toolbar: {
+      new: 'Nouveau work item',
+      suggest: 'Suggérer',
+      suggestPlaceholder: 'Décrivez ce dont vous avez besoin…',
+      suggestRun: 'Trouver des SOP correspondants',
+      suggestEmpty: 'Aucun SOP ne correspond à cette intention.'
+    },
+    form: {
+      title: 'Titre',
+      subjectType: 'Type de sujet',
+      subjectTypePlaceholder: 'project, deal, lead…',
+      description: 'Description',
+      due: 'Échéance',
+      create: 'Créer le work item',
+      cancel: 'Annuler'
+    },
+    actions: {
+      run: 'Exécuter',
+      assign: 'Assigner',
+      submitOutput: 'Soumettre la sortie',
+      running: 'En cours…',
+      assigning: 'Assignation…',
+      submitting: 'Envoi…'
+    },
+    assign: {
+      title: 'Assigner',
+      add: 'Ajouter (ids utilisateurs)',
+      remove: 'Retirer (ids utilisateurs)',
+      role: 'Rôle',
+      save: 'Enregistrer l’assignation',
+      empty: 'Aucun utilisateur à afficher.'
+    },
+    submit: {
+      title: 'Soumettre la sortie',
+      runId: 'Id du run',
+      output: 'Sortie (JSON)',
+      notes: 'Notes',
+      send: 'Soumettre'
+    },
+    checklist: {
+      title: 'Checklist',
+      itemLabel: 'Id de l’élément de la checklist',
+      doneLabel: 'Terminé',
+      toggle: 'Basculer',
+      empty: 'Aucun élément de checklist fourni pour ce work item.'
+    },
+    errors: {
+      create: 'Impossible de créer le work item.',
+      run: 'Impossible d’exécuter le work item.',
+      assign: 'Impossible de mettre à jour l’assignation.',
+      submit: 'Impossible de soumettre la sortie.',
+      checklist: 'Impossible de basculer l’élément de la checklist.',
+      suggest: 'Impossible de récupérer les suggestions de SOP.',
+      general: 'L’action a échoué. Réessayez.'
+    }
+  },
   crm: {
     leads: {
       title: 'Leads CEODigital',

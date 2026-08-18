@@ -259,6 +259,314 @@ def test_workitem_detail_unknown_id_returns_not_found(plugin, client, monkeypatc
 
 
 # ---------------------------------------------------------------------------
+# Workitems operational (W2) — status, suggest + the POST actions
+# ---------------------------------------------------------------------------
+
+
+def test_workitems_status_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    # Monkeypatch the module-level _mcp_fetch to return rows.
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"workitems": [{"id": "wi-m1", "title": "My item", "status": "ready"}]}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.get("/api/plugins/ceodigital/workitems/status?filter=mine")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["workitems"][0]["id"] == "wi-m1"
+    assert captured["tool"] == "workitems.status"
+    assert captured["args"] == {"filter": "mine"}
+
+
+def test_workitems_status_without_filter(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["args"] = arguments
+        return {"workitems": []}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.get("/api/plugins/ceodigital/workitems/status")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "workitems": []}
+    assert captured["args"] == {}
+
+
+def test_workitems_status_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    resp = client.get("/api/plugins/ceodigital/workitems/status")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+def test_workitems_suggest_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"suggestions": [{"id": "sop-1", "title": "Onboarding SOP", "score": 0.9}]}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.get("/api/plugins/ceodigital/workitems/suggest?intent=onboard%20new%20client&limit=3")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["suggestions"][0]["id"] == "sop-1"
+    assert captured["tool"] == "workitems.suggest"
+    assert captured["args"] == {"intent": "onboard new client", "limit": 3}
+
+
+def test_workitems_suggest_default_limit(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, _tool_name, arguments):
+        captured["args"] = arguments
+        return {"suggestions": []}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.get("/api/plugins/ceodigital/workitems/suggest?intent=followup")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "suggestions": []}
+    assert "limit" not in captured["args"]
+    assert captured["args"] == {"intent": "followup"}
+
+
+def test_workitems_suggest_requires_intent(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.get("/api/plugins/ceodigital/workitems/suggest")
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "intent_required"}
+
+
+def test_workitems_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"id": "wi-new", "title": "Ship onboarding", "status": "backlog"}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/workitems",
+        json={
+            "title": "Ship onboarding",
+            "subject_type": "project",
+            "description": "Onboard beta clients",
+            "due_at": "2026-09-01T00:00:00Z",
+            "auto_run": True,
+        },
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["result"]["id"] == "wi-new"
+    assert captured["tool"] == "workitems.create"
+    assert captured["args"] == {
+        "title": "Ship onboarding",
+        "subject_type": "project",
+        "description": "Onboard beta clients",
+        "due_at": "2026-09-01T00:00:00Z",
+        "auto_run": True,
+    }
+
+
+def test_workitems_create_requires_title_and_subject(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/workitems", json={"subject_type": "project"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "title_required"}
+
+    resp = client.post("/api/plugins/ceodigital/workitems", json={"title": "x"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "subject_type_required"}
+
+
+def test_workitems_create_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    resp = client.post(
+        "/api/plugins/ceodigital/workitems",
+        json={"title": "x", "subject_type": "project"},
+    )
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+def test_workitems_run_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"run_id": "run-1", "status": "running"}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.post("/api/plugins/ceodigital/workitems/wi-1/run", json={})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["result"]["run_id"] == "run-1"
+    assert captured["tool"] == "workitems.run"
+    assert captured["args"] == {"work_item_id": "wi-1"}
+
+
+def test_workitems_assign_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"work_item_id": "wi-1"}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/workitems/wi-1/assign",
+        json={"add": ["u-1", "u-2"], "remove": ["u-3"], "role": "reviewer"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "workitems.assign"
+    assert captured["args"] == {
+        "work_item_id": "wi-1",
+        "role": "reviewer",
+        "add": ["u-1", "u-2"],
+        "remove": ["u-3"],
+    }
+
+
+def test_workitems_assign_defaults_role_owner(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, _tool_name, arguments):
+        captured["args"] = arguments
+        return {}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.post("/api/plugins/ceodigital/workitems/wi-1/assign", json={"add": ["u-9"]})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["args"] == {"work_item_id": "wi-1", "role": "owner", "add": ["u-9"]}
+
+
+def test_workitems_submit_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"accepted": True}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/workitems/wi-1/submit",
+        json={"run_id": "run-1", "output": {"summary": "done"}, "notes": "all green"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "workitems.submit_output"
+    assert captured["args"] == {
+        "work_item_id": "wi-1",
+        "run_id": "run-1",
+        "output": {"summary": "done"},
+        "notes": "all green",
+    }
+
+
+def test_workitems_submit_requires_run_id_and_output(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/workitems/wi-1/submit", json={"output": {}})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "run_id_required"}
+
+    resp = client.post("/api/plugins/ceodigital/workitems/wi-1/submit", json={"run_id": "r1"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "output_required"}
+
+
+def test_workitems_checklist_toggle_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+
+    def fake_mcp_fetch(_cfg, tool_name, arguments):
+        captured["tool"] = tool_name
+        captured["args"] = arguments
+        return {"item_id": "cli-1", "done": True}
+
+    monkeypatch.setattr(plugin, "_mcp_fetch", fake_mcp_fetch)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/workitems/wi-1/checklist",
+        json={"checklist_item_id": "cli-1", "done": True},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "workitems.checklist.toggle"
+    assert captured["args"] == {"work_item_id": "wi-1", "checklist_item_id": "cli-1", "done": True}
+
+
+def test_workitems_checklist_requires_fields(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/workitems/wi-1/checklist", json={"done": True})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "checklist_item_id_required"}
+
+    resp = client.post("/api/plugins/ceodigital/workitems/wi-1/checklist", json={"checklist_item_id": "cli-1"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "done_required"}
+
+
+def test_no_approve_or_reject_route_exposed(plugin):
+    """Certify the plugin never proxies approval/denial of work items — the
+    platform excludes ``workitems.approve``/``workitems.reject`` from MCP on
+    purpose; they stay in the tenant UI."""
+    source = pathlib.Path(plugin.__file__).read_text(encoding="utf-8")
+    assert "workitems.approve" not in source
+    assert "workitems.reject" not in source
+
+
+# ---------------------------------------------------------------------------
 # CRM (W4): leads + deals
 # ---------------------------------------------------------------------------
 
