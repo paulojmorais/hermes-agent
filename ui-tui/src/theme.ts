@@ -368,51 +368,53 @@ export function buildPalette(seeds: ThemeSeeds, isLight: boolean): ThemeColors {
 }
 
 export const DARK_SEEDS: ThemeSeeds = {
-  accent: '#FFBF00',
-  // The classic Hermes navy surfaces are IDENTITY, not derivation drift —
-  // keep them as explicit fill seeds (the ladder derives them for skins
-  // that don't care).
-  activeRow: '#333355',
-  bg: '#101014',
-  border: '#CD7F32',
+  accent: '#9E6CEF',
+  // The classic CEODigital violet/indigo surfaces are IDENTITY, not
+  // derivation drift — keep them as explicit fill seeds (the ladder derives
+  // them for skins that don't care).
+  activeRow: '#2B2370',
+  bg: '#0B0D19',
+  border: '#8249DF',
   error: '#ef5350',
-  ok: '#4caf50',
-  primary: '#FFD700',
-  prompt: '#FFF8DC',
-  selection: '#3a3a55',
-  shellDollar: '#4dabf7',
-  statusBad: '#FF8C00',
+  ok: '#1FE099',
+  primary: '#9E6CEF',
+  prompt: '#EAE4F8',
+  selection: '#392C7A',
+  shellDollar: '#00FFFF',
+  statusBad: '#E8873A',
   statusCritical: '#FF6B6B',
-  statusGood: '#8FBC8F',
-  statusWarn: '#FFD700',
-  surface: '#1a1a2e',
-  text: '#FFF8DC',
-  warn: '#ffa726'
+  statusGood: '#1FE099',
+  statusWarn: '#EBB447',
+  surface: '#19164A',
+  text: '#EAE4F8',
+  warn: '#EBB447'
 }
 
-// Light-terminal seeds: darker golds/ambers that stay legible on white.
-// The classic light-mode Hermes look was never hand-authored: for years the
-// TUI emitted the DARK golds and hosts with xterm's minimumContrastRatio
-// (Cursor defaults to 4.5) lifted them against white — hue and saturation
-// kept, luminance clamped. These seeds are those exact lifts
+// Light-terminal seeds: tamed indigo/periwinkle tones that stay legible on
+// white. The classic light-mode Hermes look was never hand-authored: for
+// years the TUI emitted the DARK golds and hosts with xterm's
+// minimumContrastRatio (Cursor defaults to 4.5) lifted them against white —
+// hue and saturation kept, luminance clamped. These seeds carry that same
+// WCAG-taming intent over to the CEODigital palette: the vivid DARK violet
+// and cyan are tempered into a periwinkle-indigo that passes on white
 // (liftForContrast(dark, '#ffffff', 4.5)), so hosts WITHOUT a contrast pass
-// render the same thing Cursor always showed. Text/prompt stay ink — body
-// copy historically rendered in the terminal's default near-black fg.
+// render the same hierarchy Cursor always showed. Text/prompt stay ink —
+// body copy historically rendered in the terminal's default near-black fg.
 export const LIGHT_SEEDS: ThemeSeeds = {
-  accent: '#956E00',
+  accent: '#6B46C1',
   bg: '#ffffff',
-  border: '#A56628',
-  error: '#C14240',
-  ok: '#367E39',
-  primary: '#867000',
-  prompt: '#2B2014',
-  shellDollar: '#377BB3',
-  statusBad: '#A65A00',
-  statusCritical: '#B94D4D',
-  statusGood: '#5C7A5C',
-  statusWarn: '#867000',
-  text: '#3D2F13',
-  warn: '#956115'
+  border: '#5A3FB8',
+  error: '#C62828',
+  ok: '#2E7D32',
+  primary: '#6B46C1',
+  prompt: '#2E2759',
+  shellDollar: '#1E6FC0',
+  statusBad: '#C2410C',
+  statusCritical: '#B91C1C',
+  statusGood: '#2E7D32',
+  statusWarn: '#93506F',
+  text: '#2E2759',
+  warn: '#934763'
 }
 
 export const DARK_THEME: Theme = {
@@ -464,11 +466,12 @@ export const LIGHT_THEME: Theme = {
 // tone. On a LIGHT background — which in practice means a TRANSPARENT Cursor/
 // terminal window compositing over a light editor, where xterm applies NO
 // contrast lift of its own (there is no solid bg to measure against) — the
-// beloved classic look is the authored palette rendered essentially RAW:
-// vivid #FFD700 gold (~1.36:1), not a WCAG-darkened mustard. So the light
-// floor is a near-invisible rescue only (catches cream #FFF8DC at 1.08 but
-// leaves the golds untouched). Pixel-sampled target: #F5C242 (L61 S90),
-// which the previous 1.45 floor crushed to #867000 (L26) — the reported mud.
+// CEODigital look is the authored palette rendered essentially RAW: vivid
+// electric violet #9E6CEF with cyan accents, not a WCAG-darkened periwinkle.
+// So the light floor is a near-invisible rescue only (catches lavender text
+// #EAE4F8 at ~1.1 but leaves the violet seeds untouched). The previous 1.45
+// floor crushed the palette to mud — the reported washout the 1.18 floor is
+// calibrated to avoid.
 const DISPLAY_MIN_CONTRAST = 1.45
 const SEMANTIC_MIN_CONTRAST = 2.2
 const LIGHT_DISPLAY_MIN_CONTRAST = 1.18
@@ -550,7 +553,7 @@ function referenceBackground(isLight: boolean, env: NodeJS.ProcessEnv = process.
     return cached.startsWith('#') ? cached : `#${cached}`
   }
 
-  return isLight ? '#ffffff' : '#101014'
+  return isLight ? LIGHT_SEEDS.bg : DARK_SEEDS.bg
 }
 
 // ── Derived tone ladder (the desktop color-mix system) ──────────────
