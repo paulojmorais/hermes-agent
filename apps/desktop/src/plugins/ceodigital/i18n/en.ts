@@ -37,6 +37,53 @@ export const en: CeodigitalMessages = {
       title: 'CEODigital Deals',
       empty: 'No CRM deals found for your tenant yet.'
     },
+    persons: {
+      title: 'CEODigital Persons',
+      empty: 'No CRM persons found for your tenant yet.',
+      headers: {
+        email: 'Email',
+        org: 'Organization'
+      }
+    },
+    organizations: {
+      title: 'CEODigital Organizations',
+      empty: 'No CRM organizations found for your tenant yet.',
+      headers: {
+        industry: 'Industry'
+      }
+    },
+    pipelines: {
+      title: 'CEODigital Pipelines',
+      empty: 'No CRM pipelines found for your tenant yet.',
+      headers: {
+        subject: 'Subject',
+        stages: 'Stages'
+      }
+    },
+    stages: {
+      title: 'CEODigital Stages',
+      empty: 'No CRM stages found for your tenant yet.',
+      headers: {
+        probability: 'Probability',
+        won: 'Won'
+      }
+    },
+    activities: {
+      title: 'CEODigital Activities',
+      empty: 'No CRM activities found for your tenant yet.',
+      headers: {
+        kind: 'Kind',
+        created: 'Created'
+      }
+    },
+    categories: {
+      title: 'CEODigital Categories',
+      empty: 'No CRM categories found for your tenant yet.',
+      headers: {
+        slug: 'Slug',
+        active: 'Active'
+      }
+    },
     headers: {
       id: 'ID',
       title: 'Title',

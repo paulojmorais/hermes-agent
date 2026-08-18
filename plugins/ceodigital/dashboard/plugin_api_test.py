@@ -344,6 +344,198 @@ def test_deals_not_configured(plugin, client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# CRM W1 — persons, organizations, pipelines, stages, activities, categories
+# ---------------------------------------------------------------------------
+
+
+def test_persons_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"persons": [
+            {"id": "p-1", "first_name": "Ana", "last_name": "Silva", "email": "ana@x.pt"},
+            {"id": "p-2", "first_name": "Joao", "last_name": "Moura"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/persons")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["persons"][0]["id"] == "p-1"
+    # title falls back to the full name when no title/name field exists.
+    assert data["persons"][0]["title"] == "Ana Silva"
+    assert data["persons"][1]["title"] == "Joao Moura"
+
+
+def test_person_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"person": {"id": "p-1", "first_name": "Ana", "last_name": "Silva"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/persons/p-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["person"]["title"] == "Ana Silva"
+
+
+def test_person_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({"ok": False, "error": "person_not_found"}))
+
+    resp = client.get("/api/plugins/ceodigital/persons/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_organizations_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"organizations": [
+            {"id": "o-1", "name": "Acme Corp", "industry": "tech"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/organizations")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["organizations"][0]["id"] == "o-1"
+    assert data["organizations"][0]["title"] == "Acme Corp"
+
+
+def test_organization_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"organization": {"id": "o-1", "name": "Acme Corp"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/organizations/o-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["organization"]["title"] == "Acme Corp"
+
+
+def test_organization_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({}))
+
+    resp = client.get("/api/plugins/ceodigital/organizations/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_pipelines_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"pipelines": [
+            {"id": "pl-1", "name": "Sales", "subject_type": "deal", "stages": [{"id": "s-1", "name": "New"}]},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/pipelines")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["pipelines"][0]["id"] == "pl-1"
+    # Inline stages pass through untouched.
+    assert data["pipelines"][0]["stages"][0]["name"] == "New"
+
+
+def test_stages_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"stages": [
+            {"id": "s-1", "name": "Qualified", "probability": 50},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/stages?pipelineId=pl-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["stages"][0]["id"] == "s-1"
+    assert data["stages"][0]["title"] == "Qualified"
+
+
+def test_stages_without_pipeline_returns_empty(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    resp = client.get("/api/plugins/ceodigital/stages")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "stages": []}
+
+
+def test_activities_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"activities": [
+            {"id": "a-1", "kind": "note", "body": "Called the client"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/activities?related_type=lead&related_id=lead-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["activities"][0]["title"] == "Called the client"
+
+
+def test_activities_without_subject_returns_empty(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    resp = client.get("/api/plugins/ceodigital/activities")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "activities": []}
+
+
+def test_categories_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(
+        plugin.httpx, "post",
+        lambda *a, **kw: _FakeResponse({"categories": [
+            {"id": "c-1", "label": "Cold call", "slug": "cold_call"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/categories")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["categories"][0]["id"] == "c-1"
+    assert data["categories"][0]["title"] == "Cold call"
+
+
+def test_crm_reads_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+    monkeypatch.setattr(plugin.httpx, "post", lambda *a, **kw: _FakeResponse({}))
+
+    for route in ("persons", "organizations", "pipelines", "categories"):
+        resp = client.get(f"/api/plugins/ceodigital/{route}")
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
 # Agents + NativeFlows (W5)
 # ---------------------------------------------------------------------------
 

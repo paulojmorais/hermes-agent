@@ -12,6 +12,7 @@
 import { type PluginRestOptions } from '@hermes/plugin-sdk'
 
 import type {
+  ActivitiesEnvelope,
   AgentAskEnvelope,
   AgentFlowsEnvelope,
   AgentPendingEnvelope,
@@ -19,8 +20,15 @@ import type {
   AgentRunsEnvelope,
   AgentSchedulesEnvelope,
   AgentsEnvelope,
+  CategoriesEnvelope,
   DealsEnvelope,
   LeadsEnvelope,
+  OrganizationsEnvelope,
+  OrganizationEnvelope,
+  PersonsEnvelope,
+  PersonEnvelope,
+  PipelinesEnvelope,
+  StagesEnvelope,
   WorkItemResponse,
   WorkItemsEnvelope
 } from './types'
@@ -69,6 +77,65 @@ export const fetchLeads = () => call<LeadsEnvelope>('/leads')
 
 /** GET /deals — the tenant's CRM deals (proxy over MCP crm_deals_list). */
 export const fetchDeals = () => call<DealsEnvelope>('/deals')
+
+// ── CRM (W1) ─────────────────────────────────────────────────────────────────
+
+export const PERSONS_KEY = ['ceodigital', 'persons'] as const
+export const personKey = (id: string) => ['ceodigital', 'persons', id] as const
+export const ORGANIZATIONS_KEY = ['ceodigital', 'organizations'] as const
+export const organizationKey = (id: string) => ['ceodigital', 'organizations', id] as const
+export const PIPELINES_KEY = ['ceodigital', 'pipelines'] as const
+export const STAGES_KEY = ['ceodigital', 'stages'] as const
+export const ACTIVITIES_KEY = ['ceodigital', 'activities'] as const
+export const CATEGORIES_KEY = ['ceodigital', 'categories'] as const
+
+/** GET /persons — the tenant's CRM persons (proxy over MCP crm.persons.list). */
+export const fetchPersons = () => call<PersonsEnvelope>('/persons')
+
+/** GET /persons/{id} — one CRM person's detail (proxy over MCP crm.persons.get). */
+export const fetchPerson = (id: string) => call<PersonEnvelope>(`/persons/${encodeURIComponent(id)}`)
+
+/** GET /organizations — the tenant's CRM organizations (proxy over MCP crm.organizations.list). */
+export const fetchOrganizations = () => call<OrganizationsEnvelope>('/organizations')
+
+/** GET /organizations/{id} — one CRM organization's detail (proxy over MCP crm.organizations.get). */
+export const fetchOrganization = (id: string) =>
+  call<OrganizationEnvelope>(`/organizations/${encodeURIComponent(id)}`)
+
+/** GET /pipelines — CRM pipelines with inline stages (proxy over MCP crm.pipelines.list). */
+export const fetchPipelines = (params?: { subjectType?: string }) => {
+  const qs = new URLSearchParams()
+  if (params?.subjectType) qs.set('subjectType', params.subjectType)
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PipelinesEnvelope>(`/pipelines${suffix}`)
+}
+
+/** GET /stages — CRM stages for a pipeline (proxy over MCP crm.stages.list). */
+export const fetchStages = (params?: { pipelineId?: string }) => {
+  const qs = new URLSearchParams()
+  if (params?.pipelineId) qs.set('pipelineId', params.pipelineId)
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<StagesEnvelope>(`/stages${suffix}`)
+}
+
+/** GET /activities — CRM activities, optionally scoped to a subject
+ *  (proxy over MCP crm.activities.list; subject requires both relatedType + relatedId). */
+export const fetchActivities = (params?: { relatedType?: string; relatedId?: string }) => {
+  const qs = new URLSearchParams()
+  if (params?.relatedType) qs.set('related_type', params.relatedType)
+  if (params?.relatedId) qs.set('related_id', params.relatedId)
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ActivitiesEnvelope>(`/activities${suffix}`)
+}
+
+/** GET /categories — CRM taxonomy categories (proxy over MCP crm.categories.list). */
+export const fetchCategories = (params?: { taxonomyKey?: string; activeOnly?: boolean }) => {
+  const qs = new URLSearchParams()
+  if (params?.taxonomyKey) qs.set('taxonomyKey', params.taxonomyKey)
+  if (params?.activeOnly) qs.set('activeOnly', 'true')
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<CategoriesEnvelope>(`/categories${suffix}`)
+}
 
 // ── Agents + NativeFlows (W5) ──────────────────────────────────────────────
 

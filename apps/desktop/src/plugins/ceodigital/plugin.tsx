@@ -22,9 +22,13 @@ import {
 
 import { bindApi } from './api'
 import { CEODIGITAL_LOCALES } from './i18n'
+import { ActivitiesPage } from './pages/Activities'
 import { AgentsPage } from './pages/Agents'
 import { DealsPage } from './pages/Deals'
 import { LeadsPage } from './pages/Leads'
+import { OrganizationsPage } from './pages/Organizations'
+import { PersonsPage } from './pages/Persons'
+import { PipelinesPage } from './pages/Pipelines'
 import { ProjectsPage } from './pages/Projects'
 
 const plugin: HermesPlugin = {
@@ -98,6 +102,110 @@ const plugin: HermesPlugin = {
           label: t('crm.deals.title'),
           path: '/ceodigital/deals'
         } satisfies SidebarNavContribution
+      },
+      {
+        id: 'persons-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/persons' } satisfies RouteContribution,
+        render: () => <PersonsPage />
+      },
+      {
+        id: 'persons-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 43,
+        data: {
+          codicon: 'person',
+          label: t('crm.persons.title'),
+          path: '/ceodigital/persons'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-persons',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openPersons',
+          label: t('crm.persons.title'),
+          keywords: ['ceodigital', 'crm', 'persons', 'people'],
+          run: () => host.navigate('/ceodigital/persons')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'organizations-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/organizations' } satisfies RouteContribution,
+        render: () => <OrganizationsPage />
+      },
+      {
+        id: 'organizations-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 44,
+        data: {
+          codicon: 'organization',
+          label: t('crm.organizations.title'),
+          path: '/ceodigital/organizations'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-organizations',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openOrganizations',
+          label: t('crm.organizations.title'),
+          keywords: ['ceodigital', 'crm', 'organizations', 'companies'],
+          run: () => host.navigate('/ceodigital/organizations')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'pipelines-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/pipelines' } satisfies RouteContribution,
+        render: () => <PipelinesPage />
+      },
+      {
+        id: 'pipelines-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 45,
+        data: {
+          codicon: 'git-branch',
+          label: t('crm.pipelines.title'),
+          path: '/ceodigital/pipelines'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-pipelines',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openPipelines',
+          label: t('crm.pipelines.title'),
+          keywords: ['ceodigital', 'crm', 'pipelines', 'stages'],
+          run: () => host.navigate('/ceodigital/pipelines')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'activities-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/activities' } satisfies RouteContribution,
+        render: () => <ActivitiesPage />
+      },
+      {
+        id: 'activities-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 46,
+        data: {
+          codicon: 'history',
+          label: t('crm.activities.title'),
+          path: '/ceodigital/activities'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-activities',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openActivities',
+          label: t('crm.activities.title'),
+          keywords: ['ceodigital', 'crm', 'activities', 'notes'],
+          run: () => host.navigate('/ceodigital/activities')
+        } satisfies PaletteContribution
       },
       {
         id: 'agents-page',

@@ -71,6 +71,129 @@ export interface CrmError {
 export type LeadsEnvelope = LeadsResponse | CrmError
 export type DealsEnvelope = DealsResponse | CrmError
 
+// ── CRM (W1) — persons, organizations, pipelines, stages, activities, categories ──
+
+/** A CRM person row (`crm.persons.list` / `crm.persons.get`). */
+export interface PersonRow {
+  id: string
+  title: string
+  first_name?: null | string
+  last_name?: null | string
+  email?: null | string
+  organization_id?: null | string
+  [key: string]: unknown
+}
+
+/** A CRM organization row (`crm.organizations.list` / `crm.organizations.get`). */
+export interface OrganizationRow {
+  id: string
+  title: string
+  name?: null | string
+  industry?: null | string
+  [key: string]: unknown
+}
+
+/** A CRM pipeline stage row (`crm.pipelines.list` inline stages / `crm.stages.list`). */
+export interface StageRow {
+  id: string
+  title: string
+  name?: null | string
+  position?: null | number
+  probability?: null | number
+  is_won?: null | boolean
+  is_lost?: null | boolean
+  [key: string]: unknown
+}
+
+/** A CRM pipeline row with its inline ordered stages (`crm.pipelines.list`). */
+export interface PipelineRow {
+  id: string
+  title: string
+  name?: null | string
+  subject_type?: null | string
+  is_default?: null | boolean
+  stages?: StageRow[]
+  [key: string]: unknown
+}
+
+/** A CRM activity entry (`crm.activities.list`). */
+export interface ActivityRow {
+  id: string
+  title: string
+  kind?: null | string
+  body?: null | string
+  created_at?: null | string
+  subject_type?: null | string
+  subject_id?: null | string
+  [key: string]: unknown
+}
+
+/** A CRM taxonomy category (`crm.categories.list`). */
+export interface CategoryRow {
+  id: string
+  title: string
+  label?: null | string
+  slug?: null | string
+  [key: string]: unknown
+}
+
+/** GET /persons — success envelope. */
+export interface PersonsResponse {
+  ok: true
+  persons: PersonRow[]
+}
+
+/** GET /persons/{id} — success envelope. */
+export interface PersonResponse {
+  ok: true
+  person: PersonRow
+}
+
+/** GET /organizations — success envelope. */
+export interface OrganizationsResponse {
+  ok: true
+  organizations: OrganizationRow[]
+}
+
+/** GET /organizations/{id} — success envelope. */
+export interface OrganizationResponse {
+  ok: true
+  organization: OrganizationRow
+}
+
+/** GET /pipelines — success envelope. */
+export interface PipelinesResponse {
+  ok: true
+  pipelines: PipelineRow[]
+}
+
+/** GET /stages — success envelope. */
+export interface StagesResponse {
+  ok: true
+  stages: StageRow[]
+}
+
+/** GET /activities — success envelope. */
+export interface ActivitiesResponse {
+  ok: true
+  activities: ActivityRow[]
+}
+
+/** GET /categories — success envelope. */
+export interface CategoriesResponse {
+  ok: true
+  categories: CategoryRow[]
+}
+
+export type PersonsEnvelope = PersonsResponse | CrmError
+export type PersonEnvelope = PersonResponse | CrmError
+export type OrganizationsEnvelope = OrganizationsResponse | CrmError
+export type OrganizationEnvelope = OrganizationResponse | CrmError
+export type PipelinesEnvelope = PipelinesResponse | CrmError
+export type StagesEnvelope = StagesResponse | CrmError
+export type ActivitiesEnvelope = ActivitiesResponse | CrmError
+export type CategoriesEnvelope = CategoriesResponse | CrmError
+
 // ── Agents + NativeFlows (W5) ──────────────────────────────────────────────
 
 /** A CEO agent row from the catalog (`agents.list`). */

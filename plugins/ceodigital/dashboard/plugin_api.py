@@ -305,6 +305,73 @@ def _normalize_crm_row(row: Any) -> Dict[str, Any]:
     return out
 
 
+def _normalize_crm_person(row: Any) -> Dict[str, Any]:
+    """Map one CRM person row (W1). A display title is synthesized from the
+    first/last name when the row has no ``title``/``name`` field, mirroring the
+    passthrough contract of :func:`_normalize_crm_row`."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    if not (row.get("title") or row.get("name")):
+        names = [p for p in (row.get("first_name") or "", row.get("last_name") or "") if p]
+        out.setdefault("title", " ".join(names) or row.get("email") or "")
+    else:
+        out.setdefault("title", row.get("title") or row.get("name") or "")
+    return out
+
+
+def _normalize_crm_organization(row: Any) -> Dict[str, Any]:
+    """Map one CRM organization row (W1). Pass-through plus id/title defaults."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or "")
+    return out
+
+
+def _normalize_crm_pipeline(row: Any) -> Dict[str, Any]:
+    """Map one CRM pipeline row (W1). Stages array passes through untouched."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or "")
+    return out
+
+
+def _normalize_crm_stage(row: Any) -> Dict[str, Any]:
+    """Map one CRM pipeline stage row (W1)."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or "")
+    return out
+
+
+def _normalize_crm_activity(row: Any) -> Dict[str, Any]:
+    """Map one CRM activity row (W1). The screen title derives from the free-text
+    ``body`` (falling back to the activity ``kind``) when no title exists."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("body") or row.get("kind") or "")
+    return out
+
+
+def _normalize_crm_category(row: Any) -> Dict[str, Any]:
+    """Map one CRM taxonomy category row (W1)."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("label") or row.get("name") or "")
+    return out
+
+
 @router.get("/leads")
 def list_leads() -> JSONResponse:
     """List the caller's CEODigital CRM leads (read-only, MCP ``crm_leads_list``)."""
@@ -332,6 +399,154 @@ def list_deals() -> JSONResponse:
         return _maybe_error(exc.code)
     except Exception:
         log.exception("ceodigital: deals list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/persons")
+def list_persons() -> JSONResponse:
+    """List the caller's CEODigital CRM persons (read-only, MCP
+    ``crm.persons.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.persons.list", {})
+        rows = _rows_from_key(payload, "persons")
+        return JSONResponse(content={"ok": True, "persons": [_normalize_crm_person(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: persons list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/persons/{person_id}")
+def get_person(person_id: str) -> JSONResponse:
+    """Return a single CRM person by id (MCP ``crm.persons.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.persons.get", {"id": person_id})
+        person = payload.get("person") if isinstance(payload, dict) else None
+        if not isinstance(person, dict):
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "person": _normalize_crm_person(person)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital persons get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/organizations")
+def list_organizations() -> JSONResponse:
+    """List the caller's CEODigital CRM organizations (read-only, MCP
+    ``crm.organizations.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.organizations.list", {})
+        rows = _rows_from_key(payload, "organizations")
+        return JSONResponse(content={"ok": True, "organizations": [_normalize_crm_organization(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: organizations list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/organizations/{organization_id}")
+def get_organization(organization_id: str) -> JSONResponse:
+    """Return a single CRM organization by id (MCP ``crm.organizations.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.organizations.get", {"id": organization_id})
+        org = payload.get("organization") if isinstance(payload, dict) else None
+        if not isinstance(org, dict):
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "organization": _normalize_crm_organization(org)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital organizations get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/pipelines")
+def list_pipelines(subjectType: Optional[str] = None) -> JSONResponse:
+    """List the caller's CEODigital CRM pipelines (read-only, MCP
+    ``crm.pipelines.list``). Optional ``subjectType`` (``deal`` | ``lead``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if subjectType:
+            args["subjectType"] = subjectType
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.pipelines.list", args)
+        rows = _rows_from_key(payload, "pipelines")
+        return JSONResponse(content={"ok": True, "pipelines": [_normalize_crm_pipeline(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: pipelines list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/stages")
+def list_stages(pipelineId: Optional[str] = None) -> JSONResponse:
+    """List CRM stages for a pipeline (read-only, MCP ``crm.stages.list``).
+    The MCP tool requires a pipeline; when none is supplied we return an empty
+    list rather than fail (the desktop filters by pipeline)."""
+    try:
+        if not pipelineId:
+            return JSONResponse(content={"ok": True, "stages": []})
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.stages.list", {"pipelineId": pipelineId})
+        rows = _rows_from_key(payload, "stages")
+        return JSONResponse(content={"ok": True, "stages": [_normalize_crm_stage(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: stages list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/activities")
+def list_activities(related_type: Optional[str] = None, related_id: Optional[str] = None) -> JSONResponse:
+    """List CRM activities (read-only, MCP ``crm.activities.list``).
+
+    The MCP tool scopes activities to a subject (lead|deal|person), so the
+    route filters optionally via ``related_type`` + ``related_id``; without a
+    full subject we return an empty list rather than fail.
+    """
+    try:
+        if not related_type or not related_id:
+            return JSONResponse(content={"ok": True, "activities": []})
+        args: Dict[str, Any] = {"subjectType": related_type, "subjectId": related_id}
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.activities.list", args)
+        rows = _rows_from_key(payload, "activities")
+        return JSONResponse(content={"ok": True, "activities": [_normalize_crm_activity(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: activities list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/categories")
+def list_categories(taxonomyKey: Optional[str] = None, activeOnly: Optional[bool] = None) -> JSONResponse:
+    """List CRM taxonomy categories (read-only, MCP ``crm.categories.list``).
+    Optional ``taxonomyKey`` (e.g. ``lead_source``) and ``activeOnly``."""
+    try:
+        args: Dict[str, Any] = {}
+        if taxonomyKey:
+            args["taxonomyKey"] = taxonomyKey
+        if activeOnly is not None:
+            args["activeOnly"] = bool(activeOnly)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "crm.categories.list", args)
+        rows = _rows_from_key(payload, "categories")
+        return JSONResponse(content={"ok": True, "categories": [_normalize_crm_category(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: categories list failed")
         return _maybe_error(ERR_UNREACHABLE)
 
 

@@ -42,6 +42,36 @@ export interface CeodigitalMessages {
   crm: {
     leads: { title: string; empty: string }
     deals: { title: string; empty: string }
+    persons: {
+      title: string
+      empty: string
+      headers: { email: string; org: string }
+    }
+    organizations: {
+      title: string
+      empty: string
+      headers: { industry: string }
+    }
+    pipelines: {
+      title: string
+      empty: string
+      headers: { subject: string; stages: string }
+    }
+    stages: {
+      title: string
+      empty: string
+      headers: { probability: string; won: string }
+    }
+    activities: {
+      title: string
+      empty: string
+      headers: { kind: string; created: string }
+    }
+    categories: {
+      title: string
+      empty: string
+      headers: { slug: string; active: string }
+    }
     headers: { id: string; title: string; status: string; value: string }
     unassigned: string
   }

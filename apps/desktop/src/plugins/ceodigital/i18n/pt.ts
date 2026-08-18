@@ -37,6 +37,53 @@ export const pt: CeodigitalMessages = {
       title: 'Negócios CEODigital',
       empty: 'Ainda não há negócios de CRM para o teu tenant.'
     },
+    persons: {
+      title: 'Pessoas CEODigital',
+      empty: 'Ainda não há pessoas de CRM para o teu tenant.',
+      headers: {
+        email: 'Email',
+        org: 'Organização'
+      }
+    },
+    organizations: {
+      title: 'Organizações CEODigital',
+      empty: 'Ainda não há organizações de CRM para o teu tenant.',
+      headers: {
+        industry: 'Indústria'
+      }
+    },
+    pipelines: {
+      title: 'Pipelines CEODigital',
+      empty: 'Ainda não há pipelines de CRM para o teu tenant.',
+      headers: {
+        subject: 'Assunto',
+        stages: 'Etapas'
+      }
+    },
+    stages: {
+      title: 'Etapas CEODigital',
+      empty: 'Ainda não há etapas de CRM para o teu tenant.',
+      headers: {
+        probability: 'Probabilidade',
+        won: 'Ganha'
+      }
+    },
+    activities: {
+      title: 'Atividades CEODigital',
+      empty: 'Ainda não há atividades de CRM para o teu tenant.',
+      headers: {
+        kind: 'Tipo',
+        created: 'Criada em'
+      }
+    },
+    categories: {
+      title: 'Categorias CEODigital',
+      empty: 'Ainda não há categorias de CRM para o teu tenant.',
+      headers: {
+        slug: 'Slug',
+        active: 'Ativa'
+      }
+    },
     headers: {
       id: 'ID',
       title: 'Título',
