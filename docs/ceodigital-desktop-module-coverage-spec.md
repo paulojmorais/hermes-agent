@@ -92,17 +92,17 @@ Rota do plugin → tool MCP → cobertura:
 | **Services/Propostas** | catalog/offerings/categories/proposals + items/tranches (GET+POST) | 21 | ✅ **W3 done** — lifecycle completo |
 | **Automation** | conversations, playbooks, workflows/webhooks/schedules (GET+POST) | 18 | ✅ **W4 done** — conversations+playbooks+nativeflow |
 | **Documents/RAG** | files/collections/bindings/search/reindex (GET+POST) | ~19 | ✅ **W5 done** — library + upload/move/delete + RAG search/reindex |
-| **Messaging** | — | 9 | ⬜ 0 (W6) |
-| **Implementations** | — | 9 | ⬜ 0 (W6) |
-| **Commerce/Payments** | — | 7+ | ⬜ 0 (W7) |
-| **Governance** | — | 7 | ⬜ 0 (W7) |
-| **Timeline/Notif/Workspaces/Org/Members/Integrations** | — | ~32 | ⬜ 0 (W6) |
+| **Messaging** | threads/messages/react/attachments | 9 | ✅ **W6a done** |
+| **Implementations** | projects/phases/files/messages | 9 | ✅ **W6a done** |
+| **Commerce/Payments** | orders/payments/payment-links | 7+ | ✅ **W7 done** |
+| **Governance** | dsr/consents/processing/retention | 7 | ✅ **W7 done** |
+| **Timeline/Notif/Workspaces/Org/Members/Integrations** | ~32 | ✅ **W6a+W6b done** |
 | **Agents** | `agents`, `{slug}/ask`, `runs`, `schedules`, `pending` | dinâmicas | ✅ já cobre catálogo+ask+runs+schedules+pending |
 | **Platform admin.** | — | 18 (só CP) | ⬜ 0 (W9, opcional, token CP) |
 
-**Conclusão:** o plugin cobre hoje **~70% da superfície MCP do tenant** (CRM, Workitems,
-Services, Automation, Agents, Documents/RAG completos; falta Messaging, Implementations, Commerce,
-Governance e os agregados). O restante está mapeado nas waves W6–W9.
+**Conclusão:** o plugin cobre hoje **~100% da superfície MCP do tenant** (W1–W7 done),
+exceto a superfície de Control Plane (W9, token CP, opcional). O único restante é a **W8**
+(módulos do produto que ainda não expõem tools MCP no CEODigital).
 
 ### 3.1 Módulos do produto CEODigital que AINDA NÃO têm surface MCP (falta criar do lado ceodigital)
 
@@ -166,12 +166,12 @@ Prioridade por valor/gestão (o que o CEO/gestor quer gerir daqui). Cada wave = 
 ### W6 — Messaging, Notifications, Timeline, Workspaces, Members, Integrations, Departments
 **ceodigital-agent:** painéis agregados (inbox de notificações, mensagens, workspace switcher, gestão de membros, integrações visíveis).
 - Tools: ~32 agrupadas.
-- Esforço: Médio (muitas páginas pequenas).
+- Esforço: Médio (muitas páginas pequenas). **✅ DONE** — W6a commit `d83ebcf12f` (messaging/notifications/timeline/implementations); W6b commit `8345e59870` (workspaces/departments/members/integrations).
 
 ### W7 — Commerce / Payments / Governance
 **ceodigital-agent:** painéis de orders, payment_links, DSR/consents/retention.
 - Tools: `@/modules/business/commerce/tools/registry` + `@/tenant/governance/tools/registry`.
-- Esforço: Médio.
+- Esforço: Médio. **✅ DONE** — commit `09791ddfda` (orders/payments/payment-links + DSR/consents/processing/retention).
 
 ### W8 — Módulos sem MCP ainda (Calendar, Attendance, Pricing, Labels, SocialFlow, InformaDB, LLM Studio, Skills gestão, Dashboards, Workbench, Categories, Chat widgets)
 **ceodigital (repo alvo):** criar `tools/registry.ts` em cada módulo e registar no `buildMcpToolRegistry`.
