@@ -11,7 +11,15 @@
 import { type PluginLocaleBundles, type PluginMessages, type PluginTranslate, usePluginI18n } from '@hermes/plugin-sdk'
 import { useMemo } from 'react'
 
-import type { ProjectStatus, PhaseStatus, WorkItemStatus } from '../types'
+import type {
+  DepartmentRole,
+  IntegrationScope,
+  IntegrationStatus,
+  PhaseStatus,
+  ProjectStatus,
+  WorkItemStatus,
+  WorkspaceRole
+} from '../types'
 import { en } from './en'
 import { fr } from './fr'
 import { pt } from './pt'
@@ -658,6 +666,160 @@ export interface CeodigitalMessages {
       fetchFiles: string
       fetchMessages: string
       postMessage: string
+      general: string
+    }
+  }
+  workspaces: {
+    title: string
+    openCommand: string
+    empty: string
+    new: string
+    search: string
+    archivedOnly: string
+    all: string
+    back: string
+    detail: string
+    members: string
+    membersEmpty: string
+    role: string
+    allRoles: string
+    memberRoles: Partial<Record<WorkspaceRole, string>>
+    addMember: string
+    addMemberPlaceholder: string
+    removeMember: string
+    adding: string
+    removing: string
+    createForm: {
+      name: string
+      namePlaceholder: string
+      description: string
+      categoryId: string
+      icon: string
+      color: string
+      create: string
+      cancel: string
+    }
+    headers: { id: string; title: string; description: string; members: string }
+    memberHeaders: { id: string; name: string; role: string }
+    errors: {
+      list: string
+      create: string
+      addMember: string
+      removeMember: string
+      fetchMembers: string
+      general: string
+    }
+  }
+  departments: {
+    title: string
+    openCommand: string
+    empty: string
+    new: string
+    search: string
+    activeOnly: string
+    all: string
+    back: string
+    detail: string
+    members: string
+    membersEmpty: string
+    role: string
+    allRoles: string
+    memberRoles: Partial<Record<DepartmentRole, string>>
+    addMember: string
+    addMemberPlaceholder: string
+    removeMember: string
+    adding: string
+    removing: string
+    createForm: {
+      name: string
+      namePlaceholder: string
+      slugKey: string
+      slugKeyPlaceholder: string
+      areas: string
+      areasPlaceholder: string
+      headId: string
+      headIdPlaceholder: string
+      create: string
+      cancel: string
+    }
+    headers: { id: string; title: string; slug: string; areas: string; active: string }
+    memberHeaders: { id: string; name: string; role: string }
+    actions: { remove: string }
+    errors: {
+      list: string
+      create: string
+      addMember: string
+      removeMember: string
+      fetchMembers: string
+      general: string
+    }
+  }
+  members: {
+    title: string
+    openCommand: string
+    empty: string
+    invite: string
+    allRoles: string
+    role: string
+    inviteForm: {
+      email: string
+      emailPlaceholder: string
+      role: string
+      create: string
+      cancel: string
+    }
+    revoke: string
+    revoking: string
+    updateRole: string
+    updating: string
+    headers: { id: string; name: string; email: string; role: string }
+    errors: {
+      list: string
+      invite: string
+      revoke: string
+      updateRole: string
+      general: string
+    }
+  }
+  integrations: {
+    title: string
+    openCommand: string
+    empty: string
+    connect: string
+    allProviders: string
+    allStatuses: string
+    allScopes: string
+    providerCode: string
+    status: string
+    scope: string
+    scopes: Partial<Record<IntegrationScope, string>>
+    statuses: Partial<Record<IntegrationStatus, string>>
+    connectForm: {
+      providerCode: string
+      providerCodePlaceholder: string
+      appSlug: string
+      appSlugPlaceholder: string
+      scope: string
+      mailboxKey: string
+      mailboxKeyPlaceholder: string
+      mailboxLabel: string
+      mailboxLabelPlaceholder: string
+      connect: string
+      cancel: string
+    }
+    test: string
+    testing: string
+    disconnect: string
+    disconnecting: string
+    detail: string
+    back: string
+    headers: { id: string; provider: string; app: string; status: string; scope: string; mailbox: string }
+    errors: {
+      list: string
+      connect: string
+      test: string
+      disconnect: string
+      fetchIntegration: string
       general: string
     }
   }

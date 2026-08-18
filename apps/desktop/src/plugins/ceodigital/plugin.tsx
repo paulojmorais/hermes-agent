@@ -29,9 +29,12 @@ import { CatalogPage } from './pages/Catalog'
 import { CollectionsPage } from './pages/Collections'
 import { ConversationsPage } from './pages/Conversations'
 import { DealsPage } from './pages/Deals'
+import { DepartmentsPage } from './pages/Departments'
 import { DocumentsPage } from './pages/Documents'
 import { ImplementationsPage } from './pages/Implementations'
+import { IntegrationsPage } from './pages/Integrations'
 import { LeadsPage } from './pages/Leads'
+import { MembersPage } from './pages/Members'
 import { MessagingPage } from './pages/Messaging'
 import { NotificationsPage } from './pages/Notifications'
 import { OrganizationsPage } from './pages/Organizations'
@@ -43,6 +46,7 @@ import { ProposalsPage } from './pages/Proposals'
 import { TimelinePage } from './pages/Timeline'
 import { WorkflowsPage } from './pages/Workflows'
 import { WorkitemsPage } from './pages/Workitems'
+import { WorkspacesPage } from './pages/Workspaces'
 
 const plugin: HermesPlugin = {
   id: 'ceodigital',
@@ -582,6 +586,110 @@ const plugin: HermesPlugin = {
           label: t('implementations.title'),
           keywords: ['ceodigital', 'implementations', 'projects', 'phases', 'delivery'],
           run: () => host.navigate('/ceodigital/implementations')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'workspaces-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/workspaces' } satisfies RouteContribution,
+        render: () => <WorkspacesPage />
+      },
+      {
+        id: 'workspaces-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 60,
+        data: {
+          codicon: 'multiple-windows',
+          label: t('workspaces.title'),
+          path: '/ceodigital/workspaces'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-workspaces',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openWorkspaces',
+          label: t('workspaces.title'),
+          keywords: ['ceodigital', 'workspaces', 'org', 'team'],
+          run: () => host.navigate('/ceodigital/workspaces')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'departments-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/departments' } satisfies RouteContribution,
+        render: () => <DepartmentsPage />
+      },
+      {
+        id: 'departments-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 61,
+        data: {
+          codicon: 'organization',
+          label: t('departments.title'),
+          path: '/ceodigital/departments'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-departments',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openDepartments',
+          label: t('departments.title'),
+          keywords: ['ceodigital', 'departments', 'org', 'team', 'head'],
+          run: () => host.navigate('/ceodigital/departments')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'members-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/members' } satisfies RouteContribution,
+        render: () => <MembersPage />
+      },
+      {
+        id: 'members-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 62,
+        data: {
+          codicon: 'account',
+          label: t('members.title'),
+          path: '/ceodigital/members'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-members',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openMembers',
+          label: t('members.title'),
+          keywords: ['ceodigital', 'members', 'users', 'invite', 'roles'],
+          run: () => host.navigate('/ceodigital/members')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'integrations-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/integrations' } satisfies RouteContribution,
+        render: () => <IntegrationsPage />
+      },
+      {
+        id: 'integrations-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 63,
+        data: {
+          codicon: 'plug',
+          label: t('integrations.title'),
+          path: '/ceodigital/integrations'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-integrations',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openIntegrations',
+          label: t('integrations.title'),
+          keywords: ['ceodigital', 'integrations', 'connectors', 'providers'],
+          run: () => host.navigate('/ceodigital/integrations')
         } satisfies PaletteContribution
       }
     ])

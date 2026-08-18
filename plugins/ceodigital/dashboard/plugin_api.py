@@ -3036,3 +3036,577 @@ def post_implementation_message(project_id: str, payload: Dict[str, Any] = Body(
     except Exception:
         log.exception("ceodigital implementations messages post failed: %s", project_id)
         return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6b · Organization & stakeholders — workspaces (workspaces.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_workspace(row: Any) -> Dict[str, Any]:
+    """Map one workspace row onto the desktop ``WorkspaceRow``. Pass-through
+    plus stable ``id``/``title`` defaults; extra fields stay untouched."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or "")
+    return out
+
+
+def _normalize_workspace_member(row: Any) -> Dict[str, Any]:
+    """Map one workspace member row onto a member-row contract."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or row.get("member_id") or ""))
+    out.setdefault("role", row.get("role") or "")
+    return out
+
+
+# Literal ``/workspaces/invite`` is not part of this surface; the collection
+# list is declared before the parametrized detail routes so ``/workspaces``
+# never resolves to a workspace id.
+
+@router.get("/workspaces")
+def list_workspaces(
+    archived: Optional[bool] = None,
+    categoryId: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's workspaces (read-only, MCP ``workspaces.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if archived is not None:
+            args["archived"] = bool(archived)
+        if categoryId:
+            args["categoryId"] = categoryId
+        if search:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workspaces.list", args)
+        rows = _rows_from_key(payload, "workspaces")
+        return JSONResponse(content={"ok": True, "workspaces": [_normalize_workspace(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: workspaces list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/workspaces/{workspace_id}")
+def get_workspace(workspace_id: str) -> JSONResponse:
+    """Return one workspace by id (MCP ``workspaces.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workspaces.get", {"id": workspace_id})
+        ws = _single_service(payload, "workspace")
+        if ws is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "workspace": _normalize_workspace(ws)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workspaces get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/workspaces/{workspace_id}/members")
+def list_workspace_members(workspace_id: str) -> JSONResponse:
+    """List members of a workspace (read-only, MCP ``workspaces.members.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "workspaces.members.list", {"workspaceId": workspace_id})
+        rows = _rows_from_key(payload, "members")
+        return JSONResponse(content={"ok": True, "members": [_normalize_workspace_member(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workspaces members list failed: %s", workspace_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workspaces")
+def create_workspace(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a workspace (MCP ``workspaces.create``, needsApproval). Body:
+    ``{name, description?, categoryId?, icon?, color?}`` — ``name`` (≤120) is
+    required."""
+    if not isinstance(payload, dict):
+        payload = {}
+    name = payload.get("name")
+    if not name or not str(name).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "name_required"})
+
+    args: Dict[str, Any] = {"name": str(name)[:120]}
+    if payload.get("description") is not None:
+        args["description"] = str(payload["description"])[:1000]
+    if payload.get("categoryId") is not None:
+        args["categoryId"] = payload["categoryId"]
+    if payload.get("icon") is not None:
+        args["icon"] = str(payload["icon"])[:60]
+    if payload.get("color") is not None:
+        args["color"] = str(payload["color"])[:7]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workspaces.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workspaces create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workspaces/{workspace_id}/members")
+def add_workspace_member(workspace_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a member to a workspace (MCP ``workspaces.members.add``,
+    needsApproval). Body: ``{userId, role?}`` (``lead|member|viewer``)."""
+    if not isinstance(payload, dict):
+        payload = {}
+    user_id = payload.get("userId")
+    if not user_id or not str(user_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "user_id_required"})
+
+    args: Dict[str, Any] = {"workspaceId": workspace_id, "userId": str(user_id)}
+    if payload.get("role") is not None:
+        args["role"] = payload["role"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "workspaces.members.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workspaces members add failed: %s", workspace_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/workspaces/{workspace_id}/members/{member_id}/remove")
+def remove_workspace_member(workspace_id: str, member_id: str) -> JSONResponse:
+    """Remove a member from a workspace (MCP ``workspaces.members.remove``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(
+            cfg, "workspaces.members.remove", {"workspaceId": workspace_id, "memberId": member_id}
+        )
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workspaces members remove failed: %s", workspace_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6b · Departments (departments.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_department(row: Any) -> Dict[str, Any]:
+    """Map one department row onto the desktop ``DepartmentRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or "")
+    out.setdefault("slug_key", row.get("slugKey") or row.get("slug_key") or "")
+    return out
+
+
+def _normalize_department_member(row: Any) -> Dict[str, Any]:
+    """Map one department member row onto a member-row contract."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or row.get("member_id") or ""))
+    out.setdefault("role", row.get("role") or "")
+    return out
+
+
+@router.get("/departments")
+def list_departments(
+    activeOnly: Optional[bool] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's departments (read-only, MCP ``departments.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if activeOnly is not None:
+            args["activeOnly"] = bool(activeOnly)
+        if search:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "departments.list", args)
+        rows = _rows_from_key(payload, "departments")
+        return JSONResponse(content={"ok": True, "departments": [_normalize_department(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: departments list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/departments/{department_id}")
+def get_department(department_id: str) -> JSONResponse:
+    """Return one department by id (MCP ``departments.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "departments.get", {"id": department_id})
+        dep = _single_service(payload, "department")
+        if dep is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "department": _normalize_department(dep)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital departments get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/departments/{department_id}/members")
+def list_department_members(department_id: str) -> JSONResponse:
+    """List members of a department (read-only, MCP ``departments.members.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "departments.members.list", {"departmentId": department_id})
+        rows = _rows_from_key(payload, "members")
+        return JSONResponse(content={"ok": True, "members": [_normalize_department_member(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital departments members list failed: %s", department_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/departments")
+def create_department(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a department (MCP ``departments.create``, needsApproval). Body:
+    ``{name, slugKey, areas?, headId?}`` — ``name`` (≤120) and ``slugKey``
+    (≤60) are required."""
+    if not isinstance(payload, dict):
+        payload = {}
+    name = payload.get("name")
+    slug_key = payload.get("slugKey")
+    if not name or not str(name).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "name_required"})
+    if not slug_key or not str(slug_key).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "slug_key_required"})
+
+    args: Dict[str, Any] = {"name": str(name)[:120], "slugKey": str(slug_key)[:60]}
+    if payload.get("areas") is not None:
+        areas = payload["areas"]
+        args["areas"] = areas if isinstance(areas, list) else []
+    if payload.get("headId") is not None:
+        args["headId"] = payload["headId"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "departments.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital departments create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/departments/{department_id}/members")
+def add_department_member(department_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a member to a department (MCP ``departments.members.add``,
+    needsApproval). Body: ``{userId, role?}`` (``head|member``)."""
+    if not isinstance(payload, dict):
+        payload = {}
+    user_id = payload.get("userId")
+    if not user_id or not str(user_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "user_id_required"})
+
+    args: Dict[str, Any] = {"departmentId": department_id, "userId": str(user_id)}
+    if payload.get("role") is not None:
+        args["role"] = payload["role"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "departments.members.add", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital departments members add failed: %s", department_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/departments/{department_id}/members/{user_id}/remove")
+def remove_department_member(department_id: str, user_id: str) -> JSONResponse:
+    """Remove a member from a department (MCP ``departments.members.remove``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(
+            cfg, "departments.members.remove", {"departmentId": department_id, "userId": user_id}
+        )
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital departments members remove failed: %s", department_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6b · Members (members.*) — tenant members
+# ---------------------------------------------------------------------------
+
+# The literal ``/members/invite`` POST MUST be declared before the parametrized
+# ``/members/{user_id}`` detail so ``invite`` is never captured as a user_id.
+
+@router.post("/members/invite")
+def invite_member(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Invite a tenant member (MCP ``members.invite``, needsApproval). Body:
+    ``{email, role?}`` — ``email`` is required; ``role`` defaults to
+    ``member``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    email = payload.get("email")
+    if not email or not str(email).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "email_required"})
+
+    args: Dict[str, Any] = {"email": str(email).strip()}
+    if payload.get("role") is not None:
+        args["role"] = str(payload["role"])[:64]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "members.invite", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital members invite failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+def _normalize_member(row: Any) -> Dict[str, Any]:
+    """Map one tenant member row onto the desktop ``MemberRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or row.get("user_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("full_name") or row.get("email") or "")
+    out.setdefault("role", row.get("role") or "")
+    return out
+
+
+@router.get("/members")
+def list_members(
+    role: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's members (read-only, MCP ``members.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if role:
+            args["role"] = str(role)[:64]
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "members.list", args)
+        rows = _rows_from_key(payload, "members")
+        return JSONResponse(content={"ok": True, "members": [_normalize_member(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: members list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/members/{user_id}")
+def get_member(user_id: str) -> JSONResponse:
+    """Return one tenant member by user id (MCP ``members.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "members.get", {"userId": user_id})
+        member = _single_service(payload, "member")
+        if member is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "member": _normalize_member(member)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital members get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/members/{user_id}/revoke")
+def revoke_member(user_id: str) -> JSONResponse:
+    """Revoke a tenant member (MCP ``members.revoke``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "members.revoke", {"userId": user_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital members revoke failed: %s", user_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/members/{user_id}/role")
+def update_member_role(user_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Update a tenant member's role (MCP ``members.update_role``,
+    needsApproval). Body: ``{role}`` — required (≤64)."""
+    if not isinstance(payload, dict):
+        payload = {}
+    role = payload.get("role")
+    if not role or not str(role).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "role_required"})
+
+    args: Dict[str, Any] = {"userId": user_id, "role": str(role)[:64]}
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "members.update_role", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital members update_role failed: %s", user_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W6b · Integrations (integrations.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_integration(row: Any) -> Dict[str, Any]:
+    """Map one integration row onto the desktop ``IntegrationRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("provider_code", row.get("providerCode") or row.get("provider_code") or "")
+    out.setdefault("app_slug", row.get("appSlug") or row.get("app_slug") or "")
+    out.setdefault("status", row.get("status") or "")
+    out.setdefault("scope", row.get("scope") or "")
+    return out
+
+
+# The collection list is declared before the parametrized detail routes to keep
+# the literal ``/integrations`` collection from resolving to an integration id.
+
+@router.get("/integrations")
+def list_integrations(
+    providerCode: Optional[str] = None,
+    status: Optional[str] = None,
+    scope: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's integrations (read-only, MCP ``integrations.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if providerCode:
+            args["providerCode"] = str(providerCode)[:64]
+        if status:
+            args["status"] = status
+        if scope:
+            args["scope"] = scope
+        if limit is not None:
+            args["limit"] = max(1, min(50, int(limit)))
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "integrations.list", args)
+        rows = _rows_from_key(payload, "integrations")
+        return JSONResponse(content={"ok": True, "integrations": [_normalize_integration(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: integrations list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/integrations/{integration_id}")
+def get_integration(integration_id: str) -> JSONResponse:
+    """Return one integration by id (MCP ``integrations.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "integrations.get", {"id": integration_id})
+        integration = _single_service(payload, "integration")
+        if integration is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "integration": _normalize_integration(integration)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital integrations get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/integrations/{integration_id}/test")
+def test_integration(integration_id: str) -> JSONResponse:
+    """Test an integration (MCP ``integrations.test``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "integrations.test", {"id": integration_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital integrations test failed: %s", integration_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/integrations")
+def connect_integration(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Connect an integration (MCP ``integrations.connect``, needsApproval).
+    Body: ``{providerCode, appSlug, scope?, mailboxKey?, mailboxLabel?,
+    metadata?}`` — ``providerCode`` (≤64) and ``appSlug`` (≤64) are required;
+    ``scope`` defaults to ``user``; ``mailboxKey`` defaults to ``default``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    provider_code = payload.get("providerCode")
+    app_slug = payload.get("appSlug")
+    if not provider_code or not str(provider_code).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "provider_code_required"})
+    if not app_slug or not str(app_slug).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "app_slug_required"})
+
+    args: Dict[str, Any] = {"providerCode": str(provider_code)[:64], "appSlug": str(app_slug)[:64]}
+    if payload.get("scope") is not None:
+        args["scope"] = payload["scope"]
+    if payload.get("mailboxKey") is not None:
+        args["mailboxKey"] = str(payload["mailboxKey"])[:32]
+    if payload.get("mailboxLabel") is not None:
+        args["mailboxLabel"] = str(payload["mailboxLabel"])[:120]
+    if payload.get("metadata") is not None:
+        args["metadata"] = payload["metadata"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "integrations.connect", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital integrations connect failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/integrations/{integration_id}/disconnect")
+def disconnect_integration(integration_id: str) -> JSONResponse:
+    """Disconnect an integration (MCP ``integrations.disconnect``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "integrations.disconnect", {"id": integration_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital integrations disconnect failed: %s", integration_id)
+        return _maybe_error(ERR_UNREACHABLE)

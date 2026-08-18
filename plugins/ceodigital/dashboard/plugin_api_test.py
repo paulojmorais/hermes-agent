@@ -3289,3 +3289,612 @@ def test_implementations_not_configured(plugin, client, monkeypatch):
         resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
         assert resp.status_code == 503
         assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W6b · Workspaces (workspaces.*)
+# ---------------------------------------------------------------------------
+
+
+def test_workspaces_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"workspaces": [
+            {"id": "ws-1", "name": "Ops", "category_id": "c-1", "archived": False},
+            {"id": "ws-2", "title": "Backoffice", "archived": True},
+        ]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/workspaces?archived=true&categoryId=c-1&search=ops&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["workspaces"][0]["id"] == "ws-1"
+    assert data["workspaces"][0]["title"] == "Ops"  # name → title
+    assert data["workspaces"][1]["title"] == "Backoffice"
+    assert captured["tool"] == "workspaces.list"
+    assert captured["args"] == {"archived": True, "categoryId": "c-1", "search": "ops", "limit": 5}
+
+
+def test_workspaces_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"workspaces": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/workspaces")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "workspaces": []}
+    assert captured["args"] == {}
+
+
+def test_workspace_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"workspace": {"id": "ws-7", "name": "Project X"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/workspaces/ws-7")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["workspace"]["id"] == "ws-7"
+    assert data["workspace"]["title"] == "Project X"
+    assert captured["tool"] == "workspaces.get"
+    assert captured["args"] == {"id": "ws-7"}
+
+
+def test_workspace_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"workspaces": []})
+
+    resp = client.get("/api/plugins/ceodigital/workspaces/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_workspace_members_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"members": [{"id": "u-1", "member_id": "u-1", "role": "lead"}, {"id": "u-2", "role": "viewer"}]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/workspaces/ws-1/members")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["members"][0]["id"] == "u-1"
+    assert data["members"][0]["role"] == "lead"
+    assert captured["tool"] == "workspaces.members.list"
+    assert captured["args"] == {"workspaceId": "ws-1"}
+
+
+def test_workspace_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"id": "ws-new", "name": "Growth"}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/workspaces",
+        json={"name": "Growth", "description": "Go-to-market", "categoryId": "c-2", "icon": "rocket", "color": "#123456"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "workspaces.create"
+    assert captured["args"] == {
+        "name": "Growth",
+        "description": "Go-to-market",
+        "categoryId": "c-2",
+        "icon": "rocket",
+        "color": "#123456",
+    }
+
+
+def test_workspace_create_requires_name(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/workspaces", json={"description": "no name"})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "name_required"}
+
+
+def test_workspace_member_add_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"added": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/workspaces/ws-1/members", json={"userId": "u-9", "role": "member"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "workspaces.members.add"
+    assert captured["args"] == {"workspaceId": "ws-1", "userId": "u-9", "role": "member"}
+
+
+def test_workspace_member_add_requires_user_id(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/workspaces/ws-1/members", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "user_id_required"}
+
+
+def test_workspace_member_remove_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"removed": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/workspaces/ws-1/members/u-9/remove")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "workspaces.members.remove"
+    assert captured["args"] == {"workspaceId": "ws-1", "memberId": "u-9"}
+
+
+# ---------------------------------------------------------------------------
+# W6b · Departments (departments.*)
+# ---------------------------------------------------------------------------
+
+
+def test_departments_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"departments": [
+            {"id": "dp-1", "name": "Engineering", "slugKey": "eng", "is_active": True},
+            {"id": "dp-2", "name": "Sales", "slug_key": "sales"},
+        ]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/departments?activeOnly=true&search=eng&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["departments"][0]["id"] == "dp-1"
+    assert data["departments"][0]["title"] == "Engineering"
+    assert data["departments"][0]["slug_key"] == "eng"
+    assert data["departments"][1]["slug_key"] == "sales"
+    assert captured["tool"] == "departments.list"
+    assert captured["args"] == {"activeOnly": True, "search": "eng", "limit": 5}
+
+
+def test_departments_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"departments": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/departments")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "departments": []}
+    assert captured["args"] == {}
+
+
+def test_department_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"department": {"id": "dp-1", "name": "Finance"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/departments/dp-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["department"]["id"] == "dp-1"
+    assert data["department"]["title"] == "Finance"
+    assert captured["args"] == {"id": "dp-1"}
+
+
+def test_department_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"departments": []})
+
+    resp = client.get("/api/plugins/ceodigital/departments/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_department_members_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"members": [{"id": "u-1", "role": "head"}]}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/departments/dp-1/members")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["members"][0]["id"] == "u-1"
+    assert data["members"][0]["role"] == "head"
+    assert captured["tool"] == "departments.members.list"
+    assert captured["args"] == {"departmentId": "dp-1"}
+
+
+def test_department_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"id": "dp-new"}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/departments",
+        json={"name": "Marketing", "slugKey": "mkt", "areas": ["brand", "content"], "headId": "u-1"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "departments.create"
+    assert captured["args"] == {
+        "name": "Marketing",
+        "slugKey": "mkt",
+        "areas": ["brand", "content"],
+        "headId": "u-1",
+    }
+
+
+def test_department_create_requires_fields(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/departments", json={"slugKey": "x"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "name_required"}
+
+    resp = client.post("/api/plugins/ceodigital/departments", json={"name": "Legal"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "slug_key_required"}
+
+
+def test_department_member_add_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"added": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/departments/dp-1/members", json={"userId": "u-5", "role": "member"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "departments.members.add"
+    assert captured["args"] == {"departmentId": "dp-1", "userId": "u-5", "role": "member"}
+
+
+def test_department_member_add_requires_user_id(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/departments/dp-1/members", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "user_id_required"}
+
+
+def test_department_member_remove_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"removed": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/departments/dp-1/members/u-5/remove")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "departments.members.remove"
+    assert captured["args"] == {"departmentId": "dp-1", "userId": "u-5"}
+
+
+# ---------------------------------------------------------------------------
+# W6b · Members (members.*)
+# ---------------------------------------------------------------------------
+
+
+def test_members_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"members": [
+            {"id": "u-1", "name": "Ana", "role": "owner", "email": "ana@x.pt"},
+            {"id": "u-2", "full_name": "Joao", "role": "member"},
+        ]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/members?role=member&limit=10")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["members"][0]["id"] == "u-1"
+    assert data["members"][0]["title"] == "Ana"
+    assert data["members"][1]["title"] == "Joao"  # full_name → title
+    assert captured["tool"] == "members.list"
+    assert captured["args"] == {"role": "member", "limit": 10}
+
+
+def test_members_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"members": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/members")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "members": []}
+    assert captured["args"] == {}
+
+
+def test_member_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"member": {"id": "u-1", "name": "Ana", "role": "owner"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/members/u-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["member"]["id"] == "u-1"
+    assert captured["tool"] == "members.get"
+    assert captured["args"] == {"userId": "u-1"}
+
+
+def test_member_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"members": []})
+
+    resp = client.get("/api/plugins/ceodigital/members/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_members_invite_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"invited": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/members/invite", json={"email": "new@x.pt", "role": "member"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "members.invite"
+    assert captured["args"] == {"email": "new@x.pt", "role": "member"}
+
+
+def test_members_invite_routes_to_invite_not_member_id(plugin, client, monkeypatch):
+    """POST /members/invite must hit members.invite (not be captured as a
+    member id on another route)."""
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"invited": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/members/invite", json={"email": "a@x.pt"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "members.invite"
+    assert captured["args"] == {"email": "a@x.pt"}
+
+
+def test_members_invite_requires_email(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/members/invite", json={"role": "member"})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "email_required"}
+
+
+def test_member_revoke_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"revoked": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/members/u-1/revoke")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "members.revoke"
+    assert captured["args"] == {"userId": "u-1"}
+
+
+def test_member_update_role_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"role": "admin"}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/members/u-1/role", json={"role": "admin"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "members.update_role"
+    assert captured["args"] == {"userId": "u-1", "role": "admin"}
+
+
+def test_member_update_role_requires_role(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/members/u-1/role", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "role_required"}
+
+
+# ---------------------------------------------------------------------------
+# W6b · Integrations (integrations.*)
+# ---------------------------------------------------------------------------
+
+
+def test_integrations_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(
+        plugin, monkeypatch,
+        {"integrations": [
+            {"id": "it-1", "providerCode": "gmail", "appSlug": "gmail", "status": "active", "scope": "user"},
+            {"id": "it-2", "provider_code": "slack", "app_slug": "slack", "status": "pending", "scope": "tenant"},
+        ]},
+        captured,
+    )
+
+    resp = client.get("/api/plugins/ceodigital/integrations?providerCode=gmail&status=active&scope=user&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["integrations"][0]["id"] == "it-1"
+    assert data["integrations"][0]["provider_code"] == "gmail"  # providerCode → provider_code
+    assert data["integrations"][0]["app_slug"] == "gmail"
+    assert data["integrations"][1]["provider_code"] == "slack"
+    assert captured["tool"] == "integrations.list"
+    assert captured["args"] == {"providerCode": "gmail", "status": "active", "scope": "user", "limit": 5}
+
+
+def test_integrations_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"integrations": []}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/integrations")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "integrations": []}
+    assert captured["args"] == {}
+
+
+def test_integration_get_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"integration": {"id": "it-1", "providerCode": "gmail"}}, captured)
+
+    resp = client.get("/api/plugins/ceodigital/integrations/it-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["integration"]["id"] == "it-1"
+    assert data["integration"]["provider_code"] == "gmail"
+    assert captured["args"] == {"id": "it-1"}
+
+
+def test_integration_get_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    _fake_fetch(plugin, monkeypatch, {"integrations": []})
+
+    resp = client.get("/api/plugins/ceodigital/integrations/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_integration_test_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"status": "active"}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/integrations/it-1/test")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "integrations.test"
+    assert captured["args"] == {"id": "it-1"}
+
+
+def test_integration_connect_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"id": "it-new"}, captured)
+
+    resp = client.post(
+        "/api/plugins/ceodigital/integrations",
+        json={
+            "providerCode": "gmail",
+            "appSlug": "gmail",
+            "scope": "user",
+            "mailboxKey": "work",
+            "mailboxLabel": "Work inbox",
+            "metadata": {"label": "x"},
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "integrations.connect"
+    assert captured["args"] == {
+        "providerCode": "gmail",
+        "appSlug": "gmail",
+        "scope": "user",
+        "mailboxKey": "work",
+        "mailboxLabel": "Work inbox",
+        "metadata": {"label": "x"},
+    }
+
+
+def test_integration_connect_requires_fields(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/integrations", json={"appSlug": "gmail"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "provider_code_required"}
+
+    resp = client.post("/api/plugins/ceodigital/integrations", json={"providerCode": "gmail"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "app_slug_required"}
+
+
+def test_integration_disconnect_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    _fake_fetch(plugin, monkeypatch, {"disconnected": True}, captured)
+
+    resp = client.post("/api/plugins/ceodigital/integrations/it-1/disconnect")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "integrations.disconnect"
+    assert captured["args"] == {"id": "it-1"}
+
+
+def test_w6b_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/workspaces", None),
+        ("GET", "/workspaces/ws-1", None),
+        ("GET", "/workspaces/ws-1/members", None),
+        ("POST", "/workspaces", {"name": "ops"}),
+        ("POST", "/workspaces/ws-1/members", {"userId": "u-1"}),
+        ("POST", "/workspaces/ws-1/members/u-1/remove", None),
+        ("GET", "/departments", None),
+        ("GET", "/departments/dp-1", None),
+        ("GET", "/departments/dp-1/members", None),
+        ("POST", "/departments", {"name": "eng", "slugKey": "eng"}),
+        ("POST", "/departments/dp-1/members", {"userId": "u-1"}),
+        ("POST", "/departments/dp-1/members/u-1/remove", None),
+        ("GET", "/members", None),
+        ("GET", "/members/u-1", None),
+        ("POST", "/members/invite", {"email": "a@x.pt"}),
+        ("POST", "/members/u-1/revoke", None),
+        ("POST", "/members/u-1/role", {"role": "admin"}),
+        ("GET", "/integrations", None),
+        ("GET", "/integrations/it-1", None),
+        ("POST", "/integrations/it-1/test", None),
+        ("POST", "/integrations", {"providerCode": "gmail", "appSlug": "gmail"}),
+        ("POST", "/integrations/it-1/disconnect", None),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body)
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}

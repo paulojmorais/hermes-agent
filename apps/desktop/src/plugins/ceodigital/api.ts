@@ -20,9 +20,14 @@ import type {
   AgentRunsEnvelope,
   AgentSchedulesEnvelope,
   AgentsEnvelope,
+  AddDepartmentMemberInput,
+  AddWorkspaceMemberInput,
   AssignBody,
   AssignWorkItemEnvelope,
   AutomationActionEnvelope,
+  ConnectIntegrationInput,
+  CreateDepartmentInput,
+  CreateWorkspaceInput,
   AttachBindingInput,
   BindingsEnvelope,
   BindingsListParams,
@@ -43,6 +48,12 @@ import type {
   CreateThreadInput,
   CreateWorkItemEnvelope,
   DealsEnvelope,
+  DepartmentEnvelope,
+  DepartmentsEnvelope,
+  DepartmentsListParams,
+  DepartmentMembersEnvelope,
+  DepartmentRow,
+  DepartmentMemberRow,
   DocumentsActionEnvelope,
   FileEnvelope,
   FilesEnvelope,
@@ -54,9 +65,18 @@ import type {
   ImplProjectEnvelope,
   ImplProjectsEnvelope,
   ImplProjectsListParams,
+  IntegrationEnvelope,
+  IntegrationsEnvelope,
+  IntegrationsListParams,
+  IntegrationRow,
+  InviteMemberInput,
   LeadsEnvelope,
   MessagesEnvelope,
   MessagesListParams,
+  MemberEnvelope,
+  MembersEnvelope,
+  MembersListParams,
+  MemberRow,
   MoveFileInput,
   NotificationsEnvelope,
   NotificationsListParams,
@@ -104,6 +124,7 @@ import type {
   UploadAttachmentInput,
   UploadFileInput,
   W6aActionEnvelope,
+  W6bActionEnvelope,
   WebhooksEnvelope,
   WebhooksListParams,
   WorkItemInput,
@@ -114,7 +135,13 @@ import type {
   WorkflowEnvelope,
   WorkflowRunsEnvelope,
   WorkflowsEnvelope,
-  WorkflowsListParams
+  WorkflowsListParams,
+  WorkspaceEnvelope,
+  WorkspaceMembersEnvelope,
+  WorkspaceMemberRow,
+  WorkspaceRow,
+  WorkspacesEnvelope,
+  WorkspacesListParams
 } from './types'
 
 type Rest = <T>(path: string, opts?: PluginRestOptions) => Promise<T>
@@ -891,3 +918,131 @@ export const postProjectMessage = (id: string, body: string) =>
     method: 'POST',
     body: { body }
   })
+
+// ── Organization & stakeholders (W6b) — workspaces / departments / members ──
+
+export const WORKSPACES_KEY = ['ceodigital', 'workspaces'] as const
+export const workspaceKey = (id: string) => ['ceodigital', 'workspaces', id] as const
+export const workspaceMembersKey = (id: string) => ['ceodigital', 'workspaces', id, 'members'] as const
+export const DEPARTMENTS_KEY = ['ceodigital', 'departments'] as const
+export const departmentKey = (id: string) => ['ceodigital', 'departments', id] as const
+export const departmentMembersKey = (id: string) => ['ceodigital', 'departments', id, 'members'] as const
+export const MEMBERS_KEY = ['ceodigital', 'members'] as const
+export const memberKey = (id: string) => ['ceodigital', 'members', id] as const
+export const INTEGRATIONS_KEY = ['ceodigital', 'integrations'] as const
+export const integrationKey = (id: string) => ['ceodigital', 'integrations', id] as const
+
+/** GET /workspaces — the tenant's workspaces (MCP workspaces.list). */
+export const fetchWorkspaces = (params?: WorkspacesListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.archived !== undefined) qs.set('archived', String(params.archived))
+  if (params?.categoryId) qs.set('categoryId', params.categoryId)
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<WorkspacesEnvelope>(`/workspaces${suffix}`)
+}
+
+/** GET /workspaces/{id} — one workspace (MCP workspaces.get). */
+export const fetchWorkspace = (id: string) => call<WorkspaceEnvelope>(`/workspaces/${encodeURIComponent(id)}`)
+
+/** GET /workspaces/{id}/members — members of a workspace (MCP workspaces.members.list). */
+export const fetchWorkspaceMembers = (id: string): Promise<WorkspaceMembersEnvelope> =>
+  call<WorkspaceMembersEnvelope>(`/workspaces/${encodeURIComponent(id)}/members`)
+
+/** POST /workspaces — create a workspace (MCP workspaces.create). */
+export const createWorkspace = (input: CreateWorkspaceInput) =>
+  call<W6bActionEnvelope>('/workspaces', { method: 'POST', body: input })
+
+/** POST /workspaces/{id}/members — add a member (MCP workspaces.members.add). */
+export const addWorkspaceMember = (id: string, body: AddWorkspaceMemberInput) =>
+  call<W6bActionEnvelope>(`/workspaces/${encodeURIComponent(id)}/members`, { method: 'POST', body })
+
+/** POST /workspaces/{id}/members/{memberId}/remove — remove a member (MCP workspaces.members.remove). */
+export const removeWorkspaceMember = (id: string, memberId: string) =>
+  call<W6bActionEnvelope>(`/workspaces/${encodeURIComponent(id)}/members/${encodeURIComponent(memberId)}/remove`, {
+    method: 'POST',
+    body: {}
+  })
+
+/** GET /departments — the tenant's departments (MCP departments.list). */
+export const fetchDepartments = (params?: DepartmentsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.activeOnly !== undefined) qs.set('activeOnly', String(params.activeOnly))
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<DepartmentsEnvelope>(`/departments${suffix}`)
+}
+
+/** GET /departments/{id} — one department (MCP departments.get). */
+export const fetchDepartment = (id: string) => call<DepartmentEnvelope>(`/departments/${encodeURIComponent(id)}`)
+
+/** GET /departments/{id}/members — members of a department (MCP departments.members.list). */
+export const fetchDepartmentMembers = (id: string): Promise<DepartmentMembersEnvelope> =>
+  call<DepartmentMembersEnvelope>(`/departments/${encodeURIComponent(id)}/members`)
+
+/** POST /departments — create a department (MCP departments.create). */
+export const createDepartment = (input: CreateDepartmentInput) =>
+  call<W6bActionEnvelope>('/departments', { method: 'POST', body: input })
+
+/** POST /departments/{id}/members — add a member (MCP departments.members.add). */
+export const addDepartmentMember = (id: string, body: AddDepartmentMemberInput) =>
+  call<W6bActionEnvelope>(`/departments/${encodeURIComponent(id)}/members`, { method: 'POST', body })
+
+/** POST /departments/{id}/members/{userId}/remove — remove a member (MCP departments.members.remove). */
+export const removeDepartmentMember = (id: string, userId: string) =>
+  call<W6bActionEnvelope>(`/departments/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}/remove`, {
+    method: 'POST',
+    body: {}
+  })
+
+/** GET /members — the tenant's members (MCP members.list). */
+export const fetchMembers = (params?: MembersListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.role) qs.set('role', params.role)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<MembersEnvelope>(`/members${suffix}`)
+}
+
+/** GET /members/{userId} — one tenant member (MCP members.get). */
+export const fetchMember = (userId: string) => call<MemberEnvelope>(`/members/${encodeURIComponent(userId)}`)
+
+/** POST /members/invite — invite a member (MCP members.invite). */
+export const inviteMember = (input: InviteMemberInput) =>
+  call<W6bActionEnvelope>('/members/invite', { method: 'POST', body: input })
+
+/** POST /members/{userId}/revoke — revoke a member (MCP members.revoke). */
+export const revokeMember = (userId: string) =>
+  call<W6bActionEnvelope>(`/members/${encodeURIComponent(userId)}/revoke`, { method: 'POST', body: {} })
+
+/** POST /members/{userId}/role — update a member's role (MCP members.update_role). */
+export const updateMemberRole = (userId: string, role: string) =>
+  call<W6bActionEnvelope>(`/members/${encodeURIComponent(userId)}/role`, { method: 'POST', body: { role } })
+
+/** GET /integrations — the tenant's integrations (MCP integrations.list). */
+export const fetchIntegrations = (params?: IntegrationsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.providerCode) qs.set('providerCode', params.providerCode)
+  if (params?.status) qs.set('status', params.status)
+  if (params?.scope) qs.set('scope', params.scope)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<IntegrationsEnvelope>(`/integrations${suffix}`)
+}
+
+/** GET /integrations/{id} — one integration (MCP integrations.get). */
+export const fetchIntegration = (id: string) => call<IntegrationEnvelope>(`/integrations/${encodeURIComponent(id)}`)
+
+/** POST /integrations/{id}/test — test an integration (MCP integrations.test). */
+export const testIntegration = (id: string) =>
+  call<W6bActionEnvelope>(`/integrations/${encodeURIComponent(id)}/test`, { method: 'POST', body: {} })
+
+/** POST /integrations — connect an integration (MCP integrations.connect). */
+export const connectIntegration = (input: ConnectIntegrationInput) =>
+  call<W6bActionEnvelope>('/integrations', { method: 'POST', body: input })
+
+/** POST /integrations/{id}/disconnect — disconnect an integration (MCP integrations.disconnect). */
+export const disconnectIntegration = (id: string) =>
+  call<W6bActionEnvelope>(`/integrations/${encodeURIComponent(id)}/disconnect`, { method: 'POST', body: {} })

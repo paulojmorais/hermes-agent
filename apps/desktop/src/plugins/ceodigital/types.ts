@@ -1378,3 +1378,272 @@ export interface W6aActionResponse {
 }
 
 export type W6aActionEnvelope = W6aActionResponse | CrmError
+
+// ── Organization & stakeholders (W6b) — workspaces / departments / members ──
+
+/** Workspace member roles (`workspaces.members.*`). */
+export type WorkspaceRole = 'lead' | 'member' | 'viewer'
+
+export const WORKSPACE_ROLES: readonly WorkspaceRole[] = ['lead', 'member', 'viewer']
+
+/** Department member roles (`departments.members.*`). */
+export type DepartmentRole = 'head' | 'member'
+
+export const DEPARTMENT_ROLES: readonly DepartmentRole[] = ['head', 'member']
+
+/** Integration connection states (`integrations.*`). */
+export type IntegrationStatus = 'pending' | 'active' | 'error' | 'revoked'
+
+export const INTEGRATION_STATUSES: readonly IntegrationStatus[] = [
+  'pending',
+  'active',
+  'error',
+  'revoked'
+]
+
+/** Integration scope (`integrations.connect` / `integrations.list`). */
+export type IntegrationScope = 'user' | 'tenant'
+
+export const INTEGRATION_SCOPES: readonly IntegrationScope[] = ['user', 'tenant']
+
+/** A workspace (`workspaces.list` / `workspaces.get`). */
+export interface WorkspaceRow {
+  id: string
+  title: string
+  name?: null | string
+  description?: null | string
+  category_id?: null | string
+  categoryId?: null | string
+  icon?: null | string
+  color?: null | string
+  archived?: null | boolean
+  [key: string]: unknown
+}
+
+/** A member-row within a workspace or department. */
+export interface WorkspaceMemberRow {
+  id: string
+  name?: null | string
+  full_name?: null | string
+  email?: null | string
+  user_id?: null | string
+  role?: null | WorkspaceRole | string
+  [key: string]: unknown
+}
+
+export interface DepartmentMemberRow {
+  id: string
+  name?: null | string
+  full_name?: null | string
+  email?: null | string
+  user_id?: null | string
+  role?: null | DepartmentRole | string
+  [key: string]: unknown
+}
+
+/** A department (`departments.list` / `departments.get`). */
+export interface DepartmentRow {
+  id: string
+  title: string
+  name?: null | string
+  slug_key?: null | string
+  slugKey?: null | string
+  areas?: null | string[]
+  head_id?: null | string
+  headId?: null | string
+  is_active?: null | boolean
+  isActive?: null | boolean
+  [key: string]: unknown
+}
+
+/** A tenant member (`members.list` / `members.get`). */
+export interface MemberRow {
+  id: string
+  title: string
+  name?: null | string
+  full_name?: null | string
+  email?: null | string
+  user_id?: null | string
+  role?: null | string
+  status?: null | string
+  [key: string]: unknown
+}
+
+/** An integration connection (`integrations.list` / `integrations.get`). */
+export interface IntegrationRow {
+  id: string
+  provider_code?: null | string
+  providerCode?: null | string
+  app_slug?: null | string
+  appSlug?: null | string
+  status?: null | IntegrationStatus | string
+  scope?: null | IntegrationScope | string
+  mailbox_key?: null | string
+  mailboxKey?: null | string
+  mailbox_label?: null | string
+  mailboxLabel?: null | string
+  metadata?: null | Record<string, unknown>
+  created_at?: null | string
+  createdAt?: null | string
+  [key: string]: unknown
+}
+
+// ── Organization & stakeholders — query params ───────────────────────────────
+
+/** GET /workspaces — list query params (map 1:1 to MCP). */
+export interface WorkspacesListParams {
+  archived?: boolean
+  categoryId?: string
+  search?: string
+  limit?: number
+}
+
+/** GET /departments — list query params (map 1:1 to MCP). */
+export interface DepartmentsListParams {
+  activeOnly?: boolean
+  search?: string
+  limit?: number
+}
+
+/** GET /members — list query params (map 1:1 to MCP). */
+export interface MembersListParams {
+  role?: string
+  limit?: number
+}
+
+/** GET /integrations — list query params (map 1:1 to MCP). */
+export interface IntegrationsListParams {
+  providerCode?: string
+  status?: IntegrationStatus | string
+  scope?: IntegrationScope | string
+  limit?: number
+}
+
+// ── Organization & stakeholders — mutation inputs ────────────────────────────
+
+/** POST /workspaces — create input (name required, ≤120). */
+export interface CreateWorkspaceInput {
+  name: string
+  description?: string
+  categoryId?: string
+  icon?: string
+  color?: string
+}
+
+/** POST /workspaces/{id}/members — add member body (userId required). */
+export interface AddWorkspaceMemberInput {
+  userId: string
+  role?: WorkspaceRole | string
+}
+
+/** POST /departments — create input (name + slugKey required). */
+export interface CreateDepartmentInput {
+  name: string
+  slugKey: string
+  areas?: string[]
+  headId?: string
+}
+
+/** POST /departments/{id}/members — add member body (userId required). */
+export interface AddDepartmentMemberInput {
+  userId: string
+  role?: DepartmentRole | string
+}
+
+/** POST /members/invite — invite input (email required). */
+export interface InviteMemberInput {
+  email: string
+  role?: string
+}
+
+/** POST /integrations — connect input (providerCode + appSlug required). */
+export interface ConnectIntegrationInput {
+  providerCode: string
+  appSlug: string
+  scope?: IntegrationScope | string
+  mailboxKey?: string
+  mailboxLabel?: string
+  metadata?: Record<string, unknown>
+}
+
+// ── Organization & stakeholders — envelopes ──────────────────────────────────
+
+/** GET /workspaces — success envelope. */
+export interface WorkspacesResponse {
+  ok: true
+  workspaces: WorkspaceRow[]
+}
+
+/** GET /workspaces/{id} — success envelope. */
+export interface WorkspaceResponse {
+  ok: true
+  workspace: WorkspaceRow
+}
+
+/** GET /workspaces/{id}/members — success envelope. */
+export interface WorkspaceMembersResponse {
+  ok: true
+  members: WorkspaceMemberRow[]
+}
+
+/** GET /departments — success envelope. */
+export interface DepartmentsResponse {
+  ok: true
+  departments: DepartmentRow[]
+}
+
+/** GET /departments/{id} — success envelope. */
+export interface DepartmentResponse {
+  ok: true
+  department: DepartmentRow
+}
+
+/** GET /departments/{id}/members — success envelope. */
+export interface DepartmentMembersResponse {
+  ok: true
+  members: DepartmentMemberRow[]
+}
+
+/** GET /members — success envelope. */
+export interface MembersResponse {
+  ok: true
+  members: MemberRow[]
+}
+
+/** GET /members/{userId} — success envelope. */
+export interface MemberResponse {
+  ok: true
+  member: MemberRow
+}
+
+/** GET /integrations — success envelope. */
+export interface IntegrationsResponse {
+  ok: true
+  integrations: IntegrationRow[]
+}
+
+/** GET /integrations/{id} — success envelope. */
+export interface IntegrationResponse {
+  ok: true
+  integration: IntegrationRow
+}
+
+export type WorkspacesEnvelope = WorkspacesResponse | CrmError
+export type WorkspaceEnvelope = WorkspaceResponse | CrmError
+export type WorkspaceMembersEnvelope = WorkspaceMembersResponse | CrmError
+export type DepartmentsEnvelope = DepartmentsResponse | CrmError
+export type DepartmentEnvelope = DepartmentResponse | CrmError
+export type DepartmentMembersEnvelope = DepartmentMembersResponse | CrmError
+export type MembersEnvelope = MembersResponse | CrmError
+export type MemberEnvelope = MemberResponse | CrmError
+export type IntegrationsEnvelope = IntegrationsResponse | CrmError
+export type IntegrationEnvelope = IntegrationResponse | CrmError
+
+/** POST /workspaces|departments|members|integrations/** — mutation success
+ *  envelope (raw MCP result). */
+export interface W6bActionResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+export type W6bActionEnvelope = W6bActionResponse | CrmError
