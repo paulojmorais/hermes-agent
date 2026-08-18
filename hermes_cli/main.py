@@ -11330,6 +11330,13 @@ def cmd_dashboard_register(args):
     _impl(args)
 
 
+def cmd_serve_key(args):
+    """Print or generate the headless API server key (Bearer)."""
+    from hermes_cli.serve_key import cmd_serve_key as _impl
+
+    _impl(args)
+
+
 def cmd_gateway_enroll(args):
     """Enroll a self-hosted gateway with a relay connector."""
     from hermes_cli.gateway_enroll import cmd_gateway_enroll as _impl
@@ -13571,6 +13578,7 @@ def main():
         subparsers,
         cmd_dashboard=cmd_dashboard,
         cmd_dashboard_register=cmd_dashboard_register,
+        cmd_serve_key=cmd_serve_key,
     )
 
 

@@ -84,8 +84,22 @@ def _add_server_runtime_args(parser) -> None:
     )
 
 
+def _noop_serve_key(args) -> None:
+    """Default handler for ``hermes serve key`` when the caller injects none.
+
+    ``build_dashboard_parser`` is built by main with the real handler; tests
+    build it with only ``cmd_dashboard``/``cmd_dashboard_register``, so this
+    no-op keeps the nested ``serve key`` parser valid for them too.
+    """
+    return None
+
+
 def build_dashboard_parser(
-    subparsers, *, cmd_dashboard: Callable, cmd_dashboard_register: Callable
+    subparsers,
+    *,
+    cmd_dashboard: Callable,
+    cmd_dashboard_register: Callable,
+    cmd_serve_key: Callable = _noop_serve_key,
 ) -> None:
     """Attach the ``dashboard`` and ``serve`` subcommands.
 
@@ -212,3 +226,51 @@ def build_dashboard_parser(
         ),
     )
     dashboard_register_parser.set_defaults(func=cmd_dashboard_register)
+
+    # =========================================================================
+    # serve key — print/generate the headless API server key (Bearer)
+    #
+    # Fase 1 of making `serve` consumable by the CEODigital Go connector
+    # bundle: this prints (or mints + persists) the active profile's
+    # API_SERVER_KEY on stdout so the bundle installer can capture it, without
+    # the value ever reaching the logs. Nested subparser so bare `hermes serve`
+    # keeps launching the headless server (set_defaults above remains).
+    # =========================================================================
+    serve_subparsers = serve_parser.add_subparsers(dest="serve_subcommand")
+    serve_key_parser = serve_subparsers.add_parser(
+        "key",
+        help="Print or generate the headless API server key (Bearer)",
+        description=(
+            "Print the active profile's API_SERVER_KEY — the Bearer credential "
+            "the CEODigital connector bundle needs to talk to `hermes serve`. "
+            "Prints the existing strong key if present, otherwise mints one, "
+            "persists it via the secure credential lifecycle, and prints it. "
+            "The key goes to stdout only; it is never written to the logs."
+        ),
+    )
+    serve_key_parser.add_argument(
+        "--generate",
+        action="store_true",
+        help="Always mint a NEW key and persist it (rotates any existing key)",
+    )
+    serve_key_parser.add_argument(
+        "--port",
+        dest="show_port",
+        action="store_true",
+        help=(
+            "Also print the expected bind (127.0.0.1:9119, matching the stock "
+            "CONNECTOR_SERVE_URL default) before the key — handy for bundle config"
+        ),
+    )
+    serve_key_parser.add_argument(
+        "--json",
+        action="store_true",
+        help='Print machine-readable JSON: {"api_server_key": ..., "host": ..., "port": ...}',
+    )
+    serve_key_parser.add_argument(
+        "--label",
+        default="",
+        metavar="TEXT",
+        help="Prefix the printed key line with 'TEXT: ' (default: bare key on stdout)",
+    )
+    serve_key_parser.set_defaults(func=cmd_serve_key)
