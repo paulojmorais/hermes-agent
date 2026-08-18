@@ -289,8 +289,92 @@ export interface CeodigitalMessages {
       }
     }
   }
+  automation: {
+    conversations: {
+      title: string
+      openCommand: string
+      empty: string
+      search: string
+      archivedOnly: string
+      all: string
+      new: string
+      form: {
+        title: string
+        titlePlaceholder: string
+        systemPrompt: string
+        model: string
+        workspaceId: string
+        tags: string
+        create: string
+        cancel: string
+      }
+      actions: {
+        archive: string
+        share: string
+        unshare: string
+        archiving: string
+        sharing: string
+      }
+      headers: { id: string; title: string; model: string; archived: string; shared: string }
+    }
+    playbooks: {
+      title: string
+      openCommand: string
+      empty: string
+      back: string
+      detail: string
+      run: string
+      running: string
+      filters: { all: string; active: string; inactive: string }
+      subjectType: string
+      subjectId: string
+      runFormTitle: string
+      runFormSubjectType: string
+      runFormSubjectId: string
+      cancel: string
+      runs: string
+      runsEmpty: string
+      runStatus: Partial<Record<string, string>>
+      headers: { id: string; title: string; subject: string; active: string }
+      runsHeaders: { id: string; status: string; subject: string; started: string }
+    }
+    workflows: {
+      title: string
+      openCommand: string
+      empty: string
+      back: string
+      detail: string
+      publish: string
+      publishing: string
+      run: string
+      running: string
+      filters: { all: string; draft: string; active: string; archived: string }
+      triggers: { all: string; manual: string; webhook: string; schedule: string; event: string; api: string }
+      runInput: string
+      runInputPlaceholder: string
+      webhooks: string
+      webhooksEmpty: string
+      schedules: string
+      schedulesEmpty: string
+      runs: string
+      runsEmpty: string
+      runStatus: Partial<Record<string, string>>
+      headers: { id: string; name: string; status: string; trigger: string }
+      runsHeaders: { id: string; status: string; started: string }
+      webhooksHeaders: { id: string; url: string; active: string }
+      schedulesHeaders: { id: string; cron: string; active: string }
+      actions: {
+        rotate: string
+        pausing: string
+        pause: string
+        resume: string
+        rotating: string
+      }
+    }
+  }
   errors: {
     fetch: string
+    general: string
     mcp_not_configured: string
     mcp_unreachable: string
     tenant_not_found: string

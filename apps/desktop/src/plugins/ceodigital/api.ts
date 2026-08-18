@@ -22,12 +22,17 @@ import type {
   AgentsEnvelope,
   AssignBody,
   AssignWorkItemEnvelope,
+  AutomationActionEnvelope,
   CatalogEnvelope,
   CatalogItemEnvelope,
   CatalogListParams,
   CategoriesEnvelope,
   ChecklistToggleBody,
   ChecklistToggleEnvelope,
+  ConversationEnvelope,
+  ConversationsEnvelope,
+  ConversationsListParams,
+  CreateConversationInput,
   CreateProposalEnvelope,
   CreateProposalInput,
   CreateWorkItemEnvelope,
@@ -40,24 +45,39 @@ import type {
   PersonsEnvelope,
   PersonEnvelope,
   PipelinesEnvelope,
+  PlaybookEnvelope,
+  PlaybookRunsEnvelope,
+  PlaybookRunsListParams,
+  PlaybooksEnvelope,
+  PlaybooksListParams,
   ProposalActionEnvelope,
   ProposalEnvelope,
   ProposalItemValues,
   ProposalsEnvelope,
   ProposalsListParams,
   ProposalTrancheValues,
+  RunPlaybookInput,
   RunWorkItemEnvelope,
+  RunWorkflowInput,
+  SchedulesEnvelope,
+  SchedulesListParams,
   ServiceCategoriesParams,
   StagesEnvelope,
   SubmitBody,
   SubmitWorkItemEnvelope,
   SuggestEnvelope,
   UpdateProposalInput,
+  WebhooksEnvelope,
+  WebhooksListParams,
   WorkItemInput,
   WorkItemResponse,
   WorkItemsEnvelope,
   WorkItemsStatusEnvelope,
-  WorkItemStatusFilter
+  WorkItemStatusFilter,
+  WorkflowEnvelope,
+  WorkflowRunsEnvelope,
+  WorkflowsEnvelope,
+  WorkflowsListParams
 } from './types'
 
 type Rest = <T>(path: string, opts?: PluginRestOptions) => Promise<T>
@@ -388,3 +408,148 @@ export const removeTranche = (id: string, trancheId: string) =>
     `/services/proposals/${encodeURIComponent(id)}/tranches/${encodeURIComponent(trancheId)}/remove`,
     { method: 'POST', body: {} }
   )
+
+// ── Automation (W4) — conversations (conversations.*) ───────────────────────
+
+export const CONVERSATIONS_KEY = ['ceodigital', 'automation', 'conversations'] as const
+export const conversationKey = (id: string) => ['ceodigital', 'automation', 'conversations', id] as const
+
+/** GET /automation/conversations — the tenant's conversations (MCP conversations.list). */
+export const fetchConversations = (params?: ConversationsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.isArchived !== undefined) qs.set('isArchived', String(params.isArchived))
+  if (params?.search) qs.set('search', params.search)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<ConversationsEnvelope>(`/automation/conversations${suffix}`)
+}
+
+/** GET /automation/conversations/{id} — one conversation (MCP conversations.get). */
+export const fetchConversation = (id: string) =>
+  call<ConversationEnvelope>(`/automation/conversations/${encodeURIComponent(id)}`)
+
+/** POST /automation/conversations — create a conversation (MCP conversations.create). */
+export const createConversation = (input: CreateConversationInput) =>
+  call<AutomationActionEnvelope>('/automation/conversations', { method: 'POST', body: input })
+
+/** POST /automation/conversations/{id}/archive — archive (MCP conversations.archive). */
+export const archiveConversation = (id: string) =>
+  call<AutomationActionEnvelope>(`/automation/conversations/${encodeURIComponent(id)}/archive`, { method: 'POST', body: {} })
+
+/** POST /automation/conversations/{id}/share — share/unshare (MCP conversations.share). */
+export const shareConversation = (id: string, enabled: boolean) =>
+  call<AutomationActionEnvelope>(`/automation/conversations/${encodeURIComponent(id)}/share`, {
+    method: 'POST',
+    body: { enabled }
+  })
+
+// ── Automation (W4) — playbooks (+ runs) ───────────────────────────────────
+
+export const PLAYBOOKS_KEY = ['ceodigital', 'automation', 'playbooks'] as const
+export const playbookKey = (id: string) => ['ceodigital', 'automation', 'playbooks', id] as const
+export const PLAYBOOK_RUNS_KEY = ['ceodigital', 'automation', 'playbook-runs'] as const
+
+/** GET /automation/playbooks — the tenant's playbooks (MCP playbooks.list). */
+export const fetchPlaybooks = (params?: PlaybooksListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.subjectType) qs.set('subjectType', params.subjectType)
+  if (params?.isActive !== undefined) qs.set('isActive', String(params.isActive))
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PlaybooksEnvelope>(`/automation/playbooks${suffix}`)
+}
+
+/** GET /automation/playbooks/{id} — one playbook by id or ?code= (MCP playbooks.get). */
+export const fetchPlaybook = (idOrCode: { id?: string; code?: string } = {}) => {
+  const qs = new URLSearchParams()
+  if (idOrCode.code) qs.set('code', idOrCode.code)
+  const id = idOrCode.id ?? idOrCode.code ?? ''
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PlaybookEnvelope>(`/automation/playbooks/${encodeURIComponent(id)}${suffix}`)
+}
+
+/** POST /automation/playbooks/{id}/run — run a playbook (MCP playbooks.run). */
+export const runPlaybook = (id: string, body: RunPlaybookInput) =>
+  call<AutomationActionEnvelope>(`/automation/playbooks/${encodeURIComponent(id)}/run`, { method: 'POST', body })
+
+/** GET /automation/playbooks/runs — runs across playbooks (MCP playbook.runs.list). */
+export const fetchPlaybookRuns = (params?: PlaybookRunsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.playbookId) qs.set('playbookId', params.playbookId)
+  if (params?.status) qs.set('status', params.status)
+  if (params?.subjectType) qs.set('subjectType', params.subjectType)
+  if (params?.subjectId) qs.set('subjectId', params.subjectId)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<PlaybookRunsEnvelope>(`/automation/playbooks/runs${suffix}`)
+}
+
+// ── Automation (W4) — NativeFlow (workflows / runs / webhooks / schedules) ──
+
+export const WORKFLOWS_KEY = ['ceodigital', 'automation', 'workflows'] as const
+export const workflowKey = (id: string) => ['ceodigital', 'automation', 'workflows', id] as const
+export const workflowRunsKey = (id: string) => ['ceodigital', 'automation', 'workflows', id, 'runs'] as const
+export const workflowWebhooksKey = (id: string) => ['ceodigital', 'automation', 'workflows', id, 'webhooks'] as const
+export const workflowSchedulesKey = (id: string) => ['ceodigital', 'automation', 'workflows', id, 'schedules'] as const
+
+/** GET /automation/workflows — the tenant's NativeFlow workflows (agentflow.workflows.list). */
+export const fetchWorkflows = (params?: WorkflowsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.status) qs.set('status', params.status)
+  if (params?.triggerType) qs.set('triggerType', params.triggerType)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<WorkflowsEnvelope>(`/automation/workflows${suffix}`)
+}
+
+/** GET /automation/workflows/{id} — one workflow (agentflow.workflows.get). */
+export const fetchWorkflow = (id: string) =>
+  call<WorkflowEnvelope>(`/automation/workflows/${encodeURIComponent(id)}`)
+
+/** POST /automation/workflows/{id}/publish — publish (agentflow.workflows.publish). */
+export const publishWorkflow = (id: string) =>
+  call<AutomationActionEnvelope>(`/automation/workflows/${encodeURIComponent(id)}/publish`, { method: 'POST', body: {} })
+
+/** POST /automation/workflows/{id}/run — run a workflow (agentflow.run). */
+export const runWorkflow = (id: string, input?: RunWorkflowInput) =>
+  call<AutomationActionEnvelope>(`/automation/workflows/${encodeURIComponent(id)}/run`, {
+    method: 'POST',
+    body: input ?? {}
+  })
+
+/** GET /automation/workflows/{id}/runs — runs for a workflow (agentflow.runs.list). */
+export const fetchWorkflowRuns = (id: string, params?: { limit?: number }) => {
+  const qs = new URLSearchParams()
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<WorkflowRunsEnvelope>(`/automation/workflows/${encodeURIComponent(id)}/runs${suffix}`)
+}
+
+/** GET /automation/workflows/{id}/webhooks — webhooks for a workflow (agentflow.webhooks.list). */
+export const fetchWorkflowWebhooks = (id: string, params?: WebhooksListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.active !== undefined) qs.set('active', String(params.active))
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<WebhooksEnvelope>(`/automation/workflows/${encodeURIComponent(id)}/webhooks${suffix}`)
+}
+
+/** POST /automation/webhooks/{id}/rotate — rotate a webhook secret (agentflow.webhooks.rotate). */
+export const rotateWebhook = (id: string) =>
+  call<AutomationActionEnvelope>(`/automation/webhooks/${encodeURIComponent(id)}/rotate`, { method: 'POST', body: {} })
+
+/** GET /automation/workflows/{id}/schedules — schedules for a workflow (agentflow.schedules.list). */
+export const fetchWorkflowSchedules = (id: string, params?: SchedulesListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.active !== undefined) qs.set('active', String(params.active))
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<SchedulesEnvelope>(`/automation/workflows/${encodeURIComponent(id)}/schedules${suffix}`)
+}
+
+/** POST /automation/schedules/{id}/pause — pause/resume a schedule (agentflow.schedules.pause). */
+export const pauseSchedule = (id: string, paused: boolean) =>
+  call<AutomationActionEnvelope>(`/automation/schedules/${encodeURIComponent(id)}/pause`, {
+    method: 'POST',
+    body: { paused }
+  })

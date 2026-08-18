@@ -1438,3 +1438,496 @@ def remove_proposal_tranche(proposal_id: str, tranche_id: str) -> JSONResponse:
     except Exception:
         log.exception("ceodigital services proposals tranches remove failed: %s", tranche_id)
         return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W4 · Automation — conversations (conversations.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_conversation(row: Any) -> Dict[str, Any]:
+    """Map one conversation row onto the desktop `ConversationRow`. Pass-through
+    plus stable ``id``/``title`` defaults; extra fields stay untouched."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or "")
+    out.setdefault("is_archived", row.get("is_archived") or row.get("isArchived") or False)
+    return out
+
+
+# Literal ``/automation/conversations/{id}`` single-segment routes need the
+# collection list declared first; there is no literal conflict here, but the
+# parametrized ``{id}`` GET must not swallow a future literal sibling.
+
+@router.get("/automation/conversations")
+def list_conversations(
+    isArchived: Optional[bool] = None,
+    search: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's automation conversations (read-only, MCP
+    ``conversations.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if isArchived is not None:
+            args["isArchived"] = bool(isArchived)
+        if search:
+            args["search"] = str(search)[:200]
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "conversations.list", args)
+        rows = _rows_from_key(payload, "conversations")
+        return JSONResponse(content={"ok": True, "conversations": [_normalize_conversation(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: conversations list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/conversations/{conversation_id}")
+def get_conversation(conversation_id: str) -> JSONResponse:
+    """Return one conversation by id (MCP ``conversations.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "conversations.get", {"id": conversation_id})
+        conv = _single_service(payload, "conversation")
+        if conv is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "conversation": _normalize_conversation(conv)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital conversations get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/conversations")
+def create_conversation(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a conversation (MCP ``conversations.create``, needsApproval).
+    All fields optional; body maps 1:1 to the tool input."""
+    if not isinstance(payload, dict):
+        payload = {}
+    args: Dict[str, Any] = {}
+    if payload.get("title") is not None:
+        args["title"] = str(payload["title"])[:240]
+    if payload.get("systemPrompt") is not None:
+        args["systemPrompt"] = str(payload["systemPrompt"])[:4000]
+    if payload.get("model") is not None:
+        args["model"] = str(payload["model"])[:64]
+    if payload.get("tags") is not None:
+        args["tags"] = payload["tags"]
+    if payload.get("workspaceId") is not None:
+        args["workspaceId"] = payload["workspaceId"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "conversations.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital conversations create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/conversations/{conversation_id}/archive")
+def archive_conversation(conversation_id: str) -> JSONResponse:
+    """Archive a conversation (MCP ``conversations.archive``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "conversations.archive", {"id": conversation_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital conversations archive failed: %s", conversation_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/conversations/{conversation_id}/share")
+def share_conversation(conversation_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Share/unshare a conversation (MCP ``conversations.share``,
+    needsApproval). Body: ``{enabled: bool}``."""
+    enabled = payload.get("enabled") if isinstance(payload, dict) else None
+    if not isinstance(enabled, bool):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "enabled_required"})
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "conversations.share", {"id": conversation_id, "enabled": enabled})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital conversations share failed: %s", conversation_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W4 · Automation — playbooks (playbooks.* / playbook.runs.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_playbook(row: Any) -> Dict[str, Any]:
+    """Map one playbook row onto the desktop `PlaybookRow`. Pass-through plus
+    stable ``id``/``title`` (falling back to ``name``/``code``)."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("title") or row.get("name") or row.get("code") or "")
+    out.setdefault("is_active", row.get("is_active") or row.get("isActive") or False)
+    return out
+
+
+def _normalize_playbook_run(row: Any) -> Dict[str, Any]:
+    """Map one playbook run row onto the desktop `PlaybookRunRow`."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("status", row.get("status") or row.get("state") or "")
+    return out
+
+
+# The literal ``/automation/playbooks/runs`` MUST be declared before the
+# parametrized ``/automation/playbooks/{playbook_id}`` below so ``runs`` isn't
+# captured as a playbook id (same three-segment shape, mirroring the workitems
+# ``/workitems/status`` precedent).
+
+@router.get("/automation/playbooks/runs")
+def list_playbook_runs(
+    playbookId: Optional[str] = None,
+    status: Optional[str] = None,
+    subjectType: Optional[str] = None,
+    subjectId: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List playbook runs (read-only, MCP ``playbook.runs.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if playbookId:
+            args["playbookId"] = playbookId
+        if status:
+            args["status"] = status
+        if subjectType:
+            args["subjectType"] = str(subjectType)[:64]
+        if subjectId:
+            args["subjectId"] = subjectId
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "playbook.runs.list", args)
+        rows = _rows_from_key(payload, "runs")
+        return JSONResponse(content={"ok": True, "runs": [_normalize_playbook_run(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: playbook runs list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/playbooks")
+def list_playbooks(
+    subjectType: Optional[str] = None,
+    isActive: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's playbooks (read-only, MCP ``playbooks.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if subjectType:
+            args["subjectType"] = str(subjectType)[:64]
+        if isActive is not None:
+            args["isActive"] = bool(isActive)
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "playbooks.list", args)
+        rows = _rows_from_key(payload, "playbooks")
+        return JSONResponse(content={"ok": True, "playbooks": [_normalize_playbook(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: playbooks list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/playbooks/{playbook_id}")
+def get_playbook(playbook_id: str, code: Optional[str] = None) -> JSONResponse:
+    """Return one playbook (MCP ``playbooks.get``). The path ``{id}`` maps to
+    ``id``; an optional ``?code=`` query is passed through for a code lookup
+    (id-or-code — at least one must be supplied by the caller)."""
+    args: Dict[str, Any] = {}
+    if playbook_id:
+        args["id"] = playbook_id
+    if code:
+        args["code"] = code
+    if not args:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "id_or_code_required"})
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "playbooks.get", args)
+        pb = _single_service(payload, "playbook")
+        if pb is None:
+            rows = _rows_from_key(payload, "playbooks")
+            pb = rows[0] if rows else None
+        if pb is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "playbook": _normalize_playbook(pb)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital playbooks get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/playbooks/{playbook_id}/run")
+def run_playbook(playbook_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Run a playbook (MCP ``playbooks.run``, needsApproval). Body:
+    ``{subjectType: str, subjectId?: str}`` — ``subjectType`` is required."""
+    if not isinstance(payload, dict):
+        payload = {}
+    subject_type = payload.get("subjectType")
+    if not subject_type or not str(subject_type).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "subject_type_required"})
+
+    args: Dict[str, Any] = {"playbookId": playbook_id, "subjectType": str(subject_type)[:64]}
+    if payload.get("subjectId") is not None:
+        args["subjectId"] = payload["subjectId"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "playbooks.run", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital playbooks run failed: %s", playbook_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W4 · Automation — NativeFlow (agentflow.*)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_workflow_run(row: Any) -> Dict[str, Any]:
+    """Map one NativeFlow run row onto the desktop `WorkflowRunRow`."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("status", row.get("status") or row.get("state") or "")
+    return out
+
+
+def _normalize_webhook(row: Any) -> Dict[str, Any]:
+    """Map one NativeFlow webhook row onto the desktop `WebhookRow`."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("url", row.get("url") or "")
+    out.setdefault("is_active", row.get("is_active") or row.get("isActive") or False)
+    return out
+
+
+def _normalize_schedule(row: Any) -> Dict[str, Any]:
+    """Map one NativeFlow schedule row onto the desktop `ScheduleRow`."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("is_active", row.get("is_active") or row.get("isActive") or False)
+    return out
+
+
+@router.get("/automation/workflows")
+def list_workflows(
+    status: Optional[str] = None,
+    triggerType: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's NativeFlow workflows (read-only, MCP
+    ``agentflow.workflows.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if status:
+            args["status"] = status
+        if triggerType:
+            args["triggerType"] = triggerType
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agentflow.workflows.list", args)
+        rows = _rows_from_key(payload, "workflows")
+        return JSONResponse(content={"ok": True, "workflows": rows})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: workflows list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/workflows/{workflow_id}")
+def get_workflow(workflow_id: str) -> JSONResponse:
+    """Return one NativeFlow workflow by id (MCP ``agentflow.workflows.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agentflow.workflows.get", {"id": workflow_id})
+        wf = _single_service(payload, "workflow")
+        if wf is None:
+            rows = _rows_from_key(payload, "workflows")
+            wf = rows[0] if rows else None
+        if wf is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "workflow": wf})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workflows get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/workflows/{workflow_id}/publish")
+def publish_workflow(workflow_id: str) -> JSONResponse:
+    """Publish a NativeFlow workflow (MCP ``agentflow.workflows.publish``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "agentflow.workflows.publish", {"id": workflow_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital workflows publish failed: %s", workflow_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/workflows/{workflow_id}/run")
+def run_workflow(workflow_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Run a NativeFlow workflow (MCP ``agentflow.run``, needsApproval). The
+    ``{workflow_id}`` path maps to ``flowId``; an optional ``input`` record is
+    passed through."""
+    args: Dict[str, Any] = {"flowId": workflow_id}
+    if isinstance(payload, dict) and payload.get("input") is not None:
+        args["input"] = payload["input"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "agentflow.run", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agentflow run failed: %s", workflow_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/workflows/{workflow_id}/runs")
+def list_workflow_runs(workflow_id: str, limit: Optional[int] = None) -> JSONResponse:
+    """List NativeFlow runs for a workflow (read-only, MCP
+    ``agentflow.runs.list``)."""
+    try:
+        args: Dict[str, Any] = {"workflowId": workflow_id}
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agentflow.runs.list", args)
+        rows = _rows_from_key(payload, "runs")
+        return JSONResponse(content={"ok": True, "runs": [_normalize_workflow_run(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agentflow runs list failed: %s", workflow_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/workflows/{workflow_id}/webhooks")
+def list_workflow_webhooks(
+    workflow_id: str,
+    active: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List NativeFlow webhooks for a workflow (read-only, MCP
+    ``agentflow.webhooks.list``)."""
+    try:
+        args: Dict[str, Any] = {"workflowId": workflow_id}
+        if active is not None:
+            args["active"] = bool(active)
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agentflow.webhooks.list", args)
+        rows = _rows_from_key(payload, "webhooks")
+        return JSONResponse(content={"ok": True, "webhooks": [_normalize_webhook(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agentflow webhooks list failed: %s", workflow_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/webhooks/{webhook_id}/rotate")
+def rotate_webhook(webhook_id: str) -> JSONResponse:
+    """Rotate a NativeFlow webhook secret (MCP ``agentflow.webhooks.rotate``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "agentflow.webhooks.rotate", {"id": webhook_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agentflow webhooks rotate failed: %s", webhook_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/automation/workflows/{workflow_id}/schedules")
+def list_workflow_schedules(
+    workflow_id: str,
+    active: Optional[bool] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List NativeFlow schedules for a workflow (read-only, MCP
+    ``agentflow.schedules.list``)."""
+    try:
+        args: Dict[str, Any] = {"workflowId": workflow_id}
+        if active is not None:
+            args["active"] = bool(active)
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "agentflow.schedules.list", args)
+        rows = _rows_from_key(payload, "schedules")
+        return JSONResponse(content={"ok": True, "schedules": [_normalize_schedule(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agentflow schedules list failed: %s", workflow_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/automation/schedules/{schedule_id}/pause")
+def pause_schedule(schedule_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Pause/resume a NativeFlow schedule (MCP ``agentflow.schedules.pause``,
+    needsApproval). Body: ``{paused: bool}``."""
+    paused = payload.get("paused") if isinstance(payload, dict) else None
+    if not isinstance(paused, bool):
+        return JSONResponse(status_code=422, content={"ok": False, "error": "paused_required"})
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "agentflow.schedules.pause", {"id": schedule_id, "paused": paused})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital agentflow schedules pause failed: %s", schedule_id)
+        return _maybe_error(ERR_UNREACHABLE)

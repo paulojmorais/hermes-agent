@@ -354,8 +354,119 @@ export const en: CeodigitalMessages = {
       }
     }
   },
+  automation: {
+    conversations: {
+      title: 'CEODigital Conversations',
+      openCommand: 'CEODigital: Open Conversations',
+      empty: 'No automation conversations found for your tenant yet.',
+      search: 'Search conversations…',
+      archivedOnly: 'Archived only',
+      all: 'All',
+      new: 'New Conversation',
+      form: {
+        title: 'Title',
+        titlePlaceholder: 'Conversation title',
+        systemPrompt: 'System prompt',
+        model: 'Model',
+        workspaceId: 'Workspace id',
+        tags: 'Tags (comma-separated)',
+        create: 'Create conversation',
+        cancel: 'Cancel'
+      },
+      actions: {
+        archive: 'Archive',
+        share: 'Share',
+        unshare: 'Unshare',
+        archiving: 'Archiving…',
+        sharing: 'Sharing…'
+      },
+      headers: {
+        id: 'ID',
+        title: 'Title',
+        model: 'Model',
+        archived: 'Archived',
+        shared: 'Shared'
+      }
+    },
+    playbooks: {
+      title: 'CEODigital Playbooks',
+      openCommand: 'CEODigital: Open Playbooks',
+      empty: 'No playbooks found for your tenant yet.',
+      back: 'Back to playbooks',
+      detail: 'Playbook detail',
+      run: 'Run playbook',
+      running: 'Running…',
+      filters: { all: 'All', active: 'Active', inactive: 'Inactive' },
+      subjectType: 'Subject type',
+      subjectId: 'Subject id',
+      runFormTitle: 'Run playbook',
+      runFormSubjectType: 'Subject type (required)',
+      runFormSubjectId: 'Subject id (optional)',
+      cancel: 'Cancel',
+      runs: 'Runs',
+      runsEmpty: 'No runs of this playbook yet.',
+      runStatus: {
+        active: 'Active',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
+      },
+      headers: { id: 'ID', title: 'Title', subject: 'Subject', active: 'Active' },
+      runsHeaders: { id: 'ID', status: 'Status', subject: 'Subject', started: 'Started' }
+    },
+    workflows: {
+      title: 'CEODigital NativeFlows',
+      openCommand: 'CEODigital: Open NativeFlows',
+      empty: 'No NativeFlow workflows found for your tenant yet.',
+      back: 'Back to workflows',
+      detail: 'Workflow detail',
+      publish: 'Publish',
+      publishing: 'Publishing…',
+      run: 'Run workflow',
+      running: 'Running…',
+      filters: {
+        all: 'All',
+        draft: 'Draft',
+        active: 'Active',
+        archived: 'Archived'
+      },
+      triggers: {
+        all: 'All triggers',
+        manual: 'Manual',
+        webhook: 'Webhook',
+        schedule: 'Schedule',
+        event: 'Event',
+        api: 'API'
+      },
+      runInput: 'Input (JSON)',
+      runInputPlaceholder: '{ "key": "value" }',
+      webhooks: 'Webhooks',
+      webhooksEmpty: 'No webhooks on this workflow.',
+      schedules: 'Schedules',
+      schedulesEmpty: 'No schedules on this workflow.',
+      runs: 'Runs',
+      runsEmpty: 'No runs of this workflow yet.',
+      runStatus: {
+        active: 'Active',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+        failed: 'Failed'
+      },
+      headers: { id: 'ID', name: 'Name', status: 'Status', trigger: 'Trigger' },
+      runsHeaders: { id: 'ID', status: 'Status', started: 'Started' },
+      webhooksHeaders: { id: 'ID', url: 'URL', active: 'Active' },
+      schedulesHeaders: { id: 'ID', cron: 'Cron', active: 'Active' },
+      actions: {
+        rotate: 'Rotate',
+        pausing: 'Updating…',
+        pause: 'Pause',
+        resume: 'Resume',
+        rotating: 'Rotating…'
+      }
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
+    general: 'The action failed. Try again.',
     mcp_not_configured: 'CEODigital MCP is not configured. Connect it in your CEODigital settings first.',
     mcp_unreachable: 'CEODigital is unreachable right now. Check your connection and try again.',
     tenant_not_found: 'No CEODigital tenant is linked to this profile.'

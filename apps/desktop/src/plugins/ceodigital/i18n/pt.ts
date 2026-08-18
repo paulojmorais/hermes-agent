@@ -354,8 +354,119 @@ export const pt: CeodigitalMessages = {
       }
     }
   },
+  automation: {
+    conversations: {
+      title: 'Conversas CEODigital',
+      openCommand: 'CEODigital: Abrir Conversas',
+      empty: 'Ainda não existem conversas de automação para este tenant.',
+      search: 'Pesquisar conversas…',
+      archivedOnly: 'Apenas arquivadas',
+      all: 'Todas',
+      new: 'Nova conversa',
+      form: {
+        title: 'Título',
+        titlePlaceholder: 'Título da conversa',
+        systemPrompt: 'Prompt do sistema',
+        model: 'Modelo',
+        workspaceId: 'Id do workspace',
+        tags: 'Tags (separadas por vírgula)',
+        create: 'Criar conversa',
+        cancel: 'Cancelar'
+      },
+      actions: {
+        archive: 'Arquivar',
+        share: 'Partilhar',
+        unshare: 'Deixar de partilhar',
+        archiving: 'A arquivar…',
+        sharing: 'A partilhar…'
+      },
+      headers: {
+        id: 'ID',
+        title: 'Título',
+        model: 'Modelo',
+        archived: 'Arquivada',
+        shared: 'Partilhada'
+      }
+    },
+    playbooks: {
+      title: 'Playbooks CEODigital',
+      openCommand: 'CEODigital: Abrir Playbooks',
+      empty: 'Ainda não existem playbooks para este tenant.',
+      back: 'Voltar aos playbooks',
+      detail: 'Detalhe do playbook',
+      run: 'Executar playbook',
+      running: 'A executar…',
+      filters: { all: 'Todos', active: 'Ativos', inactive: 'Inativos' },
+      subjectType: 'Tipo de assunto',
+      subjectId: 'Id do assunto',
+      runFormTitle: 'Executar playbook',
+      runFormSubjectType: 'Tipo de assunto (obrigatório)',
+      runFormSubjectId: 'Id do assunto (opcional)',
+      cancel: 'Cancelar',
+      runs: 'Execuções',
+      runsEmpty: 'Ainda não existem execuções deste playbook.',
+      runStatus: {
+        active: 'Ativa',
+        completed: 'Concluída',
+        cancelled: 'Cancelada'
+      },
+      headers: { id: 'ID', title: 'Título', subject: 'Assunto', active: 'Ativo' },
+      runsHeaders: { id: 'ID', status: 'Estado', subject: 'Assunto', started: 'Iniciada' }
+    },
+    workflows: {
+      title: 'NativeFlows CEODigital',
+      openCommand: 'CEODigital: Abrir NativeFlows',
+      empty: 'Ainda não existem fluxos de trabalho NativeFlow para este tenant.',
+      back: 'Voltar aos fluxos de trabalho',
+      detail: 'Detalhe do fluxo de trabalho',
+      publish: 'Publicar',
+      publishing: 'A publicar…',
+      run: 'Executar fluxo de trabalho',
+      running: 'A executar…',
+      filters: {
+        all: 'Todos',
+        draft: 'Rascunho',
+        active: 'Ativos',
+        archived: 'Arquivados'
+      },
+      triggers: {
+        all: 'Todos os acionadores',
+        manual: 'Manual',
+        webhook: 'Webhook',
+        schedule: 'Agendado',
+        event: 'Evento',
+        api: 'API'
+      },
+      runInput: 'Entrada (JSON)',
+      runInputPlaceholder: '{ "chave": "valor" }',
+      webhooks: 'Webhooks',
+      webhooksEmpty: 'Sem webhooks neste fluxo de trabalho.',
+      schedules: 'Agendamentos',
+      schedulesEmpty: 'Sem agendamentos neste fluxo de trabalho.',
+      runs: 'Execuções',
+      runsEmpty: 'Ainda não existem execuções deste fluxo de trabalho.',
+      runStatus: {
+        active: 'Ativa',
+        completed: 'Concluída',
+        cancelled: 'Cancelada',
+        failed: 'Falhou'
+      },
+      headers: { id: 'ID', name: 'Nome', status: 'Estado', trigger: 'Acionador' },
+      runsHeaders: { id: 'ID', status: 'Estado', started: 'Iniciada' },
+      webhooksHeaders: { id: 'ID', url: 'URL', active: 'Ativo' },
+      schedulesHeaders: { id: 'ID', cron: 'Cron', active: 'Ativo' },
+      actions: {
+        rotate: 'Rodar chave',
+        pausing: 'A atualizar…',
+        pause: 'Pausar',
+        resume: 'Retomar',
+        rotating: 'A rodar chave…'
+      }
+    }
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
+    general: 'A ação falhou. Tenta novamente.',
     mcp_not_configured: 'O MCP do CEODigital não está configurado. Liga-o nas definições CEODigital primeiro.',
     mcp_unreachable: 'O CEODigital está inacessível de momento. Verifica a ligação e tenta novamente.',
     tenant_not_found: 'Nenhum tenant CEODigital está associado a este perfil.'

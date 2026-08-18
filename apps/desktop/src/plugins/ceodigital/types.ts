@@ -668,3 +668,236 @@ export type ProposalsEnvelope = ProposalsResponse | ServicesError
 export type ProposalEnvelope = ProposalResponse | ServicesError
 export type CreateProposalEnvelope = CreateProposalResponse | ServicesError
 export type ProposalActionEnvelope = ProposalActionResultResponse | ServicesError
+
+// ── Automation (W4) — conversations ─────────────────────────────────────────
+
+/** A conversation row (`conversations.list` / `conversations.get`). */
+export interface ConversationRow {
+  id: string
+  title: string
+  is_archived: boolean
+  isArchived?: boolean
+  model?: null | string
+  system_prompt?: null | string
+  systemPrompt?: null | string
+  workspace_id?: null | string
+  tags?: null | string[]
+  [key: string]: unknown
+}
+
+/** GET /automation/conversations — list query params (map 1:1 to MCP). */
+export interface ConversationsListParams {
+  isArchived?: boolean
+  search?: string
+  limit?: number
+}
+
+/** POST /automation/conversations — create input (all fields optional in MCP). */
+export interface CreateConversationInput {
+  title?: string
+  systemPrompt?: string
+  model?: string
+  tags?: string[]
+  workspaceId?: string
+}
+
+/** GET /automation/conversations — success envelope. */
+export interface ConversationsResponse {
+  ok: true
+  conversations: ConversationRow[]
+}
+
+/** GET /automation/conversations/{id} — success envelope. */
+export interface ConversationResponse {
+  ok: true
+  conversation: ConversationRow
+}
+
+export type ConversationsEnvelope = ConversationsResponse | CrmError
+export type ConversationEnvelope = ConversationResponse | CrmError
+
+// ── Automation (W4) — playbooks (+ runs) ───────────────────────────────────
+
+/** A playbook row (`playbooks.list` / `playbooks.get`). */
+export interface PlaybookRow {
+  id: string
+  title: string
+  name?: null | string
+  code?: null | string
+  subject_type?: null | string
+  subjectType?: null | string
+  is_active: boolean
+  isActive?: boolean
+  description?: null | string
+  [key: string]: unknown
+}
+
+/** A playbook run row (`playbook.runs.list`). */
+export interface PlaybookRunRow {
+  id: string
+  status: string
+  playbook_id?: null | string
+  subject_type?: null | string
+  subject_id?: null | string
+  started_at?: null | string
+  finished_at?: null | string
+  [key: string]: unknown
+}
+
+/** GET /automation/playbooks — list query params. */
+export interface PlaybooksListParams {
+  subjectType?: string
+  isActive?: boolean
+  limit?: number
+}
+
+/** GET /automation/playbooks/runs — list query params. */
+export interface PlaybookRunsListParams {
+  playbookId?: string
+  status?: 'active' | 'completed' | 'cancelled' | string
+  subjectType?: string
+  subjectId?: string
+  limit?: number
+}
+
+/** POST /automation/playbooks/{id}/run — input body. */
+export interface RunPlaybookInput {
+  subjectType: string
+  subjectId?: string
+}
+
+/** GET /automation/playbooks — success envelope. */
+export interface PlaybooksResponse {
+  ok: true
+  playbooks: PlaybookRow[]
+}
+
+/** GET /automation/playbooks/{id} — success envelope. */
+export interface PlaybookResponse {
+  ok: true
+  playbook: PlaybookRow
+}
+
+/** GET /automation/playbooks/runs — success envelope. */
+export interface PlaybookRunsResponse {
+  ok: true
+  runs: PlaybookRunRow[]
+}
+
+export type PlaybooksEnvelope = PlaybooksResponse | CrmError
+export type PlaybookEnvelope = PlaybookResponse | CrmError
+export type PlaybookRunsEnvelope = PlaybookRunsResponse | CrmError
+
+// ── Automation (W4) — NativeFlow (workflows / runs / webhooks / schedules) ──
+
+/** A NativeFlow workflow row (`agentflow.workflows.list` / `get`). */
+export interface WorkflowRow {
+  id: string
+  name: string
+  status: 'draft' | 'active' | 'archived' | string
+  trigger_type?: null | string
+  triggerType?: null | string
+  description?: null | string
+  [key: string]: unknown
+}
+
+/** A NativeFlow run row (`agentflow.runs.list`). */
+export interface WorkflowRunRow {
+  id: string
+  status: string
+  workflow_id?: null | string
+  started_at?: null | string
+  finished_at?: null | string
+  error?: null | string
+  [key: string]: unknown
+}
+
+/** A NativeFlow webhook row (`agentflow.webhooks.list`). */
+export interface WebhookRow {
+  id: string
+  url: string
+  is_active: boolean
+  isActive?: boolean
+  workflow_id?: null | string
+  workflowId?: null | string
+  [key: string]: unknown
+}
+
+/** A NativeFlow schedule row (`agentflow.schedules.list`). */
+export interface ScheduleRow {
+  id: string
+  is_active: boolean
+  isActive?: boolean
+  workflow_id?: null | string
+  cron_expr?: null | string
+  cronExpr?: null | string
+  [key: string]: unknown
+}
+
+/** GET /automation/workflows — list query params. */
+export interface WorkflowsListParams {
+  status?: 'draft' | 'active' | 'archived' | string
+  triggerType?: 'manual' | 'webhook' | 'schedule' | 'event' | 'api' | string
+  limit?: number
+}
+
+/** POST /automation/workflows/{id}/run — input body (MCP agentflow.run). */
+export interface RunWorkflowInput {
+  input?: Record<string, unknown>
+}
+
+/** GET /automation/workflows/{id}/webhooks — list query params. */
+export interface WebhooksListParams {
+  active?: boolean
+  limit?: number
+}
+
+/** GET /automation/workflows/{id}/schedules — list query params. */
+export interface SchedulesListParams {
+  active?: boolean
+  limit?: number
+}
+
+/** GET /automation/workflows — success envelope. */
+export interface WorkflowsResponse {
+  ok: true
+  workflows: WorkflowRow[]
+}
+
+/** GET /automation/workflows/{id} — success envelope. */
+export interface WorkflowResponse {
+  ok: true
+  workflow: WorkflowRow
+}
+
+/** GET /automation/workflows/{id}/runs — success envelope. */
+export interface WorkflowRunsResponse {
+  ok: true
+  runs: WorkflowRunRow[]
+}
+
+/** GET /automation/workflows/{id}/webhooks — success envelope. */
+export interface WebhooksResponse {
+  ok: true
+  webhooks: WebhookRow[]
+}
+
+/** GET /automation/workflows/{id}/schedules — success envelope. */
+export interface SchedulesResponse {
+  ok: true
+  schedules: ScheduleRow[]
+}
+
+export type WorkflowsEnvelope = WorkflowsResponse | CrmError
+export type WorkflowEnvelope = WorkflowResponse | CrmError
+export type WorkflowRunsEnvelope = WorkflowRunsResponse | CrmError
+export type WebhooksEnvelope = WebhooksResponse | CrmError
+export type SchedulesEnvelope = SchedulesResponse | CrmError
+
+/** Mutation success envelope shared by the automation actions (raw MCP result). */
+export interface AutomationActionResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+export type AutomationActionEnvelope = AutomationActionResponse | CrmError

@@ -25,13 +25,16 @@ import { CEODIGITAL_LOCALES } from './i18n'
 import { ActivitiesPage } from './pages/Activities'
 import { AgentsPage } from './pages/Agents'
 import { CatalogPage } from './pages/Catalog'
+import { ConversationsPage } from './pages/Conversations'
 import { DealsPage } from './pages/Deals'
 import { LeadsPage } from './pages/Leads'
 import { OrganizationsPage } from './pages/Organizations'
 import { PersonsPage } from './pages/Persons'
 import { PipelinesPage } from './pages/Pipelines'
+import { PlaybooksPage } from './pages/Playbooks'
 import { ProjectsPage } from './pages/Projects'
 import { ProposalsPage } from './pages/Proposals'
+import { WorkflowsPage } from './pages/Workflows'
 import { WorkitemsPage } from './pages/Workitems'
 
 const plugin: HermesPlugin = {
@@ -312,6 +315,84 @@ const plugin: HermesPlugin = {
           label: t('agents.title'),
           keywords: ['ceodigital', 'agents', 'ceo', 'nativeflow'],
           run: () => host.navigate('/ceodigital/agents')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'conversations-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/automation/conversations' } satisfies RouteContribution,
+        render: () => <ConversationsPage />
+      },
+      {
+        id: 'conversations-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 50,
+        data: {
+          codicon: 'comment',
+          label: t('automation.conversations.title'),
+          path: '/ceodigital/automation/conversations'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-conversations',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openConversations',
+          label: t('automation.conversations.title'),
+          keywords: ['ceodigital', 'automation', 'conversations', 'chat'],
+          run: () => host.navigate('/ceodigital/automation/conversations')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'playbooks-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/automation/playbooks' } satisfies RouteContribution,
+        render: () => <PlaybooksPage />
+      },
+      {
+        id: 'playbooks-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 51,
+        data: {
+          codicon: 'book',
+          label: t('automation.playbooks.title'),
+          path: '/ceodigital/automation/playbooks'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-playbooks',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openPlaybooks',
+          label: t('automation.playbooks.title'),
+          keywords: ['ceodigital', 'automation', 'playbooks', 'runbooks'],
+          run: () => host.navigate('/ceodigital/automation/playbooks')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'workflows-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/automation/workflows' } satisfies RouteContribution,
+        render: () => <WorkflowsPage />
+      },
+      {
+        id: 'workflows-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 52,
+        data: {
+          codicon: 'hubot',
+          label: t('automation.workflows.title'),
+          path: '/ceodigital/automation/workflows'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-workflows',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openWorkflows',
+          label: t('automation.workflows.title'),
+          keywords: ['ceodigital', 'automation', 'workflows', 'nativeflow', 'agentflow'],
+          run: () => host.navigate('/ceodigital/automation/workflows')
         } satisfies PaletteContribution
       }
     ])

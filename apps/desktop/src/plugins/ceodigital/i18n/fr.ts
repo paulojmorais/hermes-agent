@@ -354,8 +354,119 @@ export const fr: CeodigitalMessages = {
       }
     }
   },
+  automation: {
+    conversations: {
+      title: 'Conversations CEODigital',
+      openCommand: 'CEODigital : Ouvrir les conversations',
+      empty: 'Aucune conversation d’automatisation trouvée pour votre tenant.',
+      search: 'Rechercher des conversations…',
+      archivedOnly: 'Archivées uniquement',
+      all: 'Toutes',
+      new: 'Nouvelle conversation',
+      form: {
+        title: 'Titre',
+        titlePlaceholder: 'Titre de la conversation',
+        systemPrompt: 'Invite système',
+        model: 'Modèle',
+        workspaceId: 'Id du workspace',
+        tags: 'Tags (séparées par des virgules)',
+        create: 'Créer la conversation',
+        cancel: 'Annuler'
+      },
+      actions: {
+        archive: 'Archiver',
+        share: 'Partager',
+        unshare: 'Ne plus partager',
+        archiving: 'Archivage…',
+        sharing: 'Partage…'
+      },
+      headers: {
+        id: 'ID',
+        title: 'Titre',
+        model: 'Modèle',
+        archived: 'Archivée',
+        shared: 'Partagée'
+      }
+    },
+    playbooks: {
+      title: 'Playbooks CEODigital',
+      openCommand: 'CEODigital : Ouvrir les playbooks',
+      empty: 'Aucun playbook trouvé pour votre tenant.',
+      back: 'Retour aux playbooks',
+      detail: 'Détail du playbook',
+      run: 'Exécuter le playbook',
+      running: 'Exécution…',
+      filters: { all: 'Tous', active: 'Actifs', inactive: 'Inactifs' },
+      subjectType: 'Type de sujet',
+      subjectId: 'Id du sujet',
+      runFormTitle: 'Exécuter le playbook',
+      runFormSubjectType: 'Type de sujet (obligatoire)',
+      runFormSubjectId: 'Id du sujet (facultatif)',
+      cancel: 'Annuler',
+      runs: 'Exécutions',
+      runsEmpty: 'Aucune exécution de ce playbook pour le moment.',
+      runStatus: {
+        active: 'Active',
+        completed: 'Terminée',
+        cancelled: 'Annulée'
+      },
+      headers: { id: 'ID', title: 'Titre', subject: 'Sujet', active: 'Actif' },
+      runsHeaders: { id: 'ID', status: 'Statut', subject: 'Sujet', started: 'Démarrée' }
+    },
+    workflows: {
+      title: 'NativeFlows CEODigital',
+      openCommand: 'CEODigital : Ouvrir les NativeFlows',
+      empty: 'Aucun flux de travail NativeFlow trouvé pour votre tenant.',
+      back: 'Retour aux flux de travail',
+      detail: 'Détail du flux de travail',
+      publish: 'Publier',
+      publishing: 'Publication…',
+      run: 'Exécuter le flux de travail',
+      running: 'Exécution…',
+      filters: {
+        all: 'Tous',
+        draft: 'Brouillon',
+        active: 'Actifs',
+        archived: 'Archivés'
+      },
+      triggers: {
+        all: 'Tous les déclencheurs',
+        manual: 'Manuel',
+        webhook: 'Webhook',
+        schedule: 'Planifié',
+        event: 'Événement',
+        api: 'API'
+      },
+      runInput: 'Entrée (JSON)',
+      runInputPlaceholder: '{ "clé": "valeur" }',
+      webhooks: 'Webhooks',
+      webhooksEmpty: 'Aucun webhook sur ce flux de travail.',
+      schedules: 'Planifications',
+      schedulesEmpty: 'Aucune planification sur ce flux de travail.',
+      runs: 'Exécutions',
+      runsEmpty: 'Aucune exécution de ce flux de travail pour le moment.',
+      runStatus: {
+        active: 'Active',
+        completed: 'Terminée',
+        cancelled: 'Annulée',
+        failed: 'Échouée'
+      },
+      headers: { id: 'ID', name: 'Nom', status: 'Statut', trigger: 'Déclencheur' },
+      runsHeaders: { id: 'ID', status: 'Statut', started: 'Démarrée' },
+      webhooksHeaders: { id: 'ID', url: 'URL', active: 'Actif' },
+      schedulesHeaders: { id: 'ID', cron: 'Cron', active: 'Actif' },
+      actions: {
+        rotate: 'Pivoter',
+        pausing: 'Mise à jour…',
+        pause: 'Pause',
+        resume: 'Reprendre',
+        rotating: 'Rotation…'
+      }
+    }
+  },
   errors: {
     fetch: 'Impossible de charger les projets CEODigital.',
+    general: "L'action a échoué. Réessayez.",
     mcp_not_configured: "Le MCP CEODigital n'est pas configuré. Connectez-le d'abord dans vos paramètres CEODigital.",
     mcp_unreachable: 'CEODigital est injoignable pour le moment. Vérifiez votre connexion et réessayez.',
     tenant_not_found: "Aucun tenant CEODigital n'est associé à ce profil."

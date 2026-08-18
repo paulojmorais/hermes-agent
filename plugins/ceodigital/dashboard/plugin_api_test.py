@@ -1647,3 +1647,514 @@ def test_services_proposals_tranches_update_requires_values(plugin, client, monk
 
     assert resp.status_code == 422
     assert resp.json() == {"ok": False, "error": "values_required"}
+
+
+# ---------------------------------------------------------------------------
+# W4 · Automation — conversations
+# ---------------------------------------------------------------------------
+
+
+def test_conversations_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"conversations": [
+            {"id": "c-1", "title": "Prospecting", "is_archived": False},
+            {"id": "c-2", "name": "Billing", "isArchived": True},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/conversations?isArchived=true&search=bill&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["conversations"][0]["id"] == "c-1"
+    assert data["conversations"][0]["title"] == "Prospecting"
+    assert data["conversations"][1]["title"] == "Billing"  # name → title fallback
+    assert captured["tool"] == "conversations.list"
+    assert captured["args"] == {"isArchived": True, "search": "bill", "limit": 5}
+
+
+def test_conversations_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"conversations": []}))
+
+    resp = client.get("/api/plugins/ceodigital/automation/conversations")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "conversations": []}
+    assert captured["args"] == {}
+
+
+def test_conversation_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"conversation": {"id": "c-7", "title": "Onboarding", "model": "sonnet"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/conversations/c-7")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["conversation"]["id"] == "c-7"
+    assert captured["args"] == {"id": "c-7"}
+
+
+def test_conversation_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp({}, {}))
+
+    resp = client.get("/api/plugins/ceodigital/automation/conversations/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_conversations_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"id": "c-new", "title": "New chat", "status": "active"}),
+    )
+
+    resp = client.post(
+        "/api/plugins/ceodigital/automation/conversations",
+        json={
+            "title": "New chat",
+            "systemPrompt": "Act as an ops analyst",
+            "model": "sonnet",
+            "tags": ["ops", "lead"],
+            "workspaceId": "ws-1",
+        },
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["result"]["id"] == "c-new"
+    assert captured["tool"] == "conversations.create"
+    assert captured["args"] == {
+        "title": "New chat",
+        "systemPrompt": "Act as an ops analyst",
+        "model": "sonnet",
+        "tags": ["ops", "lead"],
+        "workspaceId": "ws-1",
+    }
+
+
+def test_conversations_create_empty_body(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "c-blank"}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/conversations", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["args"] == {}
+
+
+def test_conversations_archive_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "c-1", "is_archived": True}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/conversations/c-1/archive", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "conversations.archive"
+    assert captured["args"] == {"id": "c-1"}
+
+
+def test_conversations_share_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "c-1", "shared": True}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/conversations/c-1/share", json={"enabled": True})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "conversations.share"
+    assert captured["args"] == {"id": "c-1", "enabled": True}
+
+
+def test_conversations_share_requires_enabled(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/automation/conversations/c-1/share", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "enabled_required"}
+
+
+def test_conversations_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    resp = client.get("/api/plugins/ceodigital/automation/conversations")
+
+    assert resp.status_code == 503
+    assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W4 · Automation — playbooks (+ runs)
+# ---------------------------------------------------------------------------
+
+
+def test_playbooks_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"playbooks": [
+            {"id": "pb-1", "title": "Close lead", "subject_type": "deal", "is_active": True},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/playbooks?subjectType=deal&isActive=true&limit=10")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["playbooks"][0]["id"] == "pb-1"
+    assert data["playbooks"][0]["title"] == "Close lead"
+    assert captured["tool"] == "playbooks.list"
+    assert captured["args"] == {"subjectType": "deal", "isActive": True, "limit": 10}
+
+
+def test_playbook_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"playbook": {"id": "pb-7", "title": "Onboarding runbook", "code": "onb"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/playbooks/pb-7")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["playbook"]["id"] == "pb-7"
+    assert captured["args"] == {"id": "pb-7"}
+
+
+def test_playbook_detail_by_code(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"playbook": {"id": "pb-x", "code": "onb", "title": "Onboarding"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/playbooks/pb-x?code=onb")
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["args"] == {"id": "pb-x", "code": "onb"}
+
+
+def test_playbook_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp({}, {}))
+
+    resp = client.get("/api/plugins/ceodigital/automation/playbooks/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_playbooks_run_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"run_id": "run-1", "status": "running"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/automation/playbooks/pb-1/run",
+        json={"subjectType": "deal", "subjectId": "deal-9"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["result"]["run_id"] == "run-1"
+    assert captured["tool"] == "playbooks.run"
+    assert captured["args"] == {"playbookId": "pb-1", "subjectType": "deal", "subjectId": "deal-9"}
+
+
+def test_playbooks_run_requires_subject_type(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/automation/playbooks/pb-1/run", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "subject_type_required"}
+
+
+def test_playbook_runs_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"runs": [
+            {"id": "r-1", "playbook_id": "pb-1", "status": "completed"},
+            {"id": "r-2", "playbook_id": "pb-1", "status": "running"},
+        ]}),
+    )
+
+    resp = client.get(
+        "/api/plugins/ceodigital/automation/playbooks/runs?playbookId=pb-1&status=completed&subjectType=deal&subjectId=deal-9&limit=5"
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [r["id"] for r in data["runs"]] == ["r-1", "r-2"]
+    assert captured["tool"] == "playbook.runs.list"
+    assert captured["args"] == {
+        "playbookId": "pb-1",
+        "status": "completed",
+        "subjectType": "deal",
+        "subjectId": "deal-9",
+        "limit": 5,
+    }
+
+
+def test_playbook_runs_list_not_captured_by_detail(plugin, client, monkeypatch):
+    """The literal /automation/playbooks/runs must route to the runs list, not
+    be captured as a playbook id by /automation/playbooks/{id}."""
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"runs": []}))
+
+    resp = client.get("/api/plugins/ceodigital/automation/playbooks/runs")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "runs": []}
+    assert captured["tool"] == "playbook.runs.list"
+
+
+# ---------------------------------------------------------------------------
+# W4 · Automation — NativeFlow (workflows / runs / webhooks / schedules)
+# ---------------------------------------------------------------------------
+
+
+def test_workflows_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"workflows": [
+            {"id": "wf-1", "name": "Onboarding", "status": "active", "trigger_type": "webhook"},
+            {"id": "wf-2", "name": "Digest", "status": "draft", "trigger_type": "schedule"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/workflows?status=active&triggerType=webhook&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [w["id"] for w in data["workflows"]] == ["wf-1", "wf-2"]
+    assert captured["tool"] == "agentflow.workflows.list"
+    assert captured["args"] == {"status": "active", "triggerType": "webhook", "limit": 5}
+
+
+def test_workflow_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"workflow": {"id": "wf-7", "name": "Pipeline", "status": "active"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/workflows/wf-7")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["workflow"]["id"] == "wf-7"
+    assert captured["args"] == {"id": "wf-7"}
+
+
+def test_workflow_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp({}, {}))
+
+    resp = client.get("/api/plugins/ceodigital/automation/workflows/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_workflow_publish_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "wf-1", "status": "active"}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/workflows/wf-1/publish", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "agentflow.workflows.publish"
+    assert captured["args"] == {"id": "wf-1"}
+
+
+def test_workflow_run_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"run_id": "run-9", "status": "running"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/automation/workflows/wf-1/run",
+        json={"input": {"subject_id": "deal-1"}},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["result"]["run_id"] == "run-9"
+    assert captured["tool"] == "agentflow.run"
+    assert captured["args"] == {"flowId": "wf-1", "input": {"subject_id": "deal-1"}}
+
+
+def test_workflow_run_empty_body(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"run_id": "run-0"}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/workflows/wf-1/run", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["args"] == {"flowId": "wf-1"}
+
+
+def test_workflow_runs_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"runs": [
+            {"id": "r-1", "workflow_id": "wf-1", "status": "completed"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/workflows/wf-1/runs?limit=3")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["runs"][0]["id"] == "r-1"
+    assert captured["tool"] == "agentflow.runs.list"
+    assert captured["args"] == {"workflowId": "wf-1", "limit": 3}
+
+
+def test_workflow_webhooks_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"webhooks": [
+            {"id": "wh-1", "workflow_id": "wf-1", "url": "https://hooks.internal", "is_active": True},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/workflows/wf-1/webhooks?active=true")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["webhooks"][0]["id"] == "wh-1"
+    assert captured["tool"] == "agentflow.webhooks.list"
+    assert captured["args"] == {"workflowId": "wf-1", "active": True}
+
+
+def test_webhook_rotate_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "wh-1", "secret": "rotated"}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/webhooks/wh-1/rotate", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "agentflow.webhooks.rotate"
+    assert captured["args"] == {"id": "wh-1"}
+
+
+def test_workflow_schedules_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"schedules": [
+            {"id": "s-1", "workflow_id": "wf-1", "cron_expr": "0 9 * * *", "is_active": True},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/automation/workflows/wf-1/schedules?active=true")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["schedules"][0]["id"] == "s-1"
+    assert captured["tool"] == "agentflow.schedules.list"
+    assert captured["args"] == {"workflowId": "wf-1", "active": True}
+
+
+def test_schedule_pause_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "s-1", "paused": True}))
+
+    resp = client.post("/api/plugins/ceodigital/automation/schedules/s-1/pause", json={"paused": True})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "agentflow.schedules.pause"
+    assert captured["args"] == {"id": "s-1", "paused": True}
+
+
+def test_schedule_pause_requires_paused(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/automation/schedules/s-1/pause", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "paused_required"}
+
+
+def test_automation_mutations_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/automation/workflows", None),
+        ("POST", "/automation/workflows/wf-1/publish", {}),
+        ("POST", "/automation/playbooks/pb-1/run", {"subjectType": "deal"}),
+        ("POST", "/automation/conversations", {"title": "x"}),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body) if body is not None else client.get(f"/api/plugins/ceodigital{route}")
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
