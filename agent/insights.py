@@ -1,5 +1,5 @@
 """
-Session Insights Engine for Hermes Agent.
+Session Insights Engine for CEODigital Agent.
 
 Analyzes historical session data from the SQLite state database to produce
 comprehensive usage insights — token consumption, cost estimates, tool usage
