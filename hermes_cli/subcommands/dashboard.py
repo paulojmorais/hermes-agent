@@ -258,8 +258,19 @@ def build_dashboard_parser(
         dest="show_port",
         action="store_true",
         help=(
-            "Also print the expected bind (127.0.0.1:9119, matching the stock "
+            "Also print the expected bind (127.0.0.1:8642, matching the stock "
             "CONNECTOR_SERVE_URL default) before the key — handy for bundle config"
+        ),
+    )
+    serve_key_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        metavar="HOST",
+        help=(
+            "Bind host to print/emit as the API server's host (default "
+            "127.0.0.1). Use this for Topology A / a remote VM where the "
+            "api_server is not reachable on loopback. Does not start a server "
+            "— it only affects the printed/emitted bind."
         ),
     )
     serve_key_parser.add_argument(

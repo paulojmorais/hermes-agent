@@ -23,11 +23,13 @@ import json
 import secrets
 import sys
 
-# Expected default bind for ``hermes serve``. Must match the stock
-# CONNECTOR_SERVE_URL default (http://127.0.0.1:9119) the bundle installer
-# targets.
+# Expected default bind for the headless API server. The ``API_SERVER_KEY``
+# this command mints authenticates the gateway ``api_server`` platform — which
+# exposes ``/v1/runs`` on ``API_SERVER_PORT`` (default 8642) — NOT the
+# ``hermes serve`` web-ui port (9119). Must match the connector bundle's
+# ``CONNECTOR_SERVE_URL`` default (http://127.0.0.1:8642). See ADR-0032.
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 9119
+DEFAULT_PORT = 8642
 
 # 16 chars is well below any generated token; only a deliberately-strong
 # pre-existing key counts as usable.
@@ -70,18 +72,20 @@ def cmd_serve_key(args) -> None:
         generated_new = False
 
     if getattr(args, "json", False):
+        host = getattr(args, "host", DEFAULT_HOST) or DEFAULT_HOST
         print(
             json.dumps(
                 {
                     "api_server_key": key,
-                    "host": DEFAULT_HOST,
+                    "host": host,
                     "port": DEFAULT_PORT,
                 }
             )
         )
     else:
         if getattr(args, "show_port", False):
-            print(f"{DEFAULT_HOST}:{DEFAULT_PORT}")
+            host = getattr(args, "host", DEFAULT_HOST) or DEFAULT_HOST
+            print(f"{host}:{DEFAULT_PORT}")
         label = getattr(args, "label", "") or ""
         if label:
             print(f"{label}: {key}")
@@ -94,9 +98,10 @@ def cmd_serve_key(args) -> None:
     # Human-facing note only (stderr) — never includes the key value.
     from hermes_constants import display_hermes_home
 
+    host = getattr(args, "host", DEFAULT_HOST) or DEFAULT_HOST
     print(
         f"# Share this key with the CEODigital connector bundle: it authenticates "
-        f"to `hermes serve` via CONNECTOR_SERVE_URL (http://{DEFAULT_HOST}:"
+        f"to the headless API server via CONNECTOR_SERVE_URL (http://{host}:"
         f"{DEFAULT_PORT}) using Bearer auth. Stored in "
         f"{display_hermes_home()}/.env as API_SERVER_KEY.",
         file=sys.stderr,
