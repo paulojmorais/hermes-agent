@@ -2,7 +2,7 @@
 
 > **Repo fonte:** `paulojmorais/ceodigital-agent` (fork Hermes branded) · **Branch:** `ceodigital-branding`
 > **Plataforma alvo:** `ceodigital` v2 (TanStack Start) — `~/dev/ceodigital`
-> **Autor:** Hermes (CEODigital Agent) · **Última atualização:** 2026-08-18 (W1–W4 entregues)
+> **Autor:** Hermes (CEODigital Agent) · **Última atualização:** 2026-08-18 (W1–W5 entregues)
 > **Objetivo:** gerir **todo** o CEODigital a partir do desktop Hermes (plugin `ceodigital`), cobrindo todos os módulos que a plataforma já expõe via MCP e os que ainda não foram expostos.
 
 ---
@@ -91,7 +91,7 @@ Rota do plugin → tool MCP → cobertura:
 | **CRM** | `leads`, `deals`, `persons`, `organizations`, `pipelines`, `stages`, `activities`, `categories` | 34 | ✅ **W1 done** — read completo (persons/orgs/pipelines/stages/activities/categories); mutações UI ainda não |
 | **Services/Propostas** | catalog/offerings/categories/proposals + items/tranches (GET+POST) | 21 | ✅ **W3 done** — lifecycle completo |
 | **Automation** | conversations, playbooks, workflows/webhooks/schedules (GET+POST) | 18 | ✅ **W4 done** — conversations+playbooks+nativeflow |
-| **Documents/RAG** | — | ~19 | ⬜ 0 (W5) |
+| **Documents/RAG** | files/collections/bindings/search/reindex (GET+POST) | ~19 | ✅ **W5 done** — library + upload/move/delete + RAG search/reindex |
 | **Messaging** | — | 9 | ⬜ 0 (W6) |
 | **Implementations** | — | 9 | ⬜ 0 (W6) |
 | **Commerce/Payments** | — | 7+ | ⬜ 0 (W7) |
@@ -100,9 +100,9 @@ Rota do plugin → tool MCP → cobertura:
 | **Agents** | `agents`, `{slug}/ask`, `runs`, `schedules`, `pending` | dinâmicas | ✅ já cobre catálogo+ask+runs+schedules+pending |
 | **Platform admin.** | — | 18 (só CP) | ⬜ 0 (W9, opcional, token CP) |
 
-**Conclusão:** o plugin cobre hoje **~60% da superfície MCP do tenant** (CRM, Workitems,
-Services, Automation, Agents completos; falta Documents, Messaging, Implementations, Commerce,
-Governance e os agregados). O restante está mapeado nas waves W5–W9.
+**Conclusão:** o plugin cobre hoje **~70% da superfície MCP do tenant** (CRM, Workitems,
+Services, Automation, Agents, Documents/RAG completos; falta Messaging, Implementations, Commerce,
+Governance e os agregados). O restante está mapeado nas waves W6–W9.
 
 ### 3.1 Módulos do produto CEODigital que AINDA NÃO têm surface MCP (falta criar do lado ceodigital)
 
@@ -161,7 +161,7 @@ Prioridade por valor/gestão (o que o CEO/gestor quer gerir daqui). Cada wave = 
 ### W5 — Documents / RAG
 **ceodigital-agent:** painel de documentos, ficheiros, coleções; centro de pesquisa RAG.
 - Tools: `searchDocuments` + ~17 de `@/modules/business/documents/tools/registry`.
-- Esforço: Alto.
+- Esforço: Alto. **✅ DONE** — commit `a059a27ae3` (files library + upload/move/delete, collections, bindings, RAG search + reindex).
 
 ### W6 — Messaging, Notifications, Timeline, Workspaces, Members, Integrations, Departments
 **ceodigital-agent:** painéis agregados (inbox de notificações, mensagens, workspace switcher, gestão de membros, integrações visíveis).
