@@ -230,3 +230,60 @@ Testes: `plugin_api_test.py` (backend) + vitest (quando o rolldown do desktop es
 - Fork todos/estado: `docs/ceodigital-fork-todos.md` (repo ceodigital-agent).
 - Agent Plugins v1 portável: `~/.hermes/profiles/ceodigital/skills/teamhub-hermes-integration/references/agent-plugins-v1-portable.md`.
 - **Referência a criar no repo ceodigital v2:** `docs/implementation-plans/desktop-module-coverage/README.md` (ver ficheiro de referência incluído neste plano).
+
+---
+
+## 9. Modelo em três camadas (decisão arquitetural — 2026-08-18)
+
+> **Nota do owner:** reorientação do plugin. O objetivo NÃO é duplicar no desktop a UI
+> de gestão da plataforma — é gerir via **chat/agente**. As páginas de UI são usadas
+> **sob demanda**, quando o user precisa delas, não como tronco.
+
+### 9.1 As três camadas
+
+```
+                    ┌─────────────────────────────────────────────────┐
+  1. CHAT/AGENTE    │  Hermes → (MCP Direção A) → ceodigitalv2 tools │  ← TRONCO (default)
+   (gestão por LN)  │  "cria proposal", "corre workitem", "lista    │
+                    │   leads" — sem navegar telas                  │
+                    ├─────────────────────────────────────────────────┤
+  2. UI sob demanda │  Páginas desktop abertas por contexto/user:    │  ← complemento
+                    │  detalhe de deal, aprovar HITL, config guiada  │     (não o foco)
+                    │  (NativeFlow), calendar/agenda                │
+                    ├─────────────────────────────────────────────────┤
+  3. CONNECTOR/Dir B│  ceodigital → outbox/relay → Hermes LOCAL      │  ← multiplicador
+   (trabalho longo) │  enqueueAgentRun → Hermes executa com agentes  │
+                    │  → devolve resultado                          │
+                    └─────────────────────────────────────────────────┘
+```
+
+### 9.2 Regras da nova orientação
+
+1. **O tronco é o chat/agente.** O esforço prioritário é garantir que **todas** as
+   tools MCP dos módulos existem no ceodigitalv2 (repo ceodigital) — não criar telas.
+2. **As páginas de UI mantêm-se mas são "sob demanda"**: não se deita fora o
+   `plugin_api.py` (camada fina, reutilizável) nem as telas ricas com lifecycle
+   (Proposals, Workitems, NativeFlow); param é de ser o foco de desenvolvimento.
+3. **As telas read-only finas** (leads/persons/orgs/pipelines como tabelas) **não**
+   se expandem — o chat já as cobre. Só se mantêm as que justificam UI (visual:
+   kanban/grafo/calendar; confirmação: aproções; config: NativeFlow).
+4. **A Direção B (Connector) é o multiplicador** — o ceodigital dispara o Hermes
+   local para trabalhos longos via `enqueueAgentRun` (já implementado em
+   `src/tenant/connector/agent-run.functions.ts`). Unifica Hermes=cliente e
+   Hermes=executor.
+
+### 9.3 Reclassificação das waves (nova prioridade)
+
+| Wave | Nova prioridade | Acção |
+|---|---|---|
+| W5 Documents | 🔽 baixa | tools já existem no v2; página mantém-se como UI sob demanda |
+| W6–W7 (messaging/commerce/governance…) | 🔽 baixa | sem criar novas telas read-only; cobrir via chat |
+| **W8 módulos sem MCP** (calendar, attendance, pricing, labels, socialflow, informadb, llm-studio, skills, dashboards, workbench, categories, chat, chat-widgets) | 🔼 **ALTA** | **criar `tools/registry.ts` no ceodigitalv2** + registo no `buildMcpToolRegistry` |
+| W9 platform admin | 🔽 baixa | só se CD token CP; decidir depois |
+
+### 9.4 Definição de "feito" da nova orientação
+
+- [ ] Todos os módulos do W8 têm `tools/registry.ts` no ceodigitalv2, registados no `buildMcpToolRegistry`.
+- [ ] O Hermes (qualquer sessão com MCP `ceodigital-acme`) consegue operar esses módulos por chat (smoke MCP real por módulo).
+- [ ] As tools mutating carregam `needsApproval`; approve/reject ficam na UI tenant.
+- [ ] Nenhuma nova página read-only é criada sem justificação visual/conﬁrmação/config.
