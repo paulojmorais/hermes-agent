@@ -464,6 +464,157 @@ export const pt: CeodigitalMessages = {
       }
     }
   },
+  documents: {
+    files: {
+      title: 'Documentos CEODigital',
+      openCommand: 'CEODigital: Abrir Documentos',
+      empty: 'Ainda não existem ficheiros de documentos para este tenant.',
+      searchPlaceholder: 'Pesquisar na biblioteca…',
+      namespacePlaceholder: 'Todos os namespaces',
+      allNamespaces: 'Todos os namespaces',
+      visibility: 'Visibilidade',
+      allVisibilities: 'Todas as visibilidades',
+      upload: 'Carregar ficheiro',
+      uploadForm: {
+        name: 'Nome',
+        namePlaceholder: 'Nome do ficheiro',
+        file: 'Escolher ficheiro',
+        namespace: 'Namespace',
+        collection: 'Coleção',
+        submit: 'Carregar',
+        cancel: 'Cancelar'
+      },
+      moveForm: {
+        title: 'Mover ficheiro',
+        targetNamespace: 'Namespace de destino',
+        targetCollection: 'Coleção de destino',
+        none: 'Nenhuma (remover da coleção)',
+        submit: 'Mover',
+        cancel: 'Cancelar'
+      },
+      addToCollectionForm: {
+        title: 'Adicionar à coleção',
+        collection: 'Coleção',
+        submit: 'Adicionar',
+        cancel: 'Cancelar'
+      },
+      actions: {
+        move: 'Mover',
+        delete: 'Eliminar',
+        deleteConfirm: 'Eliminar ficheiro',
+        addToCollection: 'Adicionar à coleção',
+        moving: 'A mover…',
+        deleting: 'A eliminar…',
+        adding: 'A adicionar…'
+      },
+      headers: {
+        id: 'ID',
+        title: 'Título',
+        namespace: 'Namespace',
+        visibility: 'Visibilidade',
+        mime: 'MIME'
+      },
+      rag: {
+        placeholder: 'Pesquisar documentos…',
+        search: 'Pesquisar',
+        searching: 'A pesquisar…',
+        empty: 'Ainda não existem documentos carregados.',
+        maxResults: 'Máx. de resultados',
+        resultsEmpty: 'Nenhum documento corresponde à pesquisa.',
+        reindex: 'Reindexar',
+        reindexing: 'A reindexar…',
+        reindexDone: 'Reindexação iniciada.'
+      },
+      errors: {
+        list: 'Não foi possível carregar a biblioteca de documentos.',
+        upload: 'Não foi possível carregar o ficheiro.',
+        delete: 'Não foi possível eliminar o ficheiro.',
+        move: 'Não foi possível mover o ficheiro.',
+        addToCollection: 'Não foi possível adicionar o ficheiro à coleção.',
+        search: 'Não foi possível pesquisar documentos.',
+        reindex: 'Não foi possível iniciar a reindexação.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    },
+    collections: {
+      title: 'Coleções CEODigital',
+      openCommand: 'CEODigital: Abrir Coleções',
+      empty: 'Ainda não existem coleções de documentos para este tenant.',
+      new: 'Nova coleção',
+      createForm: {
+        name: 'Nome',
+        namePlaceholder: 'Nome da coleção',
+        description: 'Descrição',
+        color: 'Cor',
+        icon: 'Ícone',
+        parentId: 'Id da coleção-mãe',
+        create: 'Criar coleção',
+        cancel: 'Cancelar'
+      },
+      members: 'Membros',
+      addFile: 'Adicionar ficheiro',
+      addFilePlaceholder: 'Adicionar um ficheiro por id…',
+      removeFile: 'Remover',
+      noMembers: 'Ainda não existem ficheiros nesta coleção.',
+      headers: { id: 'ID', title: 'Título', description: 'Descrição', members: 'Membros' },
+      errors: {
+        list: 'Não foi possível carregar as coleções.',
+        create: 'Não foi possível criar a coleção.',
+        addFile: 'Não foi possível adicionar o ficheiro.',
+        removeFile: 'Não foi possível remover o ficheiro.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    },
+    bindings: {
+      title: 'Ligações CEODigital',
+      openCommand: 'CEODigital: Abrir Ligações',
+      empty: 'Nenhuma ligação de documento corresponde ao filtro.',
+      entityType: 'Tipo de entidade',
+      entityTypePlaceholder: 'project, task, crm_org…',
+      entityId: 'Id da entidade',
+      entityIdPlaceholder: 'Id da entidade (obrigatório)',
+      direction: 'Direção',
+      allDirections: 'Todas as direções',
+      input: 'Entrada',
+      output: 'Saída',
+      attach: 'Ligar documento',
+      attachForm: {
+        entityType: 'Tipo de entidade',
+        entityTypePlaceholder: 'project, task, crm_org, crm_deal, service_impl, chat_conv',
+        entityId: 'Id da entidade',
+        entityIdPlaceholder: 'Id da entidade (obrigatório)',
+        direction: 'Direção',
+        bindingId: 'Id da ligação',
+        bindingIdPlaceholder: 'Id da ligação (obrigatório)',
+        targetRef: 'Ref de destino (JSON)',
+        syncMode: 'Modo de sincronização',
+        publishMode: 'Modo de publicação',
+        ragIndex: 'Índice RAG',
+        outputFormat: 'Formato de saída',
+        nameTemplate: 'Modelo de nome',
+        submit: 'Ligar',
+        cancel: 'Cancelar'
+      },
+      detach: 'Desligar',
+      detaching: 'A desligar…',
+      headers: {
+        id: 'ID',
+        entity: 'Entidade',
+        direction: 'Direção',
+        binding: 'Ligação',
+        sync: 'Sync',
+        publish: 'Publicação',
+        rag: 'RAG',
+        output: 'Saída'
+      },
+      errors: {
+        list: 'Não foi possível carregar as ligações.',
+        attach: 'Não foi possível ligar o documento.',
+        detach: 'Não foi possível desligar o documento.',
+        general: 'A ação falhou. Tenta novamente.'
+      }
+    }
+  },
   errors: {
     fetch: 'Não foi possível carregar os projetos CEODigital.',
     general: 'A ação falhou. Tenta novamente.',

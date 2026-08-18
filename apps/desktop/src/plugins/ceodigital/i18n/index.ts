@@ -372,6 +372,162 @@ export interface CeodigitalMessages {
       }
     }
   }
+  documents: {
+    files: {
+      title: string
+      openCommand: string
+      empty: string
+      searchPlaceholder: string
+      namespacePlaceholder: string
+      allNamespaces: string
+      visibility: string
+      allVisibilities: string
+      upload: string
+      uploadForm: {
+        name: string
+        namePlaceholder: string
+        file: string
+        namespace: string
+        collection: string
+        submit: string
+        cancel: string
+      }
+      moveForm: {
+        title: string
+        targetNamespace: string
+        targetCollection: string
+        none: string
+        submit: string
+        cancel: string
+      }
+      addToCollectionForm: {
+        title: string
+        collection: string
+        submit: string
+        cancel: string
+      }
+      actions: {
+        move: string
+        delete: string
+        deleteConfirm: string
+        addToCollection: string
+        moving: string
+        deleting: string
+        adding: string
+      }
+      headers: {
+        id: string
+        title: string
+        namespace: string
+        visibility: string
+        mime: string
+      }
+      rag: {
+        placeholder: string
+        search: string
+        searching: string
+        empty: string
+        maxResults: string
+        resultsEmpty: string
+        reindex: string
+        reindexing: string
+        reindexDone: string
+      }
+      errors: {
+        list: string
+        upload: string
+        delete: string
+        move: string
+        addToCollection: string
+        search: string
+        reindex: string
+        general: string
+      }
+    }
+    collections: {
+      title: string
+      openCommand: string
+      empty: string
+      new: string
+      createForm: {
+        name: string
+        namePlaceholder: string
+        description: string
+        color: string
+        icon: string
+        parentId: string
+        create: string
+        cancel: string
+      }
+      members: string
+      addFile: string
+      addFilePlaceholder: string
+      removeFile: string
+      noMembers: string
+      headers: {
+        id: string
+        title: string
+        description: string
+        members: string
+      }
+      errors: {
+        list: string
+        create: string
+        addFile: string
+        removeFile: string
+        general: string
+      }
+    }
+    bindings: {
+      title: string
+      openCommand: string
+      empty: string
+      entityType: string
+      entityTypePlaceholder: string
+      entityId: string
+      entityIdPlaceholder: string
+      direction: string
+      allDirections: string
+      input: string
+      output: string
+      attach: string
+      attachForm: {
+        entityType: string
+        entityTypePlaceholder: string
+        entityId: string
+        entityIdPlaceholder: string
+        direction: string
+        bindingId: string
+        bindingIdPlaceholder: string
+        targetRef: string
+        syncMode: string
+        publishMode: string
+        ragIndex: string
+        outputFormat: string
+        nameTemplate: string
+        submit: string
+        cancel: string
+      }
+      detach: string
+      detaching: string
+      headers: {
+        id: string
+        entity: string
+        direction: string
+        binding: string
+        sync: string
+        publish: string
+        rag: string
+        output: string
+      }
+      errors: {
+        list: string
+        attach: string
+        detach: string
+        general: string
+      }
+    }
+  }
   errors: {
     fetch: string
     general: string

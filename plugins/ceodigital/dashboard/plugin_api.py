@@ -1931,3 +1931,433 @@ def pause_schedule(schedule_id: str, payload: Dict[str, Any] = Body(default={}))
     except Exception:
         log.exception("ceodigital agentflow schedules pause failed: %s", schedule_id)
         return _maybe_error(ERR_UNREACHABLE)
+
+
+# ---------------------------------------------------------------------------
+# W5 · Documents & RAG (documents.* / documents.rag.*)
+# ---------------------------------------------------------------------------
+
+
+def _rows_from_documents(payload: Any, *keys: str) -> List[Dict[str, Any]]:
+    """Extract rows from a documents MCP payload under any of ``keys`` (e.g.
+    ``"files"``/``"collections"``/``"bindings"``/``"results"``), tolerating the
+    JSON-RPC-unwrapped shapes. Mirrors ``_rows_from_services``."""
+    if isinstance(payload, list):
+        return [r for r in payload if isinstance(r, dict)]
+    if isinstance(payload, dict):
+        for candidate in (*keys, "items", "data", "rows", "results"):
+            rows = payload.get(candidate)
+            if isinstance(rows, list):
+                return [r for r in rows if isinstance(r, dict)]
+        return []
+    return []
+
+
+def _normalize_document_file(row: Any) -> Dict[str, Any]:
+    """Map one document file row onto the desktop ``FileRow`` contract.
+    Pass-through plus stable ``id``/``title``; the snake_case twins
+    ``mime_type``/``collection_id`` are filled from camelCase when present."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or row.get("filename") or "")
+    if out.get("mime_type") is None and row.get("mimeType") is not None:
+        out["mime_type"] = row["mimeType"]
+    if out.get("collection_id") is None and row.get("collectionId") is not None:
+        out["collection_id"] = row["collectionId"]
+    return out
+
+
+def _normalize_collection(row: Any) -> Dict[str, Any]:
+    """Map one document collection row onto the desktop ``CollectionRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    out.setdefault("title", row.get("name") or row.get("title") or "")
+    if out.get("parent_id") is None and row.get("parentId") is not None:
+        out["parent_id"] = row["parentId"]
+    return out
+
+
+def _normalize_binding(row: Any) -> Dict[str, Any]:
+    """Map one entity document-binding row onto the desktop ``BindingRow``."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault("id", str(row.get("id") or row.get("_id") or ""))
+    return out
+
+
+def _normalize_search_result(row: Any) -> Dict[str, Any]:
+    """Map one RAG search result row onto the desktop ``SearchResultRow``.
+    The id prefers the document reference so the renderer can deep-link."""
+    if not isinstance(row, dict):
+        row = {}
+    out: Dict[str, Any] = dict(row)
+    out.setdefault(
+        "id",
+        str(
+            row.get("id")
+            or row.get("_id")
+            or row.get("document_id")
+            or row.get("documentId")
+            or ""
+        ),
+    )
+    out.setdefault(
+        "title",
+        row.get("title") or row.get("name") or row.get("filename") or row.get("snippet") or "",
+    )
+    return out
+
+
+# The literal ``/documents/files/upload`` POST is declared before the
+# parametrized ``/documents/files/{file_id}``-family routes so ``upload`` never
+# reads as a file id (same guard as the workitems/playbooks literal sub-routes).
+
+
+@router.post("/documents/files/upload")
+def upload_document_file(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Upload a document file (MCP ``documents.files.upload``, needsApproval).
+    Body: ``{name, contentBase64, mimeType?, namespace?, collectionId?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    name = payload.get("name")
+    content = payload.get("contentBase64")
+    if not name or not str(name).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "name_required"})
+    if not content or not str(content).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "content_base64_required"})
+
+    args: Dict[str, Any] = {"name": str(name)[:240], "contentBase64": str(content)}
+    for key in ("mimeType", "namespace", "collectionId"):
+        if payload.get(key) is not None:
+            args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.files.upload", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents files upload failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/documents/search")
+def search_documents(
+    q: Optional[str] = None,
+    query: Optional[str] = None,
+    namespaces: Optional[str] = None,
+    maxResults: Optional[int] = None,
+) -> JSONResponse:
+    """Semantic search across the tenant's document library (MCP
+    ``searchDocuments``). ``?query=`` (alias ``q=``) is required; ``namespaces``
+    is a comma-separated list (e.g. ``tenant/docs,tenant/shared``, ≤10 entries);
+    ``maxResults`` clamps to 1..20."""
+    text = (query or q or "").strip()
+    if not text:
+        return JSONResponse(status_code=422, content={"ok": False, "error": "query_required"})
+
+    args: Dict[str, Any] = {"query": text[:1000]}
+    ns: List[str] = []
+    for part in (namespaces or "").split(","):
+        part = part.strip()
+        if part and part not in ns:
+            ns.append(part)
+    if ns:
+        args["namespaces"] = ns[:10]
+    if maxResults is not None:
+        args["maxResults"] = max(1, min(20, int(maxResults)))
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "searchDocuments", args)
+        rows = _rows_from_documents(payload, "results", "documents", "hits")
+        return JSONResponse(content={"ok": True, "results": [_normalize_search_result(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents search failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/documents/files")
+def list_document_files(
+    search: Optional[str] = None,
+    collectionId: Optional[str] = None,
+    namespace: Optional[str] = None,
+    visibility: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List the tenant's document files (read-only, MCP ``documents.files.list``)."""
+    try:
+        args: Dict[str, Any] = {}
+        if search:
+            args["search"] = str(search)[:200]
+        if collectionId:
+            args["collectionId"] = collectionId
+        if namespace:
+            args["namespace"] = str(namespace)[:120]
+        if visibility:
+            args["visibility"] = visibility
+        if limit is not None:
+            args["limit"] = int(limit)
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "documents.files.list", args)
+        rows = _rows_from_documents(payload, "files", "documents")
+        return JSONResponse(content={"ok": True, "files": [_normalize_document_file(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: documents files list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/documents/files/{file_id}")
+def get_document_file(file_id: str) -> JSONResponse:
+    """Return one document file by id (MCP ``documents.files.get``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "documents.files.get", {"id": file_id})
+        f = _single_service(payload, "file")
+        if f is None:
+            rows = _rows_from_documents(payload, "files")
+            f = rows[0] if rows else None
+        if f is None:
+            return _maybe_error("not_found")
+        return JSONResponse(content={"ok": True, "file": _normalize_document_file(f)})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents files get failed: %s", type(exc).__name__)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/files/{file_id}/delete")
+def delete_document_file(file_id: str) -> JSONResponse:
+    """Delete a document file (MCP ``documents.files.delete``, needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.files.delete", {"id": file_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents files delete failed: %s", file_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/files/{file_id}/move")
+def move_document_file(file_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Move a document file between namespaces/collections (MCP
+    ``documents.files.move``, needsApproval). Body:
+    ``{targetNamespace?, targetCollectionId?}`` — a null ``targetCollectionId``
+    moves the file out of any collection."""
+    args: Dict[str, Any] = {"fileId": file_id}
+    if isinstance(payload, dict):
+        if payload.get("targetNamespace") is not None:
+            args["targetNamespace"] = str(payload["targetNamespace"])[:120]
+        if "targetCollectionId" in payload:
+            args["targetCollectionId"] = payload["targetCollectionId"]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.files.move", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents files move failed: %s", file_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/documents/collections")
+def list_document_collections() -> JSONResponse:
+    """List the tenant's document collections (read-only, MCP
+    ``documents.collections.list``)."""
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "documents.collections.list", {})
+        rows = _rows_from_documents(payload, "collections")
+        return JSONResponse(content={"ok": True, "collections": [_normalize_collection(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: documents collections list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/collections")
+def create_document_collection(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Create a document collection (MCP ``documents.collections.create``,
+    needsApproval). Body: ``{name, description?, color?, icon?, parentId?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    name = payload.get("name")
+    if not name or not str(name).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "name_required"})
+
+    args: Dict[str, Any] = {"name": str(name)[:120]}
+    for key in ("description", "color", "icon", "parentId"):
+        if payload.get(key) is not None:
+            args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.collections.create", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents collections create failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/collections/{collection_id}/add_file")
+def add_file_to_collection(collection_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Add a file to a collection (MCP ``documents.collections.add_file``,
+    needsApproval). Body: ``{fileId}``."""
+    file_id = payload.get("fileId") if isinstance(payload, dict) else None
+    if not file_id or not str(file_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "file_id_required"})
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(
+            cfg, "documents.collections.add_file", {"collectionId": collection_id, "fileId": str(file_id)}
+        )
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents collections add_file failed: %s", collection_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/collections/{collection_id}/remove_file")
+def remove_file_from_collection(collection_id: str, payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Remove a file from a collection (MCP ``documents.collections.remove_file``,
+    needsApproval). Body: ``{fileId}``."""
+    file_id = payload.get("fileId") if isinstance(payload, dict) else None
+    if not file_id or not str(file_id).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "file_id_required"})
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(
+            cfg, "documents.collections.remove_file", {"collectionId": collection_id, "fileId": str(file_id)}
+        )
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents collections remove_file failed: %s", collection_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.get("/documents/bindings")
+def list_document_bindings(
+    entityType: Optional[str] = None,
+    entityId: Optional[str] = None,
+    direction: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> JSONResponse:
+    """List document bindings for an entity (read-only, MCP
+    ``documents.bindings.list``). ``entityType`` + ``entityId`` are required."""
+    if not entityType or not str(entityType).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "entity_type_required"})
+    if not entityId or not str(entityId).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "entity_id_required"})
+
+    args: Dict[str, Any] = {"entityType": str(entityType), "entityId": str(entityId)}
+    if direction:
+        args["direction"] = direction
+    if limit is not None:
+        args["limit"] = int(limit)
+
+    try:
+        cfg = _load_config()
+        payload = _mcp_fetch(cfg, "documents.bindings.list", args)
+        rows = _rows_from_documents(payload, "bindings")
+        return JSONResponse(content={"ok": True, "bindings": [_normalize_binding(r) for r in rows]})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital: documents bindings list failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/bindings")
+def attach_document_binding(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Attach a document binding to an entity (MCP ``documents.bindings.attach``,
+    needsApproval). Body maps 1:1 to the tool input; ``entityType``/``entityId``/
+    ``direction``/``bindingId`` are required."""
+    if not isinstance(payload, dict):
+        payload = {}
+    for key in ("entityType", "entityId", "direction", "bindingId"):
+        if not payload.get(key) or not str(payload.get(key) or "").strip():
+            return JSONResponse(status_code=422, content={"ok": False, "error": f"{key}_required"})
+
+    args: Dict[str, Any] = {
+        "entityType": str(payload["entityType"]),
+        "entityId": str(payload["entityId"]),
+        "direction": str(payload["direction"]),
+        "bindingId": str(payload["bindingId"]),
+    }
+    for key in ("targetRef", "syncMode", "publishMode", "ragIndex", "outputFormat", "nameTemplate"):
+        if payload.get(key) is not None:
+            args[key] = payload[key]
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.bindings.attach", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents bindings attach failed")
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/bindings/{binding_row_id}/detach")
+def detach_document_binding(binding_row_id: str) -> JSONResponse:
+    """Detach a document binding by its row id (MCP ``documents.bindings.detach``,
+    needsApproval)."""
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.bindings.detach", {"bindingRowId": binding_row_id})
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents bindings detach failed: %s", binding_row_id)
+        return _maybe_error(ERR_UNREACHABLE)
+
+
+@router.post("/documents/reindex")
+def reindex_documents(payload: Dict[str, Any] = Body(default={})) -> JSONResponse:
+    """Trigger a RAG reindex of a document namespace (MCP
+    ``documents.rag.reindex``, needsApproval). Body: ``{namespace, fullReindex?}``."""
+    if not isinstance(payload, dict):
+        payload = {}
+    namespace = payload.get("namespace")
+    if not namespace or not str(namespace).strip():
+        return JSONResponse(status_code=422, content={"ok": False, "error": "namespace_required"})
+
+    args: Dict[str, Any] = {"namespace": str(namespace)[:120]}
+    if payload.get("fullReindex") is not None:
+        args["fullReindex"] = bool(payload["fullReindex"])
+
+    try:
+        cfg = _load_config()
+        result = _mcp_fetch(cfg, "documents.rag.reindex", args)
+        return JSONResponse(content={"ok": True, "result": result})
+    except _TypedError as exc:
+        return _maybe_error(exc.code)
+    except Exception:
+        log.exception("ceodigital documents rag reindex failed")
+        return _maybe_error(ERR_UNREACHABLE)

@@ -23,21 +23,31 @@ import type {
   AssignBody,
   AssignWorkItemEnvelope,
   AutomationActionEnvelope,
+  AttachBindingInput,
+  BindingsEnvelope,
+  BindingsListParams,
   CatalogEnvelope,
   CatalogItemEnvelope,
   CatalogListParams,
   CategoriesEnvelope,
   ChecklistToggleBody,
   ChecklistToggleEnvelope,
+  CollectionsEnvelope,
   ConversationEnvelope,
   ConversationsEnvelope,
   ConversationsListParams,
+  CreateCollectionInput,
   CreateConversationInput,
   CreateProposalEnvelope,
   CreateProposalInput,
   CreateWorkItemEnvelope,
   DealsEnvelope,
+  DocumentsActionEnvelope,
+  FileEnvelope,
+  FilesEnvelope,
+  FilesListParams,
   LeadsEnvelope,
+  MoveFileInput,
   OfferingsEnvelope,
   OfferingsListParams,
   OrganizationEnvelope,
@@ -56,17 +66,21 @@ import type {
   ProposalsEnvelope,
   ProposalsListParams,
   ProposalTrancheValues,
+  ReindexInput,
   RunPlaybookInput,
   RunWorkItemEnvelope,
   RunWorkflowInput,
   SchedulesEnvelope,
   SchedulesListParams,
+  SearchEnvelope,
+  SearchParams,
   ServiceCategoriesParams,
   StagesEnvelope,
   SubmitBody,
   SubmitWorkItemEnvelope,
   SuggestEnvelope,
   UpdateProposalInput,
+  UploadFileInput,
   WebhooksEnvelope,
   WebhooksListParams,
   WorkItemInput,
@@ -554,3 +568,93 @@ export const pauseSchedule = (id: string, paused: boolean) =>
     method: 'POST',
     body: { paused }
   })
+
+// ── Documents & RAG (W5) — files, collections, bindings, search ─────────────
+
+export const FILES_KEY = ['ceodigital', 'documents', 'files'] as const
+export const fileKey = (id: string) => ['ceodigital', 'documents', 'files', id] as const
+export const COLLECTIONS_KEY = ['ceodigital', 'documents', 'collections'] as const
+export const BINDINGS_KEY = ['ceodigital', 'documents', 'bindings'] as const
+export const SEARCH_KEY = ['ceodigital', 'documents', 'search'] as const
+
+/** GET /documents/search — RAG search across the library (MCP searchDocuments). */
+export const searchDocuments = (params: SearchParams) => {
+  const qs = new URLSearchParams({ query: params.query })
+  if (params.namespaces?.length) qs.set('namespaces', params.namespaces.join(','))
+  if (params.maxResults !== undefined) qs.set('maxResults', String(params.maxResults))
+  return call<SearchEnvelope>(`/documents/search?${qs.toString()}`)
+}
+
+/** GET /documents/files — the tenant's document library (MCP documents.files.list). */
+export const fetchFiles = (params?: FilesListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.search) qs.set('search', params.search)
+  if (params?.collectionId) qs.set('collectionId', params.collectionId)
+  if (params?.namespace) qs.set('namespace', params.namespace)
+  if (params?.visibility) qs.set('visibility', params.visibility)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<FilesEnvelope>(`/documents/files${suffix}`)
+}
+
+/** GET /documents/files/{id} — one document file (MCP documents.files.get). */
+export const fetchFile = (id: string) => call<FileEnvelope>(`/documents/files/${encodeURIComponent(id)}`)
+
+/** POST /documents/files/{id}/delete — delete a file (MCP documents.files.delete). */
+export const deleteFile = (id: string) =>
+  call<DocumentsActionEnvelope>(`/documents/files/${encodeURIComponent(id)}/delete`, { method: 'POST', body: {} })
+
+/** POST /documents/files/upload — upload a file (MCP documents.files.upload). */
+export const uploadFile = (input: UploadFileInput) =>
+  call<DocumentsActionEnvelope>('/documents/files/upload', { method: 'POST', body: input })
+
+/** POST /documents/files/{id}/move — move a file between namespaces/collections
+ *  (MCP documents.files.move). */
+export const moveFile = (id: string, body: MoveFileInput) =>
+  call<DocumentsActionEnvelope>(`/documents/files/${encodeURIComponent(id)}/move`, { method: 'POST', body })
+
+/** GET /documents/collections — the tenant's collections (MCP documents.collections.list). */
+export const fetchCollections = () => call<CollectionsEnvelope>('/documents/collections')
+
+/** POST /documents/collections — create a collection (MCP documents.collections.create). */
+export const createCollection = (input: CreateCollectionInput) =>
+  call<DocumentsActionEnvelope>('/documents/collections', { method: 'POST', body: input })
+
+/** POST /documents/collections/{id}/add_file — add a file to a collection
+ *  (MCP documents.collections.add_file). */
+export const addFileToCollection = (collectionId: string, fileId: string) =>
+  call<DocumentsActionEnvelope>(`/documents/collections/${encodeURIComponent(collectionId)}/add_file`, {
+    method: 'POST',
+    body: { fileId }
+  })
+
+/** POST /documents/collections/{id}/remove_file — remove a file from a collection
+ *  (MCP documents.collections.remove_file). */
+export const removeFileFromCollection = (collectionId: string, fileId: string) =>
+  call<DocumentsActionEnvelope>(`/documents/collections/${encodeURIComponent(collectionId)}/remove_file`, {
+    method: 'POST',
+    body: { fileId }
+  })
+
+/** GET /documents/bindings — entity document bindings (MCP documents.bindings.list). */
+export const fetchBindings = (params?: BindingsListParams) => {
+  const qs = new URLSearchParams()
+  if (params?.entityType) qs.set('entityType', params.entityType)
+  if (params?.entityId) qs.set('entityId', params.entityId)
+  if (params?.direction) qs.set('direction', params.direction)
+  if (params?.limit !== undefined) qs.set('limit', String(params.limit))
+  const suffix = qs.size ? `?${qs.toString()}` : ''
+  return call<BindingsEnvelope>(`/documents/bindings${suffix}`)
+}
+
+/** POST /documents/bindings — attach a document binding (MCP documents.bindings.attach). */
+export const attachBinding = (input: AttachBindingInput) =>
+  call<DocumentsActionEnvelope>('/documents/bindings', { method: 'POST', body: input })
+
+/** POST /documents/bindings/{rowId}/detach — detach a binding (MCP documents.bindings.detach). */
+export const detachBinding = (rowId: string) =>
+  call<DocumentsActionEnvelope>(`/documents/bindings/${encodeURIComponent(rowId)}/detach`, { method: 'POST', body: {} })
+
+/** POST /documents/reindex — RAG reindex of a namespace (MCP documents.rag.reindex). */
+export const reindexDocuments = (body: ReindexInput) =>
+  call<DocumentsActionEnvelope>('/documents/reindex', { method: 'POST', body })

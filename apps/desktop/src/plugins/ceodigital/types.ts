@@ -901,3 +901,192 @@ export interface AutomationActionResponse {
 }
 
 export type AutomationActionEnvelope = AutomationActionResponse | CrmError
+
+// ── Documents & RAG (W5) — files, collections, bindings, search ──────────────
+
+export type DocumentVisibility = 'draft' | 'internal' | 'shared' | 'public'
+export type BindingEntityType =
+  | 'project'
+  | 'task'
+  | 'crm_org'
+  | 'crm_deal'
+  | 'service_impl'
+  | 'chat_conv'
+export type BindingDirection = 'input' | 'output'
+
+/** A document file row (`documents.files.list` / `documents.files.get`). */
+export interface FileRow {
+  id: string
+  title: string
+  name?: null | string
+  filename?: null | string
+  namespace?: null | string
+  visibility?: null | DocumentVisibility | string
+  mime_type?: null | string
+  mimeType?: null | string
+  size?: null | number
+  collection_id?: null | string
+  collectionId?: null | string
+  created_at?: null | string
+  updated_at?: null | string
+  [key: string]: unknown
+}
+
+/** A document collection row (`documents.collections.list`). */
+export interface CollectionRow {
+  id: string
+  title: string
+  name?: null | string
+  description?: null | string
+  color?: null | string
+  icon?: null | string
+  parent_id?: null | string
+  parentId?: null | string
+  [key: string]: unknown
+}
+
+/** An entity document-binding row (`documents.bindings.list`). */
+export interface BindingRow {
+  id: string
+  entityType?: null | BindingEntityType | string
+  entityType_?: null | string
+  entityId?: null | string
+  direction?: null | BindingDirection | string
+  bindingId?: null | string
+  binding_id?: null | string
+  targetRef?: null | Record<string, unknown>
+  target_ref?: null | Record<string, unknown>
+  syncMode?: null | string
+  publishMode?: null | string
+  ragIndex?: null | boolean
+  outputFormat?: null | string
+  nameTemplate?: null | string
+  [key: string]: unknown
+}
+
+/** A RAG search result (`searchDocuments`). */
+export interface SearchResultRow {
+  id: string
+  title: string
+  score?: null | number
+  snippet?: null | string
+  document_id?: null | string
+  documentId?: null | string
+  namespace?: null | string
+  [key: string]: unknown
+}
+
+// ── Documents — read envelopes ────────────────────────────────────────────────
+
+/** GET /documents/files — list query params (map 1:1 to MCP). */
+export interface FilesListParams {
+  search?: string
+  collectionId?: string
+  namespace?: string
+  visibility?: DocumentVisibility | string
+  limit?: number
+}
+
+/** GET /documents/bindings — list query params (entityType + entityId required). */
+export interface BindingsListParams {
+  entityType: BindingEntityType | string
+  entityId: string
+  direction?: BindingDirection | string
+  limit?: number
+}
+
+/** GET /documents/search — query params. */
+export interface SearchParams {
+  query: string
+  namespaces?: string[]
+  maxResults?: number
+}
+
+/** GET /documents/search — success envelope. */
+export interface SearchResponse {
+  ok: true
+  results: SearchResultRow[]
+}
+
+/** GET /documents/files — success envelope. */
+export interface FilesResponse {
+  ok: true
+  files: FileRow[]
+}
+
+/** GET /documents/files/{id} — success envelope. */
+export interface FileResponse {
+  ok: true
+  file: FileRow
+}
+
+/** GET /documents/collections — success envelope. */
+export interface CollectionsResponse {
+  ok: true
+  collections: CollectionRow[]
+}
+
+/** GET /documents/bindings — success envelope. */
+export interface BindingsResponse {
+  ok: true
+  bindings: BindingRow[]
+}
+
+// ── Documents — mutation inputs & envelopes ──────────────────────────────────
+
+/** POST /documents/files/upload — input (name + base64 content required). */
+export interface UploadFileInput {
+  name: string
+  contentBase64: string
+  mimeType?: string
+  namespace?: string
+  collectionId?: string
+}
+
+/** POST /documents/files/{id}/move — input body. */
+export interface MoveFileInput {
+  targetNamespace?: string
+  targetCollectionId?: string | null
+}
+
+/** POST /documents/collections — create input (name required). */
+export interface CreateCollectionInput {
+  name: string
+  description?: string
+  color?: string
+  icon?: string
+  parentId?: string
+}
+
+/** POST /documents/bindings — attach input (entityType/entityId/direction/bindingId required). */
+export interface AttachBindingInput {
+  entityType: BindingEntityType | string
+  entityId: string
+  direction: BindingDirection | string
+  bindingId: string
+  targetRef?: Record<string, unknown>
+  syncMode?: 'manual' | 'on_demand' | 'watch'
+  publishMode?: 'manual' | 'auto' | 'on_approve'
+  ragIndex?: boolean
+  outputFormat?: 'pdf' | 'docx' | 'xlsx' | 'page' | 'md'
+  nameTemplate?: string
+}
+
+/** POST /documents/reindex — input (namespace required). */
+export interface ReindexInput {
+  namespace: string
+  fullReindex?: boolean
+}
+
+/** POST /documents/** — mutation success envelope (raw MCP result). */
+export interface DocumentsActionResponse {
+  ok: true
+  result: Record<string, unknown>
+}
+
+export type SearchEnvelope = SearchResponse | CrmError
+export type FilesEnvelope = FilesResponse | CrmError
+export type FileEnvelope = FileResponse | CrmError
+export type CollectionsEnvelope = CollectionsResponse | CrmError
+export type BindingsEnvelope = BindingsResponse | CrmError
+export type DocumentsActionEnvelope = DocumentsActionResponse | CrmError

@@ -24,9 +24,12 @@ import { bindApi } from './api'
 import { CEODIGITAL_LOCALES } from './i18n'
 import { ActivitiesPage } from './pages/Activities'
 import { AgentsPage } from './pages/Agents'
+import { BindingsPage } from './pages/Bindings'
 import { CatalogPage } from './pages/Catalog'
+import { CollectionsPage } from './pages/Collections'
 import { ConversationsPage } from './pages/Conversations'
 import { DealsPage } from './pages/Deals'
+import { DocumentsPage } from './pages/Documents'
 import { LeadsPage } from './pages/Leads'
 import { OrganizationsPage } from './pages/Organizations'
 import { PersonsPage } from './pages/Persons'
@@ -393,6 +396,84 @@ const plugin: HermesPlugin = {
           label: t('automation.workflows.title'),
           keywords: ['ceodigital', 'automation', 'workflows', 'nativeflow', 'agentflow'],
           run: () => host.navigate('/ceodigital/automation/workflows')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'documents-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/documents' } satisfies RouteContribution,
+        render: () => <DocumentsPage />
+      },
+      {
+        id: 'documents-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 53,
+        data: {
+          codicon: 'file',
+          label: t('documents.files.title'),
+          path: '/ceodigital/documents'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-documents',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openDocuments',
+          label: t('documents.files.title'),
+          keywords: ['ceodigital', 'documents', 'files', 'library', 'rag', 'search'],
+          run: () => host.navigate('/ceodigital/documents')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'collections-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/collections' } satisfies RouteContribution,
+        render: () => <CollectionsPage />
+      },
+      {
+        id: 'collections-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 54,
+        data: {
+          codicon: 'library',
+          label: t('documents.collections.title'),
+          path: '/ceodigital/collections'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-collections',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openCollections',
+          label: t('documents.collections.title'),
+          keywords: ['ceodigital', 'documents', 'collections', 'library'],
+          run: () => host.navigate('/ceodigital/collections')
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'bindings-page',
+        area: ROUTES_AREA,
+        data: { path: '/ceodigital/bindings' } satisfies RouteContribution,
+        render: () => <BindingsPage />
+      },
+      {
+        id: 'bindings-nav',
+        area: SIDEBAR_NAV_AREA,
+        order: 55,
+        data: {
+          codicon: 'link',
+          label: t('documents.bindings.title'),
+          path: '/ceodigital/bindings'
+        } satisfies SidebarNavContribution
+      },
+      {
+        id: 'open-bindings',
+        area: PALETTE_AREA,
+        data: {
+          id: 'ceodigital.openBindings',
+          label: t('documents.bindings.title'),
+          keywords: ['ceodigital', 'documents', 'bindings', 'links'],
+          run: () => host.navigate('/ceodigital/bindings')
         } satisfies PaletteContribution
       }
     ])

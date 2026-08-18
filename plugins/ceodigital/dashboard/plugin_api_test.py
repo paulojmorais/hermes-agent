@@ -2158,3 +2158,463 @@ def test_automation_mutations_not_configured(plugin, client, monkeypatch):
         resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body) if body is not None else client.get(f"/api/plugins/ceodigital{route}")
         assert resp.status_code == 503
         assert resp.json() == {"ok": False, "error": "mcp_not_configured"}
+
+
+# ---------------------------------------------------------------------------
+# W5 · Documents & RAG (documents.* / documents.rag.*)
+# ---------------------------------------------------------------------------
+
+
+def test_documents_search_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"results": [
+            {"id": "f-1", "title": "Onboarding.pdf", "score": 0.95, "snippet": "How to onboard"},
+            {"document_id": "f-2", "filename": "Policy.md", "score": 0.82},
+        ]}),
+    )
+
+    resp = client.get(
+        "/api/plugins/ceodigital/documents/search?query=onboarding&namespaces=tenant/docs,tenant/shared&maxResults=5"
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    results = data["results"]
+    assert len(results) == 2
+    assert results[0]["title"] == "Onboarding.pdf"
+    assert results[1]["id"] == "f-2"  # document_id → id fallback
+    assert results[1]["title"] == "Policy.md"  # filename → title fallback
+    assert captured["tool"] == "searchDocuments"
+    assert captured["args"] == {
+        "query": "onboarding",
+        "namespaces": ["tenant/docs", "tenant/shared"],
+        "maxResults": 5,
+    }
+
+
+def test_documents_search_supports_q_and_comma_namespaces(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"results": []}))
+
+    resp = client.get("/api/plugins/ceodigital/documents/search?q=terms&namespaces=tenant/a,tenant/b&maxResults=15")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "results": []}
+    assert captured["args"] == {
+        "query": "terms",
+        "namespaces": ["tenant/a", "tenant/b"],
+        "maxResults": 15,
+    }
+
+
+def test_documents_search_max_results_clamps(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"results": []}))
+
+    resp = client.get("/api/plugins/ceodigital/documents/search?query=x&maxResults=999")
+
+    assert resp.status_code == 200
+    assert captured["args"] == {"query": "x", "maxResults": 20}
+
+
+def test_documents_search_requires_query(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.get("/api/plugins/ceodigital/documents/search")
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "query_required"}
+
+
+def test_documents_files_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"files": [
+            {"id": "f-1", "name": "Onboarding.pdf", "namespace": "tenant/docs", "visibility": "internal", "mimeType": "application/pdf"},
+            {"id": "f-2", "name": "Policy.md", "mime_type": "text/markdown", "collectionId": "col-1"},
+        ]}),
+    )
+
+    resp = client.get(
+        "/api/plugins/ceodigital/documents/files?search=onb&collectionId=col-1&namespace=tenant/docs&visibility=internal&limit=5"
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    files = data["files"]
+    assert len(files) == 2
+    assert files[0]["title"] == "Onboarding.pdf"  # name → title fallback
+    assert files[0]["mime_type"] == "application/pdf"  # mimeType → mime_type
+    assert files[1]["collection_id"] == "col-1"  # collectionId → collection_id
+    assert captured["tool"] == "documents.files.list"
+    assert captured["args"] == {
+        "search": "onb",
+        "collectionId": "col-1",
+        "namespace": "tenant/docs",
+        "visibility": "internal",
+        "limit": 5,
+    }
+
+
+def test_documents_files_list_no_filters(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"files": []}))
+
+    resp = client.get("/api/plugins/ceodigital/documents/files")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "files": []}
+    assert captured["args"] == {}
+
+
+def test_documents_file_detail_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"file": {"id": "f-7", "name": "Report.pdf", "namespace": "default"}}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/documents/files/f-7")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["file"]["id"] == "f-7"
+    assert data["file"]["title"] == "Report.pdf"
+    assert captured["args"] == {"id": "f-7"}
+
+
+def test_documents_file_detail_unknown_returns_not_found(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp({}, {}))
+
+    resp = client.get("/api/plugins/ceodigital/documents/files/nope")
+
+    assert resp.status_code == 404
+    assert resp.json() == {"ok": False, "error": "not_found"}
+
+
+def test_documents_upload_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "f-new", "name": "notes.md"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/documents/files/upload",
+        json={
+            "name": "notes.md",
+            "contentBase64": "aGVsbG8=",
+            "mimeType": "text/markdown",
+            "namespace": "tenant/docs",
+            "collectionId": "col-1",
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.files.upload"
+    assert captured["args"] == {
+        "name": "notes.md",
+        "contentBase64": "aGVsbG8=",
+        "mimeType": "text/markdown",
+        "namespace": "tenant/docs",
+        "collectionId": "col-1",
+    }
+
+
+def test_documents_upload_requires_name_and_content(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/documents/files/upload", json={"contentBase64": "aGVsbG8="})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "name_required"}
+
+    resp = client.post("/api/plugins/ceodigital/documents/files/upload", json={"name": "x.md"})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "content_base64_required"}
+
+
+def test_documents_delete_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"deleted": True}))
+
+    resp = client.post("/api/plugins/ceodigital/documents/files/f-1/delete", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.files.delete"
+    assert captured["args"] == {"id": "f-1"}
+
+
+def test_documents_move_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "f-1", "namespace": "tenant/shared"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/documents/files/f-1/move",
+        json={"targetNamespace": "tenant/shared", "targetCollectionId": "col-2"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.files.move"
+    assert captured["args"] == {"fileId": "f-1", "targetNamespace": "tenant/shared", "targetCollectionId": "col-2"}
+
+
+def test_documents_move_without_collection(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "f-1"}))
+
+    resp = client.post("/api/plugins/ceodigital/documents/files/f-1/move", json={"targetNamespace": "other"})
+
+    assert resp.status_code == 200
+    assert captured["args"] == {"fileId": "f-1", "targetNamespace": "other"}
+
+
+def test_documents_collections_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"collections": [
+            {"id": "col-1", "name": "Knowledge base", "description": "SOPs", "color": "#ffeecc"},
+            {"id": "col-2", "name": "Contracts", "parentId": "col-1"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/documents/collections")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["collections"][0]["title"] == "Knowledge base"  # name → title
+    assert data["collections"][0]["color"] == "#ffeecc"
+    assert data["collections"][1]["parent_id"] == "col-1"  # parentId → parent_id
+    assert captured["tool"] == "documents.collections.list"
+    assert captured["args"] == {}
+
+
+def test_documents_collection_create_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "col-new", "name": "Policies"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/documents/collections",
+        json={"name": "Policies", "description": "Company policies", "color": "#ccffcc", "icon": "book", "parentId": "col-1"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.collections.create"
+    assert captured["args"] == {
+        "name": "Policies",
+        "description": "Company policies",
+        "color": "#ccffcc",
+        "icon": "book",
+        "parentId": "col-1",
+    }
+
+
+def test_documents_collection_create_requires_name(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/documents/collections", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "name_required"}
+
+
+def test_documents_collection_add_file_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"added": True}))
+
+    resp = client.post("/api/plugins/ceodigital/documents/collections/col-1/add_file", json={"fileId": "f-9"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.collections.add_file"
+    assert captured["args"] == {"collectionId": "col-1", "fileId": "f-9"}
+
+
+def test_documents_collection_remove_file_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"removed": True}))
+
+    resp = client.post("/api/plugins/ceodigital/documents/collections/col-1/remove_file", json={"fileId": "f-9"})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.collections.remove_file"
+    assert captured["args"] == {"collectionId": "col-1", "fileId": "f-9"}
+
+
+def test_documents_collection_file_mutation_requires_file_id(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/documents/collections/col-1/add_file", json={})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "file_id_required"}
+
+    resp = client.post("/api/plugins/ceodigital/documents/collections/col-1/remove_file", json={})
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "file_id_required"}
+
+
+def test_documents_bindings_list_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(
+        plugin,
+        "_mcp_fetch",
+        _fake_mcp(captured, {"bindings": [
+            {"id": "b-1", "entityType": "project", "entityId": "pr-1", "direction": "output", "bindingId": "bd-1", "ragIndex": True},
+            {"id": "b-2", "entityType": "crm_deal", "entityId": "dl-1", "direction": "input", "binding_id": "bd-2"},
+        ]}),
+    )
+
+    resp = client.get("/api/plugins/ceodigital/documents/bindings?entityType=project&entityId=pr-1&direction=output&limit=5")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["bindings"][0]["id"] == "b-1"
+    assert data["bindings"][0]["bindingId"] == "bd-1"
+    assert data["bindings"][1]["id"] == "b-2"
+    assert captured["tool"] == "documents.bindings.list"
+    assert captured["args"] == {
+        "entityType": "project",
+        "entityId": "pr-1",
+        "direction": "output",
+        "limit": 5,
+    }
+
+
+def test_documents_bindings_list_requires_entity(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.get("/api/plugins/ceodigital/documents/bindings?entityId=pr-1")
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "entity_type_required"}
+
+    resp = client.get("/api/plugins/ceodigital/documents/bindings?entityType=project")
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "entity_id_required"}
+
+
+def test_documents_binding_attach_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"id": "b-new"}))
+
+    resp = client.post(
+        "/api/plugins/ceodigital/documents/bindings",
+        json={
+            "entityType": "project",
+            "entityId": "pr-1",
+            "direction": "input",
+            "bindingId": "bd-1",
+            "targetRef": {"file_id": "f-1"},
+            "syncMode": "on_demand",
+            "publishMode": "on_approve",
+            "ragIndex": True,
+            "outputFormat": "pdf",
+            "nameTemplate": "{{title}}-summary",
+        },
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.bindings.attach"
+    assert captured["args"] == {
+        "entityType": "project",
+        "entityId": "pr-1",
+        "direction": "input",
+        "bindingId": "bd-1",
+        "targetRef": {"file_id": "f-1"},
+        "syncMode": "on_demand",
+        "publishMode": "on_approve",
+        "ragIndex": True,
+        "outputFormat": "pdf",
+        "nameTemplate": "{{title}}-summary",
+    }
+
+
+def test_documents_binding_attach_requires_fields(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    for key in ("entityType", "entityId", "direction", "bindingId"):
+        resp = client.post("/api/plugins/ceodigital/documents/bindings", json={"bindingId": "bd-1", "entityType": "project", "entityId": "pr-1", "direction": "input", **{key: ""}})
+        assert resp.status_code == 422
+        assert resp.json() == {"ok": False, "error": f"{key}_required"}
+
+
+def test_documents_binding_detach_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"detached": True}))
+
+    resp = client.post("/api/plugins/ceodigital/documents/bindings/b-1/detach", json={})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.bindings.detach"
+    assert captured["args"] == {"bindingRowId": "b-1"}
+
+
+def test_documents_reindex_success(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+    captured = {}
+    monkeypatch.setattr(plugin, "_mcp_fetch", _fake_mcp(captured, {"reindexed": True, "count": 12}))
+
+    resp = client.post("/api/plugins/ceodigital/documents/reindex", json={"namespace": "tenant/docs", "fullReindex": True})
+
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert captured["tool"] == "documents.rag.reindex"
+    assert captured["args"] == {"namespace": "tenant/docs", "fullReindex": True}
+
+
+def test_documents_reindex_requires_namespace(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: dict(_OK_CONFIG))
+
+    resp = client.post("/api/plugins/ceodigital/documents/reindex", json={})
+
+    assert resp.status_code == 422
+    assert resp.json() == {"ok": False, "error": "namespace_required"}
+
+
+def test_documents_mutations_not_configured(plugin, client, monkeypatch):
+    monkeypatch.setattr(plugin, "_load_config", lambda: {**dict(_OK_CONFIG), "mcp_token": ""})
+
+    for method, route, body in (
+        ("GET", "/documents/files", None),
+        ("GET", "/documents/collections", None),
+        ("POST", "/documents/files/upload", {"name": "x.md", "contentBase64": "aGVsbG8="}),
+        ("POST", "/documents/collections", {"name": "x"}),
+        ("POST", "/documents/bindings", {"entityType": "project", "entityId": "pr-1", "direction": "input", "bindingId": "bd-1"}),
+        ("POST", "/documents/reindex", {"namespace": "default"}),
+    ):
+        resp = client.request(method, f"/api/plugins/ceodigital{route}", json=body) if body is not None else client.get(f"/api/plugins/ceodigital{route}")
+        assert resp.status_code == 503
+        assert resp.json() == {"ok": False, "error": "mcp_not_configured"}

@@ -464,6 +464,157 @@ export const en: CeodigitalMessages = {
       }
     }
   },
+  documents: {
+    files: {
+      title: 'CEODigital Documents',
+      openCommand: 'CEODigital: Open Documents',
+      empty: 'No document files found for your tenant yet.',
+      searchPlaceholder: 'Search the file library…',
+      namespacePlaceholder: 'All namespaces',
+      allNamespaces: 'All namespaces',
+      visibility: 'Visibility',
+      allVisibilities: 'All visibilities',
+      upload: 'Upload file',
+      uploadForm: {
+        name: 'Name',
+        namePlaceholder: 'File name',
+        file: 'Choose file',
+        namespace: 'Namespace',
+        collection: 'Collection',
+        submit: 'Upload',
+        cancel: 'Cancel'
+      },
+      moveForm: {
+        title: 'Move file',
+        targetNamespace: 'Target namespace',
+        targetCollection: 'Target collection',
+        none: 'None (remove from collection)',
+        submit: 'Move',
+        cancel: 'Cancel'
+      },
+      addToCollectionForm: {
+        title: 'Add to collection',
+        collection: 'Collection',
+        submit: 'Add',
+        cancel: 'Cancel'
+      },
+      actions: {
+        move: 'Move',
+        delete: 'Delete',
+        deleteConfirm: 'Delete file',
+        addToCollection: 'Add to collection',
+        moving: 'Moving…',
+        deleting: 'Deleting…',
+        adding: 'Adding…'
+      },
+      headers: {
+        id: 'ID',
+        title: 'Title',
+        namespace: 'Namespace',
+        visibility: 'Visibility',
+        mime: 'MIME'
+      },
+      rag: {
+        placeholder: 'Search documents…',
+        search: 'Search',
+        searching: 'Searching…',
+        empty: 'No documents uploaded yet.',
+        maxResults: 'Max results',
+        resultsEmpty: 'No documents matched your search.',
+        reindex: 'Reindex',
+        reindexing: 'Reindexing…',
+        reindexDone: 'Reindex started.'
+      },
+      errors: {
+        list: 'Could not load the document library.',
+        upload: 'Could not upload the file.',
+        delete: 'Could not delete the file.',
+        move: 'Could not move the file.',
+        addToCollection: 'Could not add the file to the collection.',
+        search: 'Could not search documents.',
+        reindex: 'Could not start the reindex.',
+        general: 'The action failed. Try again.'
+      }
+    },
+    collections: {
+      title: 'CEODigital Collections',
+      openCommand: 'CEODigital: Open Collections',
+      empty: 'No document collections found for your tenant yet.',
+      new: 'New Collection',
+      createForm: {
+        name: 'Name',
+        namePlaceholder: 'Collection name',
+        description: 'Description',
+        color: 'Color',
+        icon: 'Icon',
+        parentId: 'Parent id',
+        create: 'Create collection',
+        cancel: 'Cancel'
+      },
+      members: 'Members',
+      addFile: 'Add file',
+      addFilePlaceholder: 'Add a file by id…',
+      removeFile: 'Remove',
+      noMembers: 'No files in this collection yet.',
+      headers: { id: 'ID', title: 'Title', description: 'Description', members: 'Members' },
+      errors: {
+        list: 'Could not load the collections.',
+        create: 'Could not create the collection.',
+        addFile: 'Could not add the file.',
+        removeFile: 'Could not remove the file.',
+        general: 'The action failed. Try again.'
+      }
+    },
+    bindings: {
+      title: 'CEODigital Bindings',
+      openCommand: 'CEODigital: Open Bindings',
+      empty: 'No document bindings match this filter.',
+      entityType: 'Entity type',
+      entityTypePlaceholder: 'project, task, crm_org…',
+      entityId: 'Entity id',
+      entityIdPlaceholder: 'Entity id (required)',
+      direction: 'Direction',
+      allDirections: 'All directions',
+      input: 'Input',
+      output: 'Output',
+      attach: 'Attach binding',
+      attachForm: {
+        entityType: 'Entity type',
+        entityTypePlaceholder: 'project, task, crm_org, crm_deal, service_impl, chat_conv',
+        entityId: 'Entity id',
+        entityIdPlaceholder: 'Entity id (required)',
+        direction: 'Direction',
+        bindingId: 'Binding id',
+        bindingIdPlaceholder: 'Binding id (required)',
+        targetRef: 'Target ref (JSON)',
+        syncMode: 'Sync mode',
+        publishMode: 'Publish mode',
+        ragIndex: 'RAG index',
+        outputFormat: 'Output format',
+        nameTemplate: 'Name template',
+        submit: 'Attach',
+        cancel: 'Cancel'
+      },
+      detach: 'Detach',
+      detaching: 'Detaching…',
+      headers: {
+        id: 'ID',
+        entity: 'Entity',
+        direction: 'Direction',
+        binding: 'Binding',
+        sync: 'Sync',
+        publish: 'Publish',
+        rag: 'RAG',
+        output: 'Output'
+      },
+      errors: {
+        list: 'Could not load the bindings.',
+        attach: 'Could not attach the binding.',
+        detach: 'Could not detach the binding.',
+        general: 'The action failed. Try again.'
+      }
+    }
+  },
   errors: {
     fetch: 'Could not load CEODigital projects.',
     general: 'The action failed. Try again.',
