@@ -106,7 +106,8 @@ export function bindApi(r: Rest): () => void {
 }
 
 function call<T>(path: string, opts?: PluginRestOptions): Promise<T> {
-  return rest ? rest<T>(path, opts) : Promise.reject(new Error('ceodigital api not ready'))
+  if (!rest) return Promise.reject(new Error('ceodigital api not ready'))
+  return opts ? rest<T>(path, opts) : rest<T>(path)
 }
 
 // ── reads ─────────────────────────────────────────────────────────────────
