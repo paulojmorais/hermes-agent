@@ -28,8 +28,8 @@ fireworks = ProviderProfile(
     # generic profile.default_headers path, so they survive switch_model and
     # credential rotation.
     default_headers={
-        "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-        "X-Title": "Hermes Agent",
+        "HTTP-Referer": "https://ceodigital.ai",
+        "X-Title": "CEODigital Agent",
         "User-Agent": f"HermesAgent/{_HERMES_VERSION}",
     },
     # Auxiliary model for cheap tasks (compaction, title generation, vision).

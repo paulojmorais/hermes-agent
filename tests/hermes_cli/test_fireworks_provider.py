@@ -160,8 +160,8 @@ class TestFireworksAuxiliary:
         client, model, kwargs = self._resolve("fireworks")
         assert client is not None
         headers = kwargs.get("default_headers", {})
-        assert headers["HTTP-Referer"] == "https://hermes-agent.nousresearch.com"
-        assert headers["X-Title"] == "Hermes Agent"
+        assert headers["HTTP-Referer"] == "https://ceodigital.ai"
+        assert headers["X-Title"] == "CEODigital Agent"
         assert kwargs["base_url"] == "https://api.fireworks.ai/inference/v1"
 
     def test_client_sends_hermes_user_agent(self, monkeypatch):

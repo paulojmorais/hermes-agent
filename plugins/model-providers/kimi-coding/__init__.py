@@ -120,8 +120,8 @@ kimi = KimiProfile(
     fixed_temperature=OMIT_TEMPERATURE,
     default_max_tokens=32000,
     default_headers={
-        "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-        "X-Title": "Hermes Agent",
+        "HTTP-Referer": "https://ceodigital.ai",
+        "X-Title": "CEODigital Agent",
         "User-Agent": f"HermesAgent/{_HERMES_VERSION}",
     },
     default_aux_model="kimi-k2-turbo-preview",
@@ -135,8 +135,8 @@ kimi_cn = KimiProfile(
     fixed_temperature=OMIT_TEMPERATURE,
     default_max_tokens=32000,
     default_headers={
-        "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-        "X-Title": "Hermes Agent",
+        "HTTP-Referer": "https://ceodigital.ai",
+        "X-Title": "CEODigital Agent",
         "User-Agent": f"HermesAgent/{_HERMES_VERSION}",
     },
     default_aux_model="kimi-k2-turbo-preview",

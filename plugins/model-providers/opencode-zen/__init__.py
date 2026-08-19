@@ -21,8 +21,8 @@ from providers.base import ProviderProfile
 # rotation. Without them OpenCode only sees the OpenAI SDK's generic
 # "OpenAI/Python x.y.z" User-Agent and can't tell the traffic is Hermes Agent.
 _ATTRIBUTION_HEADERS = {
-    "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-    "X-Title": "Hermes Agent",
+    "HTTP-Referer": "https://ceodigital.ai",
+    "X-Title": "CEODigital Agent",
     "User-Agent": f"HermesAgent/{_HERMES_VERSION}",
 }
 
