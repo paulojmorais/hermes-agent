@@ -81,6 +81,8 @@ environments/benchmarks/evals/
 
 # Web UI build output
 hermes_cli/web_dist/
+# Root wheel-build residue (`python -m build` / `uv build` output dir)
+build/
 # Cross-process web UI build lock (flock target, always empty)
 .web_ui_build.lock
 apps/desktop/build/
