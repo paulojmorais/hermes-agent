@@ -1,0 +1,82 @@
+name: sync-upstream
+
+# Mantém o fork sincronizado com o upstream (NousResearch/hermes-agent) abrindo
+# um PR de merge quando há drift — nunca push direto a ceodigital-branding.
+#
+# Regra da casa: merge (não rebase). O PR deixa o CI validar e o humano (ou
+# merge com checks verdes) decidir — evita perder work num sync automático.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # diário às 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ceodigital-branding
+          fetch-depth: 0
+
+      - name: Config git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/NousResearch/hermes-agent.git
+          git fetch upstream main
+
+      - name: Check drift
+        id: drift
+        run: |
+          AHEAD=$(git rev-list --count HEAD..upstream/main)
+          echo "commits_ahead=$AHEAD" >> "$GITHUB_OUTPUT"
+          echo "drift=$([ "$AHEAD" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "::notice::drift: $AHEAD commits de upstream/main"
+
+      - name: No drift
+        if: steps.drift.outputs.drift == 'false'
+        run: echo "Já sincronizado com upstream/main."
+
+      - name: Create sync branch + merge upstream
+        if: steps.drift.outputs.drift == 'true'
+        continue-on-error: true
+        run: |
+          TS=$(date +%Y%m%d-%H%M%S)
+          SYNC="sync/upstream-$TS"
+          git checkout -b "$SYNC"
+          git merge upstream/main --no-edit || true
+          git add -A || true
+          git -c user.name="github-actions[bot]" \
+             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+             commit -m "chore(sync): merge upstream/main into ceodigital-branding" 2>/dev/null || \
+            echo "::notice::nada a commitar"
+          git push origin "$SYNC"
+          echo "branch=$SYNC" >> "$GITHUB_OUTPUT"
+
+      - name: Open PR
+        if: steps.drift.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TS=$(date +%Y%m%d-%H%M%S)
+          BRANCH="sync/upstream-$TS"
+          if [ "$(gh pr list --head "$BRANCH" --json number --jq 'length')" -gt 0 ]; then
+            echo "::notice::PR já existe para $BRANCH"
+            exit 0
+          fi
+          gh pr create \
+            --base ceodigital-branding \
+            --head "$BRANCH" \
+            --title "chore(sync): upstream/main → ceodigital-branding" \
+            --body "Sync automático do fork com NousResearch/hermes-agent (main). Possíveis conflitos de branding, resolver manualmente (manter CEODigital Agent/ceodigital.ai; upstream ganha estrutura/features)."
