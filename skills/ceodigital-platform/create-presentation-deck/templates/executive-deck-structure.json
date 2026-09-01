@@ -1,0 +1,50 @@
+{
+  "theme": "corporate_dark",
+  "slides": [
+    {
+      "title": "Apresentação Executiva: {{TITLE}}",
+      "subtitle": "Relatório Estratégico e Indicadores de Negócio",
+      "bullets": [
+        "Preparado para a Liderança Executiva",
+        "Data: {{CURRENT_DATE}} · CEODigital Workspace"
+      ],
+      "notes": "Slide de abertura e contexto geral."
+    },
+    {
+      "title": "Sumário Executivo & Diagnóstico",
+      "bullets": [
+        "Visão integrada dos módulos ativos e objetivos trimestrais",
+        "Principais conquistas e marcos concluídos recentemente",
+        "Áreas prioritárias que exigem alocação de recursos"
+      ],
+      "notes": "Apresentar a fotografia de alto nível da organização."
+    },
+    {
+      "title": "Desempenho Comercial & Pipeline",
+      "bullets": [
+        "Volume de negócios em aberto e taxa de conversão",
+        "Propostas comerciais pendentes e valor global estimado",
+        "Principais oportunidades com fecho previsto para o mês"
+      ],
+      "notes": "Foco no funil de vendas e velocidade de fecho de deals."
+    },
+    {
+      "title": "Operações & Execução de Projetos",
+      "bullets": [
+        "Estado dos projetos de implementação e entregas ativas",
+        "Tarefas críticas (workitems) em execução por departamento",
+        "Mitigação de riscos operacionais e prazos assegurados"
+      ],
+      "notes": "Demonstrar o progresso operacional das equipas."
+    },
+    {
+      "title": "Plano de Ação & Próximos Passos",
+      "bullets": [
+        "Prioridade 1: {{ACTION_1}}",
+        "Prioridade 2: {{ACTION_2}}",
+        "Prioridade 3: {{ACTION_3}}"
+      ],
+      "notes": "Conclusão acionável com responsáveis claros."
+    }
+  ]
+}
