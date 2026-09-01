@@ -253,6 +253,7 @@ gateway:
     matrix_cross_room_success: "⚠️ Retoma entre salas: **{title}** retomada na sala Matrix **{room}**.\nAs mensagens futuras nesta sala usarão esse histórico até `/reset` ou outra `/resume`.{msg_part}"
     blocked_not_owner: "⚠️ /resume bloqueado: '**{name}**' pertence a outro utilizador ou chat. Só podes retomar sessões a partir deste chat."
     no_named_sessions:     "Não foram encontradas sessões com nome.\nUsa `/title A minha sessão` para nomear a sessão atual e depois `/resume A minha sessão` para voltar a ela."
+    all_requires_admin: "_Nota: `--all` (listagem entre conversas) requer um administrador configurado; mostram-se apenas as sessões desta conversa._"
     list_header:           "📋 **Sessões com nome**\n"
     list_item:             "• **{title}**{preview_part}"
     list_item_numbered:    "{index}. **{title}**{preview_part}"
