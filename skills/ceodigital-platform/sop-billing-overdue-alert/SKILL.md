@@ -1,23 +1,36 @@
 ---
 name: sop-billing-overdue-alert
-description: "Use when monitoring overdue invoices, generating staggered dunning alerts, and scheduling follow-ups for late payments."
-version: 1.0.0
+description: "Use when monitoring overdue invoices, calculating aging brackets (30/60/90+ days), triggering automated payment reminder alerts, and coordinating escalations for late collections."
+version: 2.0.0
 ---
 
-# SOP: Gestão e Cobrança de Faturas Vencidas
+# SOP: Alertas de Faturas em Atraso & Gestão de Aging de Cobranças
 
 ## Quando Usar
-- Quando o utilizador disser: "quais faturas estão em atraso?", "inicia as cobranças das dívidas", "envia lembretes de pagamento".
+- Em revisões financeiras matinais, encerramentos mensais de tesouraria ou quando o utilizador pedir: "mostra as faturas em atraso", "quem são os clientes com pagamentos vencidos há mais de 30 dias?", "prepara um aviso de cobrança para o cliente X", "qual o valor total em dívida?".
 
-## 1. Mapeamento de Ferramentas Reais
-- `int.moloni.invoices.list` (com filtro de estado "pago" vs "emitida" e data de vencimento).
-- `services.proposals.list` / `services.proposals.get`.
-- `int.gmail.create_draft` / `int.outlook.create_draft`: Rascunhos de emails de cobrança.
-- `workitems.create`: Criação de tarefa de follow-up de cobrança para o comercial/responsável.
+## 1. Mapeamento de Ferramentas Reais (`int.moloni.*` / `invoices.*`)
+- **Consulta de Faturação & Saldos:**
+  - `int.moloni.invoices.list` / `int.invoicexpress.invoices.list`: Lista de faturas com estado pendente/emitida e data de vencimento no ERP.
+  - `services.proposals.list`: Propostas aceites com tranches de pagamento vencidas.
+- **Visualização de Risco de Tesouraria:**
+  - `renderWidget({ source: "dynamic.dataset", viz: "table", ... })`: Mapa de antiguidade de saldos (Aging) categorizado por escalões (0-30d, 31-60d, 61-90d, >90d).
+- **Ações de Notificação & Cobrança:**
+  - `debtor-dunning-campaign`: Orquestração da régua escalonada de lembretes por email.
+  - `workitems.create`: Instancia tarefas de contacto telefónico para o gestor de conta.
+  - `timeline.events`: Regista o alerta de incumprimento na ficha do cliente no CRM.
 
-## 2. Procedimento de Cobrança Escalonada (Dunning)
-1. **Deteção de Vencidas:** Filtra as faturas com vencimento ultrapassado e valor por liquidar.
-2. **Fase 1 — Aviso Amigável (até 7d):** Redige rascunho de email educado a relembrar o vencimento.
-3. **Fase 2 — Alerta Formal (7-21d):** Contacto mais formal com detalhe do valor, juros se aplicável e nova data.
-4. **Fase 3 — Última Notificação (>21d):** Se aplicável, menciona possível impacto no credit score e escalada.
-5. **Registo e Follow-up:** Cria o `workitems` de acompanhamento com prazo e responsável.
+## 2. Escalões de Antiguidade & Níveis de Intervenção
+1. **Lembrete Preventivo (3 a 5 dias antes do vencimento):**
+   - Email amigável a recordar a data de vencimento com envio de 2ª via da fatura.
+2. **Nível 1 (1 a 15 dias de atraso):**
+   - Notificação cordial por email a solicitar comprovativo de transferência ou esclarecimento de eventuais divergências.
+3. **Nível 2 (16 a 30 dias de atraso):**
+   - Contacto direto pelo gestor comercial e suspensão de novos desenvolvimentos/entregáveis no módulo de projetos.
+4. **Nível 3 (>30 dias de atraso — Risco Crítico):**
+   - Aviso formal de cobrança com cálculo de juros de mora legais (taxa comercial em vigor) e encaminhamento para o departamento jurídico (`Duarte / Legal`).
+
+## 3. Procedimento de Atuação
+1. **Auditoria de Faturas:** Extrai as faturas vencidas no ERP certificado e agrupa por cliente e antiguidade.
+2. **Scorecard Visual:** Projeta a tabela de aging no chat via `renderWidget` com totais acumulados.
+3. **Disparo de Ações:** Gera os rascunhos de email de cobrança e cria os respetivos workitems para a equipa financeira.
