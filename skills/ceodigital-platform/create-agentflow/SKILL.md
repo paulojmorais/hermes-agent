@@ -136,8 +136,13 @@ Ao invocar a ferramenta `agentflow.draft`, compõe a estrutura com `nodes` e `ed
 
 ---
 
-## 3. Protocolo de Ação Imediata (Zero-Procrastinação)
+## 3. Protocolo de Ação Imediata & Experiência Imersiva no Workspace
 
 1. **Geração Imediata:** Invoca `agentflow.draft` no primeiro turno com o grafo completo desenhado. Nunca responder com meras descrições textuais antes de gerar o rascunho na ferramenta.
-2. **Explicação Clara dos Ramos:** Explica sucintamente o objetivo de cada nó e as condições de transição.
-3. **Aplicação no Canvas:** Convida o utilizador a aplicar o fluxo com `agentflow.apply` ou abre o editor visual lado a lado no Workspace com `workspaces.open_pane("route:agentflow")`.
+2. **Abertura Imersiva Lado a Lado (Live Flow Canvas):**
+   - Projeta imediatamente a aba do editor no Workspace via `workspaces.open_pane("route:agentflow")` ou `workspaces.open_pane("flow:<flowId>")`.
+   - O utilizador vê o canvas interativo a renderizar os nós em tempo real ao lado do chat enquanto conversa.
+3. **Execução Conversacional & Cartão Vivo (`FlowExecutionCard`):**
+   - Ao executar com `agentflow.run({ flowId, inputs })`, o sistema emite um cartão vivo de telemetria no chat que reflete o avanço passo-a-passo (nós a passarem a verde `completed`, tempo decorrido, formulários HITL de aprovação com botões de ação direta).
+4. **Refinamento Conversacional:**
+   - O utilizador pode pedir ajustes em linguagem natural (ex: *"adiciona um nó de aprovação antes de faturar"*), e o agente atualiza o canvas ativo via `agentflow.draft(mode='edit')` + `agentflow.canvas.apply`.

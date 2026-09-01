@@ -27,7 +27,8 @@ version: 2.0.0
 2. **Resiliência & Tratamento de Erros:** Fluxos que comunicam com APIs externas devem incluir nós de `try_catch` ou caminhos de `fallback`.
 3. **Ações Espaciais no Final:** Quando o fluxo terminar uma operação que exige atenção humana, incluir um nó `workspace_open_pane` ou `render_widget` para projetar os resultados imediatamente no Workspace do utilizador.
 
-## 3. Procedimento de Atuação
+## 3. Protocolo de Atuação Imersiva no Workspace
 1. **Compreensão do Processo:** Mapeia a sequência lógica: Gatilho ➔ Processamento (LLM / Informa D&B / RAG) ➔ Condições (If/Else) ➔ Saída (Email / Slack / CRM).
-2. **Invocação Imediata:** Executa `agentflow.draft` no primeiro turno sem hesitar.
-3. **Explicação:** Explica sucintamente cada passo ao utilizador e propõe aplicar com `agentflow.apply`.
+2. **Invocação Imediata & Abertura do Canvas:** Executa `agentflow.draft` no primeiro turno e projeta o editor visual no Workspace com `workspaces.open_pane("route:agentflow")` para que o utilizador veja o fluxo a nascer em tempo real.
+3. **Execução com Cartão Vivo:** Ao correr o fluxo via `agentflow.run`, o progresso de cada passo é transmitido no chat através de um cartão de execução vivo com formulários de aprovação humana (HITL) integrados.
+4. **Aplicação:** Propõe aplicar alterações diretamente no canvas via `agentflow.apply` / `agentflow.canvas.apply`.
