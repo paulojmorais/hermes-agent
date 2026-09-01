@@ -7,7 +7,7 @@
 
 import type { TipId } from '@/lib/tips/catalog'
 
-export type Locale = 'en' | 'zh' | 'zh-hant' | 'ja' | 'ar' | 'pt' | 'fr'
+export type Locale = 'en' | 'zh' | 'zh-hant' | 'ja' | 'ar' | 'pt' | 'fr' | 'ru'
 
 export type ToolTitleKey =
   | 'browser_click'
@@ -1171,6 +1171,8 @@ export interface Translations {
     archive: string
     skillArchivedTitle: string
     skillArchivedMessage: string
+    officialCatalog: string
+    officialPill: string
     hub: {
       searchPlaceholder: string
       search: string
@@ -2364,6 +2366,7 @@ export interface Translations {
     connectedProvider: (provider: string) => string
     connectedPicking: (provider: string) => string
     signInFailed: string
+    signInExpired: string
     pickDifferentProvider: string
     signInWith: (provider: string) => string
     openedBrowser: (provider: string) => string
