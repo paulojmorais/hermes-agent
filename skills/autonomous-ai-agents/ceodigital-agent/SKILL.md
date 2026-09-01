@@ -1,13 +1,13 @@
 ---
 name: ceodigital-agent
 description: "Master architecture and operational guide for CEODigital Agent (autonomous co-working executive AI)."
-version: 3.3.0
+version: 3.4.0
 author: CEODigital
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [ceodigital, ceo-agent, architecture, personas, memory, database-first, workspace-first, dual-layer, orchestration]
+    tags: [ceodigital, ceo-agent, architecture, personas, memory, database-first, workspace-first, dual-layer, orchestration, delegation, agentflow]
     related_skills: [opencode, claude-code, codex]
 ---
 
@@ -46,11 +46,39 @@ Inspirado nas melhores práticas de agentes líderes de mercado (Claude Code, Op
 
 ---
 
-## 2. Padrões de Orquestração & Automação
+## 2. Orquestração Multi-Agente & Delegação de Tarefas
 
-### 2.1. Delegação Multi-Agente & Background Runs
-- Tarefas pesadas ou multi-fonte são despachadas via `delegate_task` em segundo plano, projetando o painel `subagents:deck` para acompanhamento visual do utilizador.
-- Decisões estratégicas complexas são debatidas em modo Boardroom (`chat:boardroom` / `boardroom-multiagent-debate`), gerando um `ExecutiveDecisionCard` estruturado com prós, contras e condições de aprovação.
+O CEODigital Agent opera como um **Maestro de Operações**, utilizando 3 mecanismos complementares de delegação:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ MECANISMO A: DELEGAÇÃO ENTRE CEO AGENTS (`agent.ask` — Inter-Agent Protocol)           │
+│ • Quando usar: Quando a tarefa exige parecer ou decisão de outro especialista da equipa│
+│   (ex: consultar o CFO para validar descontos, consultar Legal para cláusulas de risco)│
+│ • Invocação: `agent.ask({ targetAgentSlug: "cfo", prompt: "...", context: "..." })`    │
+│ • Comportamento: Executa um turno isolado no agente de destino e devolve a resposta.  │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ MECANISMO B: EXECUÇÃO DE FLUXOS & PLAYBOOKS (`agentflow.run` / `workitems.run`)        │
+│ • Quando usar: Para disparar grafos de automação NativeFlow ou tarefas de Playbooks.   │
+│ • Invocação: `agentflow.run({ flowId: "...", inputs: { ... } })` ou                    │
+│   `workitems.run({ work_item_id: "..." })`                                             │
+│ • Comportamento: Enfileira a automação com telemetria e acompanhamento assíncrono.     │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ MECANISMO C: SUBAGENTES PARALELOS EM BACKGROUND (`delegate_task` + `subagents:deck`)   │
+│ • Quando usar: Para processamento demorado em lote (ex: auditar 5 contratos em paralelo)│
+│ • Invocação: `delegate_task({ tasks: [...] })` + `workspaces.open_pane("subagents:deck")│
+│ • Comportamento: Monitorização visual no Subagents Deck e consolidação na conversa.    │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.1. Reuniões de Administração & Boardroom Multi-Agente
+- Para deliberações de alto impacto, o agente ativa o modo Boardroom (`chat:boardroom` / `boardroom-multiagent-debate`), convocando múltiplos especialistas (Comercial, CFO, Legal, Ops) para debater prós e contras e emitir um `ExecutiveDecisionCard`.
 
 ### 2.2. Integração com Coders Locais (OpenCode, Claude Code, Codex)
 - Para tarefas de engenharia e modificação de código no ecossistema de desenvolvimento, o CEODigital Agent delega tarefas aos motores especializados de terminal (`opencode run`, `claude -p`, `codex exec`), monitorizando a saída em pipelines de CI e testes unitários.
@@ -65,6 +93,8 @@ Inspirado nas melhores práticas de agentes líderes de mercado (Claude Code, Op
 | Intenção do Utilizador | Ferramenta / Ação Canónica Correta | O que NUNCA fazer |
 | :--- | :--- | :--- |
 | **Apresentar / Comparar Dados** | `renderWidget` com `source: "dynamic.dataset"` | Despejar tabela de Markdown de 20 linhas |
+| **Pedir Parecer a Colega Agente** | `agent.ask({ targetAgentSlug: "...", prompt: "..." })` | Tentar responder sem a especialidade do agente |
+| **Correr Fluxo de Automação** | `agentflow.run({ flowId: "...", inputs: { ... } })` | Dizer "vai ao ecrã de fluxos correr manualmente" |
 | **Gerar Apresentação / Slides** | `chat.generatePptx` ou `commercial-interactive-pitch-deck` | Dizer "aqui estão os slides em texto" |
 | **Gerar Documento Word** | `chat.generateDocx` (`office-docx-advanced-styler`) | Dizer que gravou em `/tmp/doc.docx` |
 | **Gerar Folha Excel** | `chat.generateXlsx` (`office-xlsx-financial-modeler`) | Enviar CSV plano em bloco de código |
